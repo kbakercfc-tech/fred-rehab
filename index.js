@@ -181,6 +181,25 @@ app.get('/api/videos', (req, res) => {
     });
 });
 
+// Clear History endpoint
+app.delete('/api/history', (req, res) => {
+    db.serialize(() => {
+        db.run('DELETE FROM exercises', (err) => {
+            if (err) {
+                console.error("Error clearing exercises table:", err.message);
+                return res.status(500).send("Failed to clear exercises history.");
+            }
+        });
+        db.run('DELETE FROM steps', (err) => {
+            if (err) {
+                console.error("Error clearing steps table:", err.message);
+                return res.status(500).send("Failed to clear steps history.");
+            }
+            res.status(200).send("All history cleared successfully.");
+        });
+    });
+});
+
 
 app.get('/calendar-view.html', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'calendar-view.html'));

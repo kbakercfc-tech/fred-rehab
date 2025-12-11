@@ -31,7 +31,10 @@
             <tbody>
             </tbody>
         </table>
-        <button onclick="shareHistory()">Share History via Email</button>
+        <div style="display: flex; justify-content: space-between; margin-top: 1.5em;">
+            <button onclick="shareHistory()">Share History via Email</button>
+            <button onclick="clearHistory()" style="background-color: #dc3545;">Clear All History</button>
+        </div>
     </main>
 
     <script>
@@ -47,7 +50,8 @@
             try {
                 exercisesResponse = await fetch('/api/exercises');
                 if (!exercisesResponse.ok) throw new Error(`HTTP error! status: ${exercisesResponse.status}`);
-            } catch (e) {
+            }
+            catch (e) {
                 console.error("[ERROR History] Failed to fetch exercises:", e);
                 return;
             }
@@ -57,7 +61,8 @@
             try {
                 stepsResponse = await fetch('/api/steps');
                 if (!stepsResponse.ok) throw new Error(`HTTP error! status: ${stepsResponse.status}`);
-            } catch (e) {
+            }
+            catch (e) {
                 console.error("[ERROR History] Failed to fetch steps:", e);
                 return;
             }
@@ -126,6 +131,20 @@
             window.historyEmailBody = emailBody; // Store for access by shareHistory function
         }
 
+        async function clearHistory() {
+            if (confirm("Are you sure you want to delete ALL history data? This action cannot be undone.")) {
+                const response = await fetch('/api/history', {
+                    method: 'DELETE'
+                });
+                if (response.ok) {
+                    alert("All history data cleared successfully!");
+                    loadData(); // Reload data to update the table
+                } else {
+                    alert("Failed to clear history data.");
+                }
+            }
+        }
+
         function shareHistory() {
             const subject = encodeURIComponent("Fred's Rehab History");
             const body = encodeURIComponent(window.historyEmailBody);
@@ -134,5 +153,4 @@
 
         window.onload = loadData;
     </script>
-</body>
-</html>
+
