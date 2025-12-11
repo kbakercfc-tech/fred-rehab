@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fred's Rehab Tracker</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+        <h1>Fred's Rehab Tracker</h1>
+        <nav>
+            <a href="/">Enter Data</a>
+            <a href="/history.html">View History</a>
+            <a href="/steps-graph.html">View Steps Graph</a>
+            <a href="/calendar-view.html">Calendar View</a>
+            <a href="/exercise-videos.html">Exercise Videos</a>
+        </nav>
+    </header>
+    <main>
+        <form id="rehab-form">
+            <h2>Log Activity</h2>
+            <img src="images/fred.gif" alt="Fred's Photo" class="fred-photo">
+            <div>
+                <label for="date">Date:</label>
+                <input type="date" id="date" name="date" min="2025-10-24" max="<%= new Date().toISOString().slice(0, 10) %>" onchange="checkDataForDate()">
+            </div>
+            <hr>
+            <div>
+                <label for="exercise-done">Exercise Done:</label>
+                <select id="exercise-done" name="exercise-done">
+                    <option value="Yes">Yes</option>
+                    <option value="No">No</option>
+                </select>
+            </div>
+            <div>
+                <label for="exercise-quantity">Repetitions:</label>
+                <select id="exercise-quantity" name="exercise-quantity">
+                    <option value="1">1</option>
+                    <option value="2">2</option>
+                    <option value="3">3</option>
+                    <option value="4">4</option>
+                </select>
+            </div>
+            <button type="button" onclick="addExercise()">Save Exercise</button>
+            <hr>
+            <div>
+                <label for="steps-quantity">Steps Walked:</label>
+                <input type="number" id="steps-quantity" name="steps-quantity">
+            </div>
+            <div>
+                <label for="comments">Comments:</label>
+                <textarea id="comments" name="comments" rows="3"></textarea>
+            </div>
+            <button type="button" onclick="addSteps()">Save Steps</button>
+        </form>
+    </main>
+
+    <script>
+        const dateInput = document.getElementById('date');
+        const exerciseDoneSelect = document.getElementById('exercise-done');
+        const stepsInput = document.getElementById('steps-quantity');
+        const exerciseQuantitySelect = document.getElementById('exercise-quantity');
+
+        // Set date to today
+        dateInput.valueAsDate = new Date();
+        dateInput.max = new Date().toISOString().split('T')[0];
+
+        // Function to check for data on a given date
+        async function checkDataForDate() {
+            const date = dateInput.value;
+
+            const exerciseResponse = await fetch(`/api/exercises?date=${date}`);
+            const exercises = await exerciseResponse.json();
+
+            if (exercises.length === 0) {
+                exerciseDoneSelect.value = "No";
+                exerciseQuantitySelect.disabled = true;
+            } else {
+                exerciseDoneSelect.value = exercises[0].done;
+                exerciseQuantitySelect.disabled = (exercises[0].done === "No");
+            }
+
+            const stepsResponse = await fetch(`/api/steps?date=${date}`);
+            const steps = await stepsResponse.json();
+
+            if (steps.length === 0) {
+                stepsInput.value = ''; // Blank if no data
+            } else {
+                const quantityToDisplay = steps[0].quantity;
+                stepsInput.value = quantityToDisplay; // Assign raw number, not formatted string
+            }
+        }
+
+        exerciseDoneSelect.addEventListener('change', () => {
+            exerciseQuantitySelect.disabled = (exerciseDoneSelect.value === "No");
+        });
+
+
+        // Functions to add data will be here
+        async function addExercise() {
+            const done = exerciseDoneSelect.value;
+            const quantity = document.getElementById('exercise-quantity').value;
+            const date = dateInput.value;
+
+            const response = await fetch(`/api/exercises?date=${date}`);
+            const exercises = await response.json();
+
+            if (exercises.length > 0) {
+                if (!confirm('Data for this date already exists. Do you want to overwrite it?')) {
+                    return;
+                }
+            }
+
+            const postResponse = await fetch('/api/exercises', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `done=${done}&quantity=${quantity}&date=${date}`
+            });
+            if (postResponse.ok) {
+                // However, we should re-check data for the current date to update fields
+                checkDataForDate();
+            }
+        }
+
+        async function addSteps() {
+            const quantity = document.getElementById('steps-quantity').value;
+            const date = dateInput.value;
+            const comments = document.getElementById('comments').value; // Get comments value
+
+            if (!quantity) {
+                alert('Please fill in the number of steps.');
+                return;
+            }
+
+            const response = await fetch(`/api/steps?date=${date}`);
+            const steps = await response.json();
+
+            if (steps.length > 0) {
+                if (!confirm('Data for this date already exists. Do you want to overwrite it?')) {
+                    return;
+                }
+            }
+
+            const postResponse = await fetch('/api/steps', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `quantity=${quantity}&date=${date}&comments=${comments}` // Include comments in body
+            });
+            if (postResponse.ok) {
+                checkDataForDate();
+                document.getElementById('steps-quantity').value = ''; // Clear steps after submission
+                document.getElementById('comments').value = ''; // Clear comments after submission
+            } else {
+                console.error("Failed to save steps and comments.");
+            }
+        }
+
+
+        // Function to load and display data - not strictly needed for this page
+        // Keeping it for consistency in case future changes require displaying current day's summary
+        async function loadData() {
+            // For the input page, checkDataForDate handles relevant field updates
+            checkDataForDate();
+        }
+
+        window.onload = loadData;
+    </script>
+</body>
+</html>

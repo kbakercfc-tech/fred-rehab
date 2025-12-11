@@ -1,0 +1,342 @@
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    margin: 0;
+    background-color: #f0f2f5; /* Lighter background */
+    color: #333;
+    line-height: 1.6;
+}
+
+header {
+    background-color: #2c3e50; /* Darker, professional blue */
+    color: white;
+    padding: 1em 2em;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+header h1 {
+    margin: 0;
+    color: white;
+    font-size: 1.8em;
+}
+
+header nav a {
+    color: white;
+    text-decoration: none;
+    margin-left: 1.5em;
+    font-weight: bold;
+    transition: color 0.3s ease;
+}
+
+header nav a:hover {
+    color: #a0d911; /* A contrasting hover color */
+}
+
+main {
+    padding: 2em;
+    max-width: 1600px; /* Even wider main container to accommodate wider graph */
+    margin: 2em auto;
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    display: flex; /* Added for centering children */
+    flex-direction: column; /* Stack children vertically */
+    align-items: center; /* Center children horizontally */
+}
+
+h1, h2 {
+    color: #2c3e50;
+    margin-top: 0;
+    margin-bottom: 1em;
+}
+
+form {
+    padding: 2em;
+    border-bottom: 1px solid #eee;
+    margin-bottom: 2em;
+    position: relative; /* Needed for absolute positioning of child */
+    max-width: 800px; /* Make form wider */
+    width: 100%; /* Ensure it takes full available width up to max-width */
+}
+
+.fred-photo {
+    width: 90px; /* Larger size */
+    height: 90px;
+    border-radius: 50%; /* Circular */
+    object-fit: cover; /* Ensures image covers the area nicely */
+    position: absolute;
+    top: 0.5em; /* Adjusted to keep it in corner with larger size */
+    right: 0.5em; /* Adjusted to keep it in corner with larger size */
+    border: 2px solid #007bff; /* Optional border */
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+form div {
+    margin-bottom: 1em;
+}
+
+label {
+    display: block;
+    margin-bottom: 0.5em;
+    font-weight: bold;
+    color: #555;
+}
+
+input[type="date"],
+input[type="number"],
+input[type="text"],
+select,
+textarea {
+    padding: 1.2em; /* Increased padding */
+    border-radius: 6px; /* Slightly larger border-radius */
+    border: 1px solid #ccc;
+    width: calc(100% - 2.4em); /* Account for increased padding */
+    box-sizing: border-box;
+    font-size: 1.1em; /* Increased font size */
+    transition: border-color 0.3s ease;
+}
+
+input[type="date"]:focus,
+input[type="number"]:focus,
+input[type="text"]:focus,
+select:focus,
+textarea:focus {
+    border-color: #a0d911;
+    outline: none;
+}
+
+button {
+    padding: 0.8em 1.5em;
+    margin-top: 1em;
+    border-radius: 4px;
+    border: none;
+    background-color: #007bff; /* Primary button color */
+    color: white;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+button:hover {
+    background-color: #0056b3; /* Darker blue on hover */
+    transform: translateY(-1px);
+}
+
+button:active {
+    transform: translateY(0);
+}
+
+hr {
+    border: none;
+    border-top: 1px solid #eee;
+    margin: 2em 0;
+}
+
+#data-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2em;
+    margin-top: 2em;
+}
+
+#exercises-list,
+#steps-list {
+    list-style-type: none;
+    padding: 0;
+}
+
+#exercises-list li,
+#steps-list li {
+    background-color: #f9f9f9;
+    padding: 1em;
+    margin-bottom: 0.5em;
+    border-radius: 4px;
+    border: 1px solid #eee;
+}
+
+/* Table specific styles for history.html */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1em;
+}
+
+th, td {
+    border: 1px solid #e0e0e0;
+    padding: 0.8em;
+    text-align: left;
+}
+
+th {
+    background-color: #f5f5f5;
+    font-weight: bold;
+    color: #555;
+}
+
+tr:nth-child(even) {
+    background-color: #f9f9f9; /* Zebra striping */
+}
+
+tr:hover {
+    background-color: #eef;
+}
+
+/* Steps Graph Specific Styles */
+#chart-container {
+    width: 100%; /* Make chart container wider */
+    max-width: 900px;
+    margin: 2em auto;
+    padding: 1em;
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+.chart-controls {
+    text-align: center;
+    margin-bottom: 1.5em;
+}
+
+.chart-controls button {
+    margin: 0 0.5em;
+    min-width: 120px;
+}
+
+.legend {
+    text-align: center;
+    margin-top: 2em;
+    padding: 1em;
+    background-color: #f9f9f9;
+    border-radius: 4px;
+    border: 1px solid #eee;
+    display: inline-block; /* To center it */
+}
+
+.legend-item {
+    display: inline-flex;
+    align-items: center;
+    margin: 0 1em;
+    font-size: 0.9em;
+    color: #555;
+}
+
+.legend-color-box {
+    width: 18px;
+    height: 18px;
+    border-radius: 3px;
+    margin-right: 0.5em;
+    border: 1px solid rgba(0,0,0,0.1); /* Subtle border for grey/white */
+}
+
+/* New flex container for chart and summary */
+.chart-flex-container {
+    display: flex;
+    flex-wrap: wrap; /* Allow wrapping for responsiveness */
+    justify-content: space-between; /* Push items to ends */
+    align-items: center; /* Align items to the center of the cross axis */
+    gap: 1em; /* Increased space between chart and summary boxes */
+    margin-top: 2em;
+    width: 100%; /* Ensure it takes full width of main */
+}
+
+.chart-section {
+    flex: 1; /* Chart takes all available space */
+    min-width: 300px; /* Minimum width for chart */
+    max-width: 1200px; /* Adjusted max-width for chart */
+    background-color: white;
+    padding: 1em;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+.summary-boxes-vertical {
+    flex: 0 0 auto; /* Don't grow or shrink, take auto width */
+    display: flex;
+    flex-direction: column; /* Stack boxes vertically */
+    gap: 1em; /* Increased space between summary boxes */
+    min-width: 150px; /* Increased minimum width for the summary column */
+    margin-left: auto; /* Push to the right */
+}
+
+.summary-box {
+    background-color: white;
+    padding: 0.8em 1em; /* Adjusted padding */
+    border-radius: 6px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    text-align: center;
+    min-width: 140px; /* Wider minimum width */
+    margin-bottom: 0;
+    max-width: 180px; /* Wider maximum width */
+}
+
+.summary-box h3 {
+    font-size: 0.8em; /* Smaller heading */
+    color: #777; /* Lighter color */
+    margin-top: 0;
+    margin-bottom: 0.3em;
+}
+
+.summary-value {
+    font-size: 1em; /* Smaller value text */
+    font-weight: normal; /* Less bold */
+    color: #444;
+    margin: 0;
+}
+
+.summary-date {
+    font-size: 0.7em; /* Smaller date text */
+    color: #999;
+    margin-top: 0.1em;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    header {
+        flex-direction: column;
+        text-align: center;
+        padding: 1em;
+    }
+
+    header nav a {
+        margin: 0.5em 0.8em;
+    }
+
+    main {
+        margin: 1em;
+        padding: 1em;
+    }
+
+    input, select, button {
+        width: 100%;
+    }
+
+    .chart-controls button {
+        display: block;
+        width: calc(100% - 1em);
+        margin: 0.5em 0.5em;
+    }
+
+    #data-container {
+        grid-template-columns: 1fr; /* Stack columns on small screens */
+    }
+
+    .chart-flex-container {
+        flex-direction: column; /* Stack chart and summary vertically on small screens */
+        align-items: center;
+    }
+
+    .summary-boxes-vertical {
+        flex-direction: row; /* Layout summary boxes horizontally on small screens */
+        flex-wrap: wrap;
+        justify-content: center;
+        width: 100%;
+    }
+
+    .summary-box {
+        min-width: unset; /* Remove min-width on small screens */
+        width: auto; /* Allow content to dictate width */
+        flex-basis: 45%; /* Two boxes per row */
+    }
+}

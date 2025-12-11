@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fred's Exercise Videos</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+        <h1>Fred's Exercise Videos</h1>
+        <nav>
+            <a href="/">Enter Data</a>
+            <a href="/history.html">View History</a>
+            <a href="/steps-graph.html">View Steps Graph</a>
+            <a href="/calendar-view.html">Calendar View</a>
+            <a href="/exercise-videos.html">Exercise Videos</a>
+        </nav>
+    </header>
+    <main>
+        <h2>Upload New Exercise Video</h2>
+        <form id="upload-form" enctype="multipart/form-data">
+            <div>
+                <label for="video-title">Video Title:</label>
+                <input type="text" id="video-title" name="title" required>
+            </div>
+            <div>
+                <label for="video-file">Select Video File:</label>
+                <input type="file" id="video-file" name="video" accept="video/*" required>
+            </div>
+            <button type="submit">Upload Video</button>
+        </form>
+
+        <hr>
+
+        <h2>Uploaded Videos</h2>
+        <div id="video-list">
+            <!-- Videos will be loaded here -->
+        </div>
+    </main>
+
+    <script>
+        document.getElementById('upload-form').addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const formData = new FormData(event.target);
+
+            const response = await fetch('/upload-video', {
+                method: 'POST',
+                body: formData
+            });
+
+            if (response.ok) {
+                alert('Video uploaded successfully!');
+                event.target.reset();
+                loadVideos();
+            } else {
+                alert('Error uploading video.');
+            }
+        });
+
+        async function loadVideos() {
+            const videoList = document.getElementById('video-list');
+            videoList.innerHTML = ''; // Clear existing videos
+
+            const response = await fetch('/api/videos');
+            const videos = await response.json();
+
+            if (videos.length === 0) {
+                videoList.innerHTML = '<p>No videos uploaded yet.</p>';
+                return;
+            }
+
+            videos.forEach(video => {
+                const videoContainer = document.createElement('div');
+                videoContainer.classList.add('video-item');
+                videoContainer.innerHTML = `
+                    <h3>${video.title}</h3>
+                    <video controls src="${video.filepath}" style="max-width: 100%;"></video>
+                `;
+                videoList.appendChild(videoContainer);
+            });
+        }
+
+        window.onload = loadVideos;
+    </script>
+</body>
+</html>

@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fred's Rehab History</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+        <h1>Fred's Rehab History</h1>
+        <nav>
+            <a href="/">Enter Data</a>
+            <a href="/history.html">View History</a>
+            <a href="/steps-graph.html">View Steps Graph</a>
+            <a href="/calendar-view.html">Calendar View</a>
+            <a href="/exercise-videos.html">Exercise Videos</a>
+        </nav>
+    </header>
+    <main>
+        <table id="history-table">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Exercises Done</th>
+                    <th>Repetitions</th>
+                    <th>Steps</th>
+                    <th>Comments</th>
+                </tr>
+            </thead>
+            <tbody>
+            </tbody>
+        </table>
+        <button onclick="shareHistory()">Share History via Email</button>
+    </main>
+
+    <script>
+        // Helper function to format date to DD-MMM-YY
+        function formatDateDDMMMYY(dateString) {
+            const date = new Date(dateString);
+            const options = { day: '2-digit', month: 'short', year: '2-digit' };
+            return date.toLocaleDateString('en-GB', options).replace(/ /g, '-').toUpperCase();
+        }
+
+        async function loadData() {
+            let exercisesResponse;
+            try {
+                exercisesResponse = await fetch('/api/exercises');
+                if (!exercisesResponse.ok) throw new Error(`HTTP error! status: ${exercisesResponse.status}`);
+            } catch (e) {
+                console.error("[ERROR History] Failed to fetch exercises:", e);
+                return;
+            }
+            const exercises = await exercisesResponse.json();
+
+            let stepsResponse;
+            try {
+                stepsResponse = await fetch('/api/steps');
+                if (!stepsResponse.ok) throw new Error(`HTTP error! status: ${stepsResponse.status}`);
+            } catch (e) {
+                console.error("[ERROR History] Failed to fetch steps:", e);
+                return;
+            }
+            const steps = await stepsResponse.json();
+
+            const data = {};
+
+            exercises.forEach(ex => {
+                if (!data[ex.date]) {
+                    data[ex.date] = {};
+                }
+                data[ex.date].exercise = ex;
+            });
+
+            steps.forEach(step => {
+                if (!data[step.date]) {
+                    data[step.date] = {};
+                }
+                data[step.date].steps = step;
+            });
+
+            const tableBody = document.querySelector('#history-table tbody');
+            if (!tableBody) {
+                console.error("Could not find #history-table tbody. Is the HTML structure correct?");
+                return;
+            }
+            tableBody.innerHTML = '';
+
+            const sortedDates = Object.keys(data).sort((a, b) => new Date(a) - new Date(b));
+
+            if (sortedDates.length === 0) {
+                const row = tableBody.insertRow();
+                const cell = row.insertCell();
+                cell.colSpan = 5; // Span all columns
+                cell.textContent = "No history data available.";
+                cell.style.textAlign = "center";
+                return;
+            }
+
+            let emailBody = "Fred's Rehab History:\n\n";
+            emailBody += "Date\tExercises Done\tRepetitions\tSteps\tComments\n";
+            emailBody += "--------------------------------------------------------------------------\n";
+
+            for (const date of sortedDates) {
+                const row = tableBody.insertRow();
+                const dateCell = row.insertCell();
+                const exerciseDoneCell = row.insertCell();
+                const repetitionsCell = row.insertCell();
+                const stepsCell = row.insertCell();
+                const commentsCell = row.insertCell();
+
+                const exercisesDone = data[date].exercise ? data[date].exercise.done : 'No';
+                const repetitions = data[date].exercise ? data[date].exercise.quantity : 'N/A';
+                const stepsCount = data[date].steps ? data[date].steps.quantity.toLocaleString() : 0;
+                const comments = data[date].steps && data[date].steps.comments ? data[date].steps.comments : '';
+
+                dateCell.textContent = formatDateDDMMMYY(date); // Format date for display
+                exerciseDoneCell.textContent = exercisesDone;
+                repetitionsCell.textContent = repetitions;
+                stepsCell.textContent = stepsCount;
+                commentsCell.textContent = comments;
+
+                emailBody += `${formatDateDDMMMYY(date)}\t${exercisesDone}\t${repetitions}\t${stepsCount}\t${comments}\n`;
+            }
+
+            window.historyEmailBody = emailBody; // Store for access by shareHistory function
+        }
+
+        function shareHistory() {
+            const subject = encodeURIComponent("Fred's Rehab History");
+            const body = encodeURIComponent(window.historyEmailBody);
+            window.location.href = `mailto:?subject=${subject}&body=${body}`;
+        }
+
+        window.onload = loadData;
+    </script>
+</body>
+</html>

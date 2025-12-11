@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fred's Steps Graph</title>
+    <script src="chart.min.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+        <h1>Fred's Steps Graph</h1>
+        <nav>
+            <a href="/">Enter Data</a>
+            <a href="/history.html">View History</a>
+            <a href="/steps-graph.html">View Steps Graph</a>
+            <a href="/calendar-view.html">Calendar View</a>
+            <a href="/exercise-videos.html">Exercise Videos</a>
+        </nav>
+    </header>
+    <main>
+        <div class="graph-and-summary-wrapper">
+            <div class="chart-flex-container">
+                <div class="chart-section">
+                    <div class="chart-controls">
+                        <button onclick="renderChart('line')">Line Chart</button>
+                        <button onclick="renderChart('bar')">Bar Chart</button>
+                    </div>
+                    <div id="chart-container">
+                        <canvas id="stepsChart"></canvas>
+                    </div>
+                    <div class="legend">
+                        <span class="legend-item"><span class="legend-color-box" style="background-color: green;"></span> Exercises Done</span>
+                        <span class="legend-item"><span class="legend-color-box" style="background-color: orange;"></span> Exercises Not Done</span>
+                        <span class="legend-item"><span class="legend-color-box" style="border: 1px solid red;"></span> Largest Steps Day</span>
+                        <span class="legend-item"><span class="legend-color-box" style="background-color: grey;"></span> No Exercise Entry</span>
+                    </div>
+                </div>
+                <div class="summary-boxes-vertical">
+                    <div class="summary-box">
+                        <h3>Largest Steps</h3>
+                        <p id="largest-steps" class="summary-value">0</p>
+                        <p id="largest-steps-date" class="summary-date"></p>
+                    </div>
+                    <div class="summary-box">
+                        <h3>Average Steps</h3>
+                        <p id="average-steps" class="summary-value">0</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+    <script>
+        let chart;
+        let chartData; // Declare chartData globally
+
+        // Helper function to format date to DD-MMM-YY
+        function formatDateDDMMMYY(dateString) {
+            const date = new Date(dateString);
+            const options = { day: '2-digit', month: 'short', year: '2-digit' };
+            return date.toLocaleDateString('en-GB', options).replace(/ /g, '-').toUpperCase();
+        }
+
+        // renderChart function (globally accessible)
+        function renderChart(type) {
+            if (chart) {
+                chart.destroy();
+            }
+            const ctx = document.getElementById('stepsChart').getContext('2d');
+            if (!ctx) {
+                // Keep this error for critical issues
+                return;
+            }
+            chart = new Chart(ctx, {
+                type: type,
+                data: chartData,
+                options: {
+                    scales: {
+                        x: {
+                            
+                        },
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+
+        async function loadChartData() {
+            const stepsResponse = await fetch('/api/steps');
+            const steps = await stepsResponse.json();
+            const exercisesResponse = await fetch('/api/exercises');
+            const exercises = await exercisesResponse.json();
+
+            const startDate = new Date('2025-10-24');
+            const today = new Date();
+            const allDates = [];
+            let currentDate = startDate;
+            while (currentDate <= today) {
+                allDates.push(currentDate.toISOString().slice(0, 10));
+                currentDate.setDate(currentDate.getDate() + 1);
+            }
+
+            const stepsData = allDates.map(date => {
+                const step = steps.find(s => s.date === date);
+                return step ? step.quantity : 0;
+            });
+
+            const backgroundColors = allDates.map(date => {
+                const exercise = exercises.find(ex => ex.date === date);
+                if (exercise && exercise.done === 'Yes') {
+                    return 'green';
+                } else if (exercise && exercise.done === 'No') {
+                    return 'orange'; // Amber
+                }
+                return 'grey'; // Default if no exercise entry
+            });
+
+            // Calculate Largest and Average Steps
+            let largestSteps = 0;
+            let largestStepsDate = 'N/A';
+            let largestStepsIndex = -1; // To store the index of the largest steps
+            const recordedStepsValues = [];
+
+            for (let i = 0; i < allDates.length; i++) {
+                const steps = stepsData[i];
+                if (steps > 0) {
+                    recordedStepsValues.push(steps);
+                    if (steps > largestSteps) {
+                        largestSteps = steps;
+                        largestStepsDate = allDates[i];
+                        largestStepsIndex = i; // Store the index
+                    }
+                }
+            }
+            
+            const averageSteps = recordedStepsValues.length > 0 ? Math.round(recordedStepsValues.reduce((a, b) => a + b, 0) / recordedStepsValues.length) : 0;
+
+            document.getElementById('largest-steps').textContent = largestSteps.toLocaleString();
+            document.getElementById('largest-steps-date').textContent = `(${formatDateDDMMMYY(largestStepsDate)})`;
+            document.getElementById('average-steps').textContent = averageSteps.toLocaleString();
+
+            // Create borderColors array
+            const borderColors = new Array(allDates.length).fill('rgb(75, 192, 192)'); // Default border color
+            const borderWidths = new Array(allDates.length).fill(1); // Default border width
+
+            if (largestStepsIndex !== -1) {
+                borderColors[largestStepsIndex] = 'red';
+                borderWidths[largestStepsIndex] = 1; // Make the border even thinner (1 pixel)
+            }
+
+            // Calculate running average
+            const runningAverageData = [];
+            let sum = 0;
+            let count = 0;
+            for (let i = 0; i < stepsData.length; i++) {
+                if (stepsData[i] > 0) { // Only count days with steps for average
+                    sum += stepsData[i];
+                    count++;
+                }
+                runningAverageData.push(count > 0 ? Math.round(sum / count) : 0);
+            }
+
+            chartData = {
+                labels: allDates, // Use raw dates for Chart.js internal logic
+                datasets: [{
+                    label: 'Steps per Day',
+                    data: stepsData,
+                    fill: false,
+                    borderColor: borderColors, // Use the new borderColors array
+                    borderWidth: borderWidths, // Use the new borderWidths array
+                    backgroundColor: backgroundColors,
+                    tension: 0.1
+                },
+                {
+                    label: 'Running Average',
+                    data: runningAverageData,
+                    type: 'line', // This will always be a line
+                    fill: false,
+                    borderColor: 'blue',
+                    borderWidth: 1, // Make the line thinner
+                    tension: 0.1,
+                    pointRadius: 0 // Hide points for a smoother line
+                }]
+            };
+
+            renderChart('bar'); // Default to bar chart
+        }
+
+        window.onload = loadChartData;
+    </script>
+</body>
+</html>

@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fred's Calendar View</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(14, 1fr); /* 14 days wide */
+            gap: 3px; /* Slightly reduced gap */
+            max-width: 1400px; /* Wider calendar container */
+            margin: 2em auto;
+            border: 1px solid #ddd;
+            padding: 5px;
+            border-radius: 8px;
+        }
+        .month-name {
+            grid-column: 1 / -1; /* Span across all 14 columns */
+            text-align: center;
+            font-size: 1.2em;
+            font-weight: bold;
+            padding: 0.5em 0;
+            background-color: #e9ecef; /* Lighter background for month name */
+            margin-bottom: 5px;
+            border-bottom: 1px solid #dee2e6;
+            border-top: 1px solid #dee2e6;
+            margin-top: 10px; /* Space above new month */
+        }
+        .day-header {
+            font-weight: bold;
+            text-align: center;
+            padding: 0.5em;
+            background-color: #f8f9fa; /* Lighter day header */
+            border: 1px solid #eee;
+        }
+        .day-cell {
+            border: 1px solid #eee; /* Lighter border */
+            padding: 0.5em;
+            min-height: 80px;
+            text-align: right;
+            position: relative;
+            font-size: 0.9em;
+            overflow: hidden; /* Hide overflowing content */
+            display: flex; /* Use flexbox for content alignment */
+            flex-direction: column;
+            justify-content: space-between; /* Push number to top right, content to bottom left */
+            align-items: flex-end; /* Align day number to right */
+        }
+        .day-number {
+            font-weight: bold;
+        }
+        .day-content {
+            text-align: left;
+            font-size: 0.75em; /* Smaller content font */
+            color: #555;
+            width: 100%; /* Take full width of cell */
+            padding-top: 5px; /* Space between number and content */
+        }
+        /* Coloring for days */
+        .day-green { background-color: #d4edda; } /* Success green */
+        .day-amber { background-color: #fff3cd; } /* Warning amber */
+        .day-red { background-color: #f8d7da; } /* Danger red */
+        .day-grey { background-color: #f1f1f1; } /* Lighter grey for no entry */
+        .empty-day {
+            background-color: #f8f9fa; /* Lighter empty days */
+            border: 1px solid #eee;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Fred's Calendar View</h1>
+        <nav>
+            <a href="/">Enter Data</a>
+            <a href="/history.html">View History</a>
+            <a href="/steps-graph.html">View Steps Graph</a>
+            <a href="/calendar-view.html">Calendar View</a>
+            <a href="/exercise-videos.html">Exercise Videos</a>
+        </nav>
+    </header>
+    <main>
+        <h2>Activity Calendar</h2>
+        <div id="calendar-container">
+            <!-- Calendar grid will be rendered here -->
+        </div>
+
+        <div class="legend" style="margin-top: 2em; text-align: center;">
+            <span class="legend-item"><span class="legend-color-box" style="background-color: #d4edda; border: 1px solid green;"></span> Exercises & Steps Done (Green)</span>
+            <span class="legend-item"><span class="legend-color-box" style="background-color: #fff3cd; border: 1px solid orange;"></span> Exercises Done Only (Amber)</span>
+            <span class="legend-item"><span class="legend-color-box" style="background-color: #f8d7da; border: 1px solid red;"></span> Nothing Entered (Red)</span>
+        </div>
+    </main>
+
+    <script>
+        async function renderCalendar() {
+            const calendarContainer = document.getElementById('calendar-container');
+            calendarContainer.innerHTML = ''; // Clear previous calendar
+
+            const startDate = new Date('2025-10-24T00:00:00'); // Set to start of day
+            const today = new Date();
+            today.setHours(0, 0, 0, 0); // Set to start of day
+
+            const exercisesResponse = await fetch('/api/exercises');
+            const allExercises = await exercisesResponse.json();
+            const stepsResponse = await fetch('/api/steps');
+            const allSteps = await stepsResponse.json();
+
+            // Create a map for quick lookup
+            const dataByDate = {};
+            allExercises.forEach(ex => {
+                if (!dataByDate[ex.date]) dataByDate[ex.date] = {};
+                dataByDate[ex.date].exercise = ex;
+            });
+            allSteps.forEach(step => {
+                if (!dataByDate[step.date]) dataByDate[step.date] = {};
+                dataByDate[step.date].steps = step;
+            });
+
+            // Create calendar grid
+            const calendarGrid = document.createElement('div');
+            calendarGrid.classList.add('calendar-grid');
+
+            // Day names for 14 columns
+            const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+            dayNames.forEach(day => {
+                const header = document.createElement('div');
+                header.classList.add('day-header');
+                header.textContent = day;
+                calendarGrid.appendChild(header);
+            });
+
+            let currentMonth = -1; // Initialize to an invalid month to force first header
+            let currentDayIndex = 0; // To track position in the 14-day grid
+
+            // Iterate through each day from startDate to today
+            let iterDate = new Date(startDate);
+            while (iterDate <= today) {
+                // Insert month header if new month or start of calendar
+                if (iterDate.getMonth() !== currentMonth) {
+                    currentMonth = iterDate.getMonth();
+                    
+                    // Fill remaining cells of the previous row before new month header
+                    while (currentDayIndex % 14 !== 0) {
+                        const emptyCell = document.createElement('div');
+                        emptyCell.classList.add('day-cell', 'empty-day');
+                        calendarGrid.appendChild(emptyCell);
+                        currentDayIndex++;
+                    }
+
+                    const monthHeaderDiv = document.createElement('div');
+                    monthHeaderDiv.classList.add('month-name');
+                    monthHeaderDiv.textContent = iterDate.toLocaleString('default', { month: 'long', year: 'numeric' });
+                    calendarGrid.appendChild(monthHeaderDiv);
+                    currentDayIndex = 0; // Reset for new month header
+                }
+
+                const dateString = iterDate.toISOString().slice(0, 10);
+                const dayData = dataByDate[dateString];
+
+                const dayCell = document.createElement('div');
+                dayCell.classList.add('day-cell');
+
+                let colorClass = '';
+                let hasExercise = false;
+                let hasSteps = false;
+
+                if (dayData) {
+                    if (dayData.exercise && dayData.exercise.done === 'Yes') {
+                        hasExercise = true;
+                    }
+                    if (dayData.steps && dayData.steps.quantity > 0) {
+                        hasSteps = true;
+                    }
+
+                    if (hasExercise && hasSteps) {
+                        colorClass = 'day-green';
+                    } else if (hasExercise && !hasSteps) {
+                        colorClass = 'day-amber';
+                    } else { // No exercise, or no exercise with steps, or something else
+                        colorClass = 'day-red';
+                    }
+                } else {
+                    colorClass = 'day-red'; // Nothing entered for this day
+                }
+
+                dayCell.classList.add(colorClass);
+
+                const dayNumber = document.createElement('div');
+                dayNumber.classList.add('day-number');
+                dayNumber.textContent = iterDate.getDate();
+                dayCell.appendChild(dayNumber);
+
+                // Add content (Steps/Reps)
+                const dayContent = document.createElement('div');
+                dayContent.classList.add('day-content');
+                if (dayData && dayData.steps && dayData.steps.quantity > 0) {
+                    dayContent.innerHTML += `Steps: ${dayData.steps.quantity.toLocaleString()}<br>`;
+                }
+                if (dayData && dayData.exercise && dayData.exercise.done === 'Yes') {
+                    dayContent.innerHTML += `Reps: ${dayData.exercise.quantity}`;
+                }
+                dayCell.appendChild(dayContent);
+
+                calendarGrid.appendChild(dayCell);
+                currentDayIndex++;
+
+                iterDate.setDate(iterDate.getDate() + 1); // Move to next day
+            }
+            
+            // Fill remaining cells of the last row
+            while (currentDayIndex % 14 !== 0) {
+                const emptyCell = document.createElement('div');
+                emptyCell.classList.add('day-cell', 'empty-day');
+                calendarGrid.appendChild(emptyCell);
+                currentDayIndex++;
+            }
+
+            calendarContainer.appendChild(calendarGrid);
+        }
+
+        window.onload = renderCalendar;
+    </script>
+</body>
+</html>
