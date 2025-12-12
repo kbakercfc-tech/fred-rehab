@@ -1,0 +1,13 @@
+# Git ignore patterns for fred-rehab project
+
+# Node.js dependencies
+node_modules/
+
+# Local database file
+rehab.db
+
+# Uploaded files
+/public/uploads/
+
+# Environment variables file
+.env
