@@ -62,14 +62,14 @@ form {
 }
 
 .fred-photo {
-    width: 90px; /* Larger size */
-    height: 90px;
-    border-radius: 50%; /* Circular */
-    object-fit: cover; /* Ensures image covers the area nicely */
+    width: 135px; /* 50% larger than 90px */
+    height: 135px;
+    border-radius: 50%;
+    object-fit: cover;
     position: absolute;
-    top: 0.5em; /* Adjusted to keep it in corner with larger size */
-    right: 0.5em; /* Adjusted to keep it in corner with larger size */
-    border: 2px solid #007bff; /* Optional border */
+    top: 0.25em; /* Adjusted positioning for larger size */
+    right: 0.25em; /* Adjusted positioning for larger size */
+    border: 2px solid #007bff;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
