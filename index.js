@@ -181,6 +181,39 @@ app.get('/api/videos', (req, res) => {
     });
 });
 
+app.delete('/api/videos/:id', (req, res) => {
+    const videoId = req.params.id;
+    db.get('SELECT filename, filepath FROM videos WHERE id = ?', [videoId], (err, row) => {
+        if (err) {
+            console.error("Error fetching video to delete:", err.message);
+            return res.status(500).send("Failed to fetch video for deletion.");
+        }
+        if (!row) {
+            return res.status(404).send("Video not found.");
+        }
+
+        const fs = require('fs');
+        const videoFilePath = path.join(__dirname, 'public', row.filepath); // Full path to the file
+
+        fs.unlink(videoFilePath, (err) => {
+            if (err && err.code !== 'ENOENT') { // ENOENT means file not found, which is fine if DB entry is also gone
+                console.error("Error deleting video file from filesystem:", err);
+                // Even if file deletion fails, try to remove from DB
+            } else if (!err) {
+                console.log(`Successfully deleted file: ${videoFilePath}`);
+            }
+
+            db.run('DELETE FROM videos WHERE id = ?', [videoId], function(err) {
+                if (err) {
+                    console.error("Error deleting video from database:", err.message);
+                    return res.status(500).send("Failed to delete video from database.");
+                }
+                res.status(200).send("Video deleted successfully.");
+            });
+        });
+    });
+});
+
 // Clear History endpoint
 app.delete('/api/history', (req, res) => {
     db.serialize(() => {

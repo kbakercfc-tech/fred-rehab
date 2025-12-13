@@ -7,7 +7,7 @@ body {
 }
 
 header {
-    background-color: #2c3e50; 
+    background-color: #2c3e50;
     color: white;
     padding: 1em 2em;
     display: flex;
@@ -28,10 +28,14 @@ header nav a {
     margin-left: 1.5em;
     font-weight: bold;
     transition: color 0.3s ease;
+    border: 1px solid transparent; /* Subtle border */
+    padding: 0.5em 0.8em;
+    border-radius: 4px;
 }
 
 header nav a:hover {
     color: #a0d911; 
+    border-color: transparent; /* Revert to transparent on hover */
 }
 
 main {
@@ -61,16 +65,45 @@ form {
     width: 100%; 
 }
 
+.fred-photo-wrapper {
+    position: absolute;
+    top: 0.25em; /* Position wrapper relative to form's padding */
+    right: 0.25em;
+    width: 135px; /* Same size as fred-photo */
+    height: 135px;
+    border-radius: 50%;
+}
+
 .fred-photo {
     width: 135px; 
     height: 135px;
     border-radius: 50%;
     object-fit: cover;
-    position: absolute;
-    top: 0.25em; 
-    right: 0.25em; 
+    position: absolute; /* Positioned relative to form */
+    top: 0.5em; /* Adjusted position */
+    right: 0.5em; /* Adjusted position */
     border: 2px solid #007bff;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.santa-hat {
+    position: absolute; /* Positioned relative to form */
+    width: 70px; /* Adjusted size */
+    height: auto;
+    top: -5px; /* Adjusted position */
+    right: 50px; /* Adjusted position */
+    transform: rotate(0deg); /* No tilt */
+    z-index: 10;
+}
+
+.santa-hat-tabular {
+    position: absolute;
+    width: 70px; /* Same size as regular santa-hat */
+    height: auto;
+    top: 5px; /* Adjusted position */
+    right: 5px; /* Adjusted position */
+    transform: rotate(0deg);
+    z-index: 10;
 }
 
 form div {

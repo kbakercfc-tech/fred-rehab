@@ -77,8 +77,28 @@
                 videoContainer.innerHTML = `
                     <h3>${video.title}</h3>
                     <video controls src="${video.filepath}" style="max-width: 100%;"></video>
+                    <button class="delete-video-btn" data-id="${video.id}">Delete</button>
                 `;
                 videoList.appendChild(videoContainer);
+            });
+
+            // Add event listeners to delete buttons
+            document.querySelectorAll('.delete-video-btn').forEach(button => {
+                button.addEventListener('click', async (event) => {
+                    const videoId = event.target.dataset.id;
+                    if (confirm('Are you sure you want to delete this video?')) {
+                        const response = await fetch(`/api/videos/${videoId}`, {
+                            method: 'DELETE'
+                        });
+                        if (response.ok) {
+                            alert('Video deleted successfully!');
+                            loadVideos(); // Reload videos list
+                        } else {
+                            alert('Failed to delete video.');
+                            console.error('Failed to delete video:', await response.text());
+                        }
+                    }
+                });
             });
         }
 
