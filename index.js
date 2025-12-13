@@ -200,6 +200,57 @@ app.delete('/api/history', (req, res) => {
     });
 });
 
+// Batch save data endpoint
+app.post('/api/batch-save-data', bodyParser.json(), (req, res) => {
+    const dataToSave = req.body; // Expecting an array of data objects
+
+    if (!Array.isArray(dataToSave)) {
+        return res.status(400).send('Request body must be an array of data objects.');
+    }
+
+    db.serialize(() => {
+        db.run('BEGIN TRANSACTION;');
+        const stmtExerciseDelete = db.prepare('DELETE FROM exercises WHERE date = ?');
+        const stmtExerciseInsert = db.prepare('INSERT INTO exercises (done, quantity, date) VALUES (?, ?, ?)');
+        const stmtStepsDelete = db.prepare('DELETE FROM steps WHERE date = ?');
+        const stmtStepsInsert = db.prepare('INSERT INTO steps (quantity, date, comments) VALUES (?, ?, ?)');
+
+        dataToSave.forEach(data => {
+            const { date, exerciseDone, repetitions, stepsCount, comments } = data;
+
+            // Save Exercise data
+            stmtExerciseDelete.run(date);
+            if (exerciseDone && exerciseDone !== 'No') { // Only insert if exercise was done
+                stmtExerciseInsert.run(exerciseDone, repetitions, date);
+            }
+            
+            // Save Steps data
+            stmtStepsDelete.run(date);
+            if (stepsCount > 0 || comments) { // Only insert if steps or comments are provided
+                stmtStepsInsert.run(stepsCount, date, comments);
+            }
+        });
+
+        stmtExerciseDelete.finalize();
+        stmtExerciseInsert.finalize();
+        stmtStepsDelete.finalize();
+        stmtStepsInsert.finalize();
+
+        db.run('COMMIT;', (err) => {
+            if (err) {
+                db.run('ROLLBACK;');
+                console.error("Error committing batch save transaction:", err.message);
+                return res.status(500).send("Failed to save all data.");
+            }
+            res.status(200).send("All data saved successfully.");
+        });
+    });
+});
+
+
+app.get('/enter-data-tabular.html', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'enter-data-tabular.html'));
+});
 
 app.get('/calendar-view.html', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'calendar-view.html'));

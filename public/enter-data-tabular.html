@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fred's Rehab - Tabular Data Entry</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        #date-selection {
+            display: flex;
+            gap: 1em;
+            margin-bottom: 1.5em;
+            align-items: center;
+            justify-content: center;
+        }
+        #date-selection label {
+            margin-bottom: 0; /* Override default label margin */
+        }
+        #date-selection input {
+            width: auto; /* Allow input to size naturally */
+            padding: 0.8em;
+            font-size: 1em;
+        }
+        #generate-table-btn {
+            padding: 0.8em 1.5em;
+        }
+        #data-entry-table-container {
+            margin-top: 2em;
+            overflow-x: auto; /* Allow horizontal scrolling for table */
+        }
+        #data-entry-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 1em;
+        }
+        #data-entry-table th, #data-entry-table td {
+            border: 1px solid #ddd;
+            padding: 0.8em;
+            text-align: left;
+            white-space: nowrap; /* Prevent wrapping in cells */
+        }
+        #data-entry-table th {
+            background-color: #f5f5f5;
+            font-weight: bold;
+            color: #555;
+        }
+        #data-entry-table tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        #data-entry-table tr:hover {
+            background-color: #eef;
+        }
+        #data-entry-table input[type="number"],
+        #data-entry-table select,
+        #data-entry-table textarea {
+            width: 100%;
+            padding: 0.5em;
+            box-sizing: border-box;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+        #data-entry-table textarea {
+            resize: vertical; /* Allow vertical resizing */
+            min-height: 40px;
+        }
+        #save-all-btn {
+            display: block;
+            margin: 1.5em auto;
+            padding: 1em 2em;
+            font-size: 1.1em;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Fred's Rehab - Tabular Data Entry</h1>
+        <nav>
+            <a href="/">Enter Data</a>
+            <a href="/enter-data-tabular.html">Enter Data - Tabular</a>
+            <a href="/history.html">View History</a>
+            <a href="/steps-graph.html">View Steps Graph</a>
+            <a href="/calendar-view.html">Calendar View</a>
+            <a href="/exercise-videos.html">Exercise Videos</a>
+        </nav>
+    </header>
+    <main>
+        <h2>Tabular Activity Entry</h2>
+
+        <div id="date-selection">
+            <div>
+                <label for="start-date">Start Date:</label>
+                <input type="date" id="start-date">
+            </div>
+            <div>
+                <label for="end-date">End Date:</label>
+                <input type="date" id="end-date">
+            </div>
+            <button id="generate-table-btn" onclick="generateTable()">Generate Table</button>
+        </div>
+
+        <div id="data-entry-table-container">
+            <!-- Dynamic table will be generated here -->
+        </div>
+
+        <button id="save-all-btn" onclick="saveAllData()" style="display: none;">Save All Data</button>
+
+    </main>
+
+    <script>
+        const startDateInput = document.getElementById('start-date');
+        const endDateInput = document.getElementById('end-date');
+        const generateTableBtn = document.getElementById('generate-table-btn');
+        const saveAllBtn = document.getElementById('save-all-btn');
+        const dataEntryTableContainer = document.getElementById('data-entry-table-container');
+
+        // Set default dates
+        const today = new Date();
+        const tenDaysAgo = new Date();
+        tenDaysAgo.setDate(today.getDate() - 9); // 10 days including today
+
+        startDateInput.valueAsDate = tenDaysAgo;
+        endDateInput.valueAsDate = today;
+
+        // Max date for date pickers
+        startDateInput.max = today.toISOString().split('T')[0];
+        endDateInput.max = today.toISOString().split('T')[0];
+
+        async function generateTable() {
+            const startDate = new Date(startDateInput.value);
+            const endDate = new Date(endDateInput.value);
+
+            if (isNaN(startDate) || isNaN(endDate) || startDate > endDate) {
+                alert('Please select valid start and end dates.');
+                return;
+            }
+
+            const diffTime = Math.abs(endDate - startDate);
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+
+            if (diffDays > 10) {
+                alert('Date range cannot exceed 10 days.');
+                return;
+            }
+
+            dataEntryTableContainer.innerHTML = '';
+            saveAllBtn.style.display = 'none';
+
+            const table = document.createElement('table');
+            table.id = 'data-entry-table';
+            const thead = table.createTHead();
+            const tbody = table.createTBody();
+
+            const headerRow = thead.insertRow();
+            headerRow.innerHTML = `
+                <th>Date</th>
+                <th>Exercise Done</th>
+                <th>Repetitions</th>
+                <th>Steps</th>
+                <th>Comments</th>
+            `;
+
+            let currentDate = new Date(startDate);
+            const datesToFetch = [];
+            while (currentDate <= endDate) {
+                datesToFetch.push(currentDate.toISOString().slice(0, 10));
+                currentDate.setDate(currentDate.getDate() + 1);
+            }
+
+            // Fetch existing data for the range
+            const allExercisesResponse = await fetch('/api/exercises');
+            const allExercises = await allExercisesResponse.json();
+            const allStepsResponse = await fetch('/api/steps');
+            const allSteps = await allStepsResponse.json();
+
+            const dataByDate = {};
+            allExercises.forEach(ex => {
+                dataByDate[ex.date] = dataByDate[ex.date] || {};
+                dataByDate[ex.date].exercise = ex;
+            });
+            allSteps.forEach(step => {
+                dataByDate[step.date] = dataByDate[step.date] || {};
+                dataByDate[step.date].steps = step;
+            });
+
+
+            datesToFetch.forEach(dateString => {
+                const row = tbody.insertRow();
+                const existingData = dataByDate[dateString] || {};
+                const exercise = existingData.exercise || {};
+                const steps = existingData.steps || {};
+
+                const exercisesDone = exercise.done || 'No';
+                const repetitions = exercise.quantity || '1';
+                const stepsCount = steps.quantity || '';
+                const comments = steps.comments || '';
+
+                row.innerHTML = `
+                    <td>${dateString}</td>
+                    <td>
+                        <select class="exercise-done" data-date="${dateString}">
+                            <option value="Yes" ${exercisesDone === 'Yes' ? 'selected' : ''}>Yes</option>
+                            <option value="No" ${exercisesDone === 'No' ? 'selected' : ''}>No</option>
+                        </select>
+                    </td>
+                    <td>
+                        <select class="repetitions" data-date="${dateString}" ${exercisesDone === 'No' ? 'disabled' : ''}>
+                            <option value="1" ${repetitions === '1' ? 'selected' : ''}>1</option>
+                            <option value="2" ${repetitions === '2' ? 'selected' : ''}>2</option>
+                            <option value="3" ${repetitions === '3' ? 'selected' : ''}>3</option>
+                            <option value="4" ${repetitions === '4' ? 'selected' : ''}>4</option>
+                        </select>
+                    </td>
+                    <td><input type="number" class="steps-count" value="${stepsCount}" data-date="${dateString}"></td>
+                    <td><textarea class="comments" data-date="${dateString}" rows="1">${comments}</textarea></td>
+                `;
+
+                // Add event listener to enable/disable repetitions
+                const exerciseDoneSelect = row.querySelector('.exercise-done');
+                const repetitionsSelect = row.querySelector('.repetitions');
+                exerciseDoneSelect.addEventListener('change', () => {
+                    repetitionsSelect.disabled = (exerciseDoneSelect.value === 'No');
+                });
+            });
+
+            table.appendChild(tbody);
+            dataEntryTableContainer.appendChild(table);
+            saveAllBtn.style.display = 'block';
+        }
+
+        async function saveAllData() {
+            const tableRows = document.querySelectorAll('#data-entry-table tbody tr');
+            const allDataToSave = [];
+
+            tableRows.forEach(row => {
+                const date = row.querySelector('.exercise-done').dataset.date;
+                const exerciseDone = row.querySelector('.exercise-done').value;
+                const repetitions = row.querySelector('.repetitions').value;
+                const stepsCount = row.querySelector('.steps-count').value;
+                const comments = row.querySelector('.comments').value;
+
+                allDataToSave.push({
+                    date,
+                    exerciseDone,
+                    repetitions: parseInt(repetitions),
+                    stepsCount: parseInt(stepsCount) || 0,
+                    comments
+                });
+            });
+
+            console.log("Data to save:", allDataToSave);
+
+            const response = await fetch('/api/batch-save-data', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(allDataToSave)
+            });
+
+            if (response.ok) {
+                alert('All data saved successfully!');
+                generateTable(); // Refresh the table to show updated data
+            } else {
+                alert('Failed to save all data. Check console for errors.');
+                console.error("Batch save failed:", await response.text());
+            }
+        }
+
+        // Initial table generation on load
+        window.onload = generateTable;
+    </script>
+</body>
+</html>

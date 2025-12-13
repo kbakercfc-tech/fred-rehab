@@ -12,6 +12,7 @@
         <h1>Fred's Steps Graph</h1>
         <nav>
             <a href="/">Enter Data</a>
+            <a href="/enter-data-tabular.html">Enter Data - Tabular</a>
             <a href="/history.html">View History</a>
             <a href="/steps-graph.html">View Steps Graph</a>
             <a href="/calendar-view.html">Calendar View</a>
@@ -25,26 +26,29 @@
                     <div class="chart-controls">
                         <button onclick="renderChart('line')">Line Chart</button>
                         <button onclick="renderChart('bar')">Bar Chart</button>
+                        <button onclick="shareGraph()">Share Graph</button>
                     </div>
                     <div id="chart-container">
                         <canvas id="stepsChart"></canvas>
                     </div>
-                    <div class="legend">
-                        <span class="legend-item"><span class="legend-color-box" style="background-color: green;"></span> Exercises Done</span>
-                        <span class="legend-item"><span class="legend-color-box" style="background-color: orange;"></span> Exercises Not Done</span>
-                        <span class="legend-item"><span class="legend-color-box" style="border: 1px solid red;"></span> Largest Steps Day</span>
-                        <span class="legend-item"><span class="legend-color-box" style="background-color: grey;"></span> No Exercise Entry</span>
-                    </div>
-                </div>
-                <div class="summary-boxes-vertical">
-                    <div class="summary-box">
-                        <h3>Largest Steps</h3>
-                        <p id="largest-steps" class="summary-value">0</p>
-                        <p id="largest-steps-date" class="summary-date"></p>
-                    </div>
-                    <div class="summary-box">
-                        <h3>Average Steps</h3>
-                        <p id="average-steps" class="summary-value">0</p>
+                    <div class="legend-and-summary-wrapper">
+                        <div class="legend">
+                            <span class="legend-item"><span class="legend-color-box" style="background-color: green;"></span> Exercises Done</span>
+                            <span class="legend-item"><span class="legend-color-box" style="background-color: orange;"></span> Exercises Not Done</span>
+                            <span class="legend-item"><span class="legend-color-box" style="border: 1px solid red;"></span> Largest Steps Day</span>
+                            <span class="legend-item"><span class="legend-color-box" style="background-color: grey;"></span> No Exercise Entry</span>
+                        </div>
+                        <div class="summary-boxes-vertical">
+                            <div class="summary-box">
+                                <h3>Largest Steps</h3>
+                                <p id="largest-steps" class="summary-value">0</p>
+                                <p id="largest-steps-date" class="summary-date"></p>
+                            </div>
+                            <div class="summary-box">
+                                <h3>Average Steps</h3>
+                                <p id="average-steps" class="summary-value">0</p>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -189,6 +193,44 @@
         }
 
         window.onload = loadChartData;
+
+        async function shareGraph() {
+            const shareUrl = window.location.href;
+            const shareTitle = "Fred's Steps Progress";
+            const shareText = "Check out Fred's daily steps progress in his rehab journey!";
+
+            if (navigator.share) {
+                // Use Web Share API if available
+                try {
+                    await navigator.share({
+                        title: shareTitle,
+                        text: shareText,
+                        url: shareUrl,
+                    });
+                    console.log('Web Share API used successfully!');
+                } catch (error) {
+                    console.error('Error sharing using Web Share API:', error);
+                    fallbackShare(shareTitle, shareText, shareUrl);
+                }
+            } else {
+                // Fallback for browsers that do not support Web Share API
+                fallbackShare(shareTitle, shareText, shareUrl);
+            }
+        }
+
+        function fallbackShare(title, text, url) {
+            const emailSubject = encodeURIComponent(title);
+            const emailBody = encodeURIComponent(`${text}\n\nView the graph here: ${url}`);
+            const whatsappText = encodeURIComponent(`${text} ${url}`);
+
+            const shareOptions = `
+                Share this graph:
+                \n\nEmail: mailto:?subject=${emailSubject}&body=${emailBody}
+                \nWhatsApp: https://wa.me/?text=${whatsappText}
+                \n\n(Copy the link to share on other platforms: ${url})
+            `;
+            alert(shareOptions);
+        }
     </script>
 </body>
 </html>

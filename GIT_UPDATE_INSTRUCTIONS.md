@@ -25,7 +25,7 @@ This document outlines the steps to commit your local changes and push them to y
     *   ```bash
         git push origin main
         ```
-    *   (Replace `main` with `master` if your main branch is named 'master' in your repository.)
+    *   (Replace `main` with `master` if your main branch is named 'master'.)
     *   You might be prompted to enter your GitLab username and password/Personal Access Token. If you have 2FA (Two-Factor Authentication) enabled, you'll need to use a Personal Access Token (PAT). GitLab will guide you on creating one if needed.
 
 **What happens next:**
