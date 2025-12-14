@@ -21,7 +21,56 @@
             <button id="lang-toggle"><img src="https://flagsapi.com/FR/flat/24.png" alt="French Flag"></button>
         </nav>
     </header>
-...
+    <main>
+        <div class="graph-and-summary-wrapper">
+            <div class="chart-flex-container">
+                <div class="chart-section">
+                    <div class="filter-controls">
+                        <label for="filter-type" data-translate="View:">View:</label>
+                        <select id="filter-type" onchange="toggleDatePickers()" title="Select a time period to display on the graph." data-translate="Select a time period to display on the graph.">
+                            <option value="all" data-translate="All Entries">All Entries</option>
+                            <option value="30days" data-translate="Last 30 Days">Last 30 Days</option>
+                            <option value="custom" data-translate="Select Period">Select Period</option>
+                        </select>
+                        <div id="custom-date-pickers" style="display: none;">
+                            <label for="start-date" data-translate="From:">From:</label>
+                            <input type="date" id="start-date" title="Select the start date for your custom period." data-translate="Select the start date for your custom period.">
+                            <label for="end-date" data-translate="To:">To:</label>
+                            <input type="date" id="end-date" title="Select the end date for your custom period." data-translate="Select the end date for your custom period.">
+                        </div>
+                        <button onclick="applyFilter()" title="Apply the selected date filter to the graph." data-translate="Apply Filter">Apply Filter</button>
+                    </div>
+                    <div class="chart-controls">
+                        <button onclick="renderChart('line')" title="Display the data as a Line Chart." data-translate="Line Chart">Line Chart</button>
+                        <button onclick="renderChart('bar')" title="Display the data as a Bar Chart." data-translate="Bar Chart">Bar Chart</button>
+                        <button onclick="shareGraph()" title="Share a link to this steps graph page." data-translate="Share Graph">Share Graph</button>
+                    </div>
+                    <div id="chart-container">
+                        <canvas id="stepsChart"></canvas>
+                    </div>
+                    <div class="legend-and-summary-wrapper">
+                        <div class="legend">
+                            <span class="legend-item"><span class="legend-color-box" style="background-color: green;"></span> <span data-translate="Exercises Done">Exercises Done</span></span>
+                            <span class="legend-item"><span class="legend-color-box" style="background-color: orange;"></span> <span data-translate="Exercises Not Done">Exercises Not Done</span></span>
+                            <span class="legend-item"><span class="legend-color-box" style="border: 1px solid red;"></span> <span data-translate="Largest Steps Day">Largest Steps Day</span></span>
+                            <span class="legend-item"><span class="legend-color-box" style="background-color: grey;"></span> <span data-translate="No Exercise Entry">No Exercise Entry</span></span>
+                        </div>
+                        <div class="summary-boxes-vertical">
+                            <div class="summary-box">
+                                <h3 data-translate="Largest Steps">Largest Steps</h3>
+                                <p id="largest-steps" class="summary-value">0</p>
+                                <p id="largest-steps-date" class="summary-date"></p>
+                            </div>
+                            <div class="summary-box">
+                                <h3 data-translate="Average Steps">Average Steps</h3>
+                                <p id="average-steps" class="summary-value">0</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
     <script src="translations.js"></script>
     <script>
         let chart;
@@ -42,8 +91,7 @@
                         element.textContent = translations[lang][key];
                     } else if (element.tagName === 'INPUT') {
                         element.title = translations[lang][key];
-                    }
-                    else if (element.tagName === 'OPTION') {
+                    } else if (element.tagName === 'OPTION') {
                         element.textContent = translations[lang][key];
                     }
                     else if (element.tagName !== 'BUTTON') {
