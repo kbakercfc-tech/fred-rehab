@@ -80,9 +80,11 @@
             if (exercises.length === 0) {
                 exerciseDoneSelect.value = "No";
                 exerciseQuantitySelect.disabled = true;
+                exerciseQuantitySelect.value = "4"; // Default to 4 if no data and "No" exercise
             } else {
                 exerciseDoneSelect.value = exercises[0].done;
                 exerciseQuantitySelect.disabled = (exercises[0].done === "No");
+                exerciseQuantitySelect.value = exercises[0].quantity || "4"; // Default to 4 if not set
             }
 
             const stepsResponse = await fetch(`/api/steps?date=${date}`);
@@ -104,8 +106,14 @@
         // Functions to add data will be here
         async function addExercise() {
             const done = exerciseDoneSelect.value;
-            const quantity = document.getElementById('exercise-quantity').value;
+            let quantity = exerciseQuantitySelect.value; // Use exerciseQuantitySelect directly
             const date = dateInput.value;
+
+            // If exercise is done and quantity is not set, default to 4
+            if (done === "Yes" && (!quantity || quantity === "0")) {
+                quantity = "4";
+            }
+
 
             const response = await fetch(`/api/exercises?date=${date}`);
             const exercises = await response.json();

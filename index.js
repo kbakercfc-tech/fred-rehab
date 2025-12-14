@@ -79,12 +79,23 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // API Endpoints
 app.get('/api/exercises', (req, res) => {
-    let sql = 'SELECT * FROM exercises ORDER BY date DESC';
+    let sql = 'SELECT * FROM exercises';
     const params = [];
-    if (req.query.date) {
-        sql = 'SELECT * FROM exercises WHERE date = ? ORDER BY id DESC';
+    const conditions = [];
+
+    if (req.query.startDate && req.query.endDate) {
+        conditions.push('date BETWEEN ? AND ?');
+        params.push(req.query.startDate, req.query.endDate);
+    } else if (req.query.date) { // Keep existing single date filter
+        conditions.push('date = ?');
         params.push(req.query.date);
     }
+
+    if (conditions.length > 0) {
+        sql += ' WHERE ' + conditions.join(' AND ');
+    }
+    sql += ' ORDER BY date DESC';
+
     db.all(sql, params, (err, rows) => {
         if (err) {
             res.status(500).send(err.message);
@@ -114,12 +125,23 @@ app.post('/api/exercises', (req, res) => {
 });
 
 app.get('/api/steps', (req, res) => {
-    let sql = 'SELECT id, date, quantity, comments FROM steps ORDER BY date DESC';
+    let sql = 'SELECT id, date, quantity, comments FROM steps';
     const params = [];
-    if (req.query.date) {
-        sql = 'SELECT id, date, quantity, comments FROM steps WHERE date = ? ORDER BY id DESC';
+    const conditions = [];
+
+    if (req.query.startDate && req.query.endDate) {
+        conditions.push('date BETWEEN ? AND ?');
+        params.push(req.query.startDate, req.query.endDate);
+    } else if (req.query.date) { // Keep existing single date filter
+        conditions.push('date = ?');
         params.push(req.query.date);
     }
+
+    if (conditions.length > 0) {
+        sql += ' WHERE ' + conditions.join(' AND ');
+    }
+    sql += ' ORDER BY date DESC';
+
     db.all(sql, params, (err, rows) => {
         if (err) {
             res.status(500).send(err.message);

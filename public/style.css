@@ -234,7 +234,76 @@ tr:hover {
 
 .chart-controls button {
     margin: 0 0.5em;
-    min-width: 120px;
+    padding: 0.4em 0.8em; /* Smaller padding */
+    font-size: 0.9em; /* Smaller font size */
+    height: auto; /* Allow height to adjust to padding/font-size */
+    min-width: 80px; /* Smaller min-width for inputs */
+    width: auto; /* Allow width to adjust naturally */
+}
+
+.filter-controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5em; /* Smaller gap */
+    margin-bottom: 1em; /* Adjusted margin */
+    font-size: 0.9em; /* Smaller font size for labels */
+}
+
+.filter-controls label {
+    margin-bottom: 0;
+    font-weight: normal;
+    color: #555;
+}
+
+.filter-controls select,
+.filter-controls input[type="date"],
+.filter-controls button {
+    padding: 0.4em 0.8em; /* Smaller padding */
+    font-size: 0.9em; /* Smaller font size */
+    height: 32px; /* Fixed height for alignment */
+    vertical-align: middle; /* Align vertically */
+    min-width: 80px; /* Smaller min-width for inputs */
+    width: auto; /* Allow width to adjust naturally */
+}
+
+.filter-controls input[type="date"] {
+    max-width: 150px; /* Limit date input width */
+}
+
+/* Styling for the steps input in tabular data entry */
+input.steps-count {
+    width: 100%; /* Match width of other table inputs */
+    padding: 0.5em; /* Match padding of other table inputs */
+    font-size: 0.9em; /* Match font size of other table inputs */
+    box-sizing: border-box; /* Include padding in width */
+    text-align: right; /* Keep text aligned to the right */
+}
+
+/* Tabular title container with hat */
+.tabular-title-container {
+    display: flex;
+    align-items: center; /* Vertically align items */
+    justify-content: center; /* Center horizontally */
+    position: relative; /* For absolute positioning of hat */
+    margin-bottom: 1em; /* Space below title */
+    padding-left: 80px; /* Space for the hat */
+}
+
+.tabular-title-container h2 {
+    margin: 0; /* Remove default margin from h2 */
+    line-height: 1; /* Adjust line height for better alignment */
+}
+
+.santa-hat-tabular {
+    position: absolute;
+    width: 70px; /* Same size as regular santa-hat */
+    height: auto;
+    left: 0; /* Position to the left of the container */
+    top: -15px; /* Adjust vertically */
+    transform: rotate(-10deg); /* Slight tilt */
+    z-index: 10;
 }
 
 

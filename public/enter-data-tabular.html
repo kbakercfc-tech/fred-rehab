@@ -85,9 +85,9 @@
         </nav>
     </header>
     <main>
-        <div style="position: relative;">
-            <h2>Tabular Activity Entry</h2>
+        <div class="tabular-title-container">
             <img src="images/santa_hat.png" alt="Santa Hat" class="santa-hat-tabular">
+            <h2>Tabular Activity Entry</h2>
         </div>
 
         <div id="date-selection">
@@ -119,10 +119,10 @@
 
         // Set default dates
         const today = new Date();
-        const tenDaysAgo = new Date();
-        tenDaysAgo.setDate(today.getDate() - 9); // 10 days including today
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(today.getDate() - 29); // 30 days including today
 
-        startDateInput.valueAsDate = tenDaysAgo;
+        startDateInput.valueAsDate = thirtyDaysAgo;
         endDateInput.valueAsDate = today;
 
         // Max date for date pickers
@@ -141,8 +141,8 @@
             const diffTime = Math.abs(endDate - startDate);
             const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
 
-            if (diffDays > 10) {
-                alert('Date range cannot exceed 10 days.');
+            if (diffDays > 30) {
+                alert('Date range cannot exceed 30 days.');
                 return;
             }
 
@@ -194,7 +194,15 @@
                 const steps = existingData.steps || {};
 
                 const exercisesDone = exercise.done || 'No';
-                const repetitions = exercise.quantity || '1';
+                let repetitionsValue;
+
+                if (exercise.quantity !== undefined && exercise.quantity !== null) {
+                    repetitionsValue = String(exercise.quantity); // Use saved quantity
+                } else {
+                    // If no quantity saved, then apply the default logic based on exercisesDone
+                    repetitionsValue = (exercisesDone === 'Yes' ? '4' : '1');
+                }
+
                 const stepsCount = steps.quantity || '';
                 const comments = steps.comments || '';
 
@@ -208,13 +216,13 @@
                     </td>
                     <td>
                         <select class="repetitions" data-date="${dateString}" ${exercisesDone === 'No' ? 'disabled' : ''}>
-                            <option value="1" ${repetitions === '1' ? 'selected' : ''}>1</option>
-                            <option value="2" ${repetitions === '2' ? 'selected' : ''}>2</option>
-                            <option value="3" ${repetitions === '3' ? 'selected' : ''}>3</option>
-                            <option value="4" ${repetitions === '4' ? 'selected' : ''}>4</option>
+                            <option value="1" ${repetitionsValue === '1' ? 'selected' : ''}>1</option>
+                            <option value="2" ${repetitionsValue === '2' ? 'selected' : ''}>2</option>
+                            <option value="3" ${repetitionsValue === '3' ? 'selected' : ''}>3</option>
+                            <option value="4" ${repetitionsValue === '4' ? 'selected' : ''}>4</option>
                         </select>
                     </td>
-                    <td><input type="number" class="steps-count" value="${stepsCount}" data-date="${dateString}"></td>
+                    <td><input type="text" class="steps-count" value="${stepsCount}" data-date="${dateString}"></td>
                     <td><textarea class="comments" data-date="${dateString}" rows="1">${comments}</textarea></td>
                 `;
 
@@ -223,6 +231,11 @@
                 const repetitionsSelect = row.querySelector('.repetitions');
                 exerciseDoneSelect.addEventListener('change', () => {
                     repetitionsSelect.disabled = (exerciseDoneSelect.value === 'No');
+                    if (exerciseDoneSelect.value === 'Yes') {
+                        repetitionsSelect.value = '4'; // Immediately set to 4 if Yes
+                    } else {
+                        repetitionsSelect.value = '1'; // Reset to 1 if No
+                    }
                 });
             });
 
@@ -242,10 +255,13 @@
                 const stepsCount = row.querySelector('.steps-count').value;
                 const comments = row.querySelector('.comments').value;
 
+                // Default repetitions to 4 if exerciseDone is 'Yes' and repetitions is 0, empty, or 1 (the default dropdown value)
+                const finalRepetitions = (exerciseDone === 'Yes' && (repetitions === "0" || !repetitions || repetitions === "1")) ? 4 : parseInt(repetitions);
+
                 allDataToSave.push({
                     date,
                     exerciseDone,
-                    repetitions: parseInt(repetitions),
+                    repetitions: finalRepetitions,
                     stepsCount: parseInt(stepsCount) || 0,
                     comments
                 });

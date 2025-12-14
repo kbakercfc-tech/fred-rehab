@@ -23,6 +23,21 @@
         <div class="graph-and-summary-wrapper">
             <div class="chart-flex-container">
                 <div class="chart-section">
+                    <div class="filter-controls">
+                        <label for="filter-type">View:</label>
+                        <select id="filter-type" onchange="toggleDatePickers()">
+                            <option value="all">All Entries</option>
+                            <option value="30days">Last 30 Days</option>
+                            <option value="custom">Select Period</option>
+                        </select>
+                        <div id="custom-date-pickers" style="display: none;">
+                            <label for="start-date">From:</label>
+                            <input type="date" id="start-date">
+                            <label for="end-date">To:</label>
+                            <input type="date" id="end-date">
+                        </div>
+                        <button onclick="applyFilter()">Apply Filter</button>
+                    </div>
                     <div class="chart-controls">
                         <button onclick="renderChart('line')">Line Chart</button>
                         <button onclick="renderChart('bar')">Bar Chart</button>
@@ -58,6 +73,28 @@
         let chart;
         let chartData; // Declare chartData globally
 
+        const filterTypeSelect = document.getElementById('filter-type');
+        const customDatePickers = document.getElementById('custom-date-pickers');
+        const startDateInput = document.getElementById('start-date');
+        const endDateInput = document.getElementById('end-date');
+
+        // Set max date for date pickers
+        const todayForPicker = new Date();
+        startDateInput.max = todayForPicker.toISOString().slice(0, 10);
+        endDateInput.max = todayForPicker.toISOString().slice(0, 10);
+
+        function toggleDatePickers() {
+            if (filterTypeSelect.value === 'custom') {
+                customDatePickers.style.display = 'block';
+            } else {
+                customDatePickers.style.display = 'none';
+            }
+        }
+
+        async function applyFilter() {
+            await loadChartData();
+        }
+
         // Helper function to format date to DD-MMM-YY
         function formatDateDDMMMYY(dateString) {
             const date = new Date(dateString);
@@ -72,7 +109,6 @@
             }
             const ctx = document.getElementById('stepsChart').getContext('2d');
             if (!ctx) {
-                // Keep this error for critical issues
                 return;
             }
             chart = new Chart(ctx, {
@@ -92,16 +128,48 @@
         }
 
         async function loadChartData() {
-            const stepsResponse = await fetch('/api/steps');
+            let stepsApiUrl = '/api/steps';
+            let exercisesApiUrl = '/api/exercises';
+            const filterType = filterTypeSelect.value;
+            const today = new Date();
+            today.setHours(0, 0, 0, 0); // Normalize to start of day
+
+            let actualStartDate;
+            let actualEndDate = today;
+
+            if (filterType === '30days') {
+                actualStartDate = new Date(today);
+                actualStartDate.setDate(today.getDate() - 29); // Last 30 days including today
+            } else if (filterType === 'custom') {
+                const customStart = new Date(startDateInput.value);
+                const customEnd = new Date(endDateInput.value);
+
+                if (isNaN(customStart) || isNaN(customEnd) || customStart > customEnd) {
+                    alert('Please select valid custom start and end dates.');
+                    return;
+                }
+                actualStartDate = customStart;
+                actualEndDate = customEnd;
+            } else { // 'all'
+                actualStartDate = new Date('2025-10-24'); // Fixed start date for all entries
+            }
+            
+            // Format dates for API requests
+            const formattedStartDate = actualStartDate.toISOString().slice(0, 10);
+            const formattedEndDate = actualEndDate.toISOString().slice(0, 10);
+
+            stepsApiUrl += `?startDate=${formattedStartDate}&endDate=${formattedEndDate}`;
+            exercisesApiUrl += `?startDate=${formattedStartDate}&endDate=${formattedEndDate}`;
+
+
+            const stepsResponse = await fetch(stepsApiUrl);
             const steps = await stepsResponse.json();
-            const exercisesResponse = await fetch('/api/exercises');
+            const exercisesResponse = await fetch(exercisesApiUrl);
             const exercises = await exercisesResponse.json();
 
-            const startDate = new Date('2025-10-24');
-            const today = new Date();
             const allDates = [];
-            let currentDate = startDate;
-            while (currentDate <= today) {
+            let currentDate = new Date(actualStartDate);
+            while (currentDate <= actualEndDate) {
                 allDates.push(currentDate.toISOString().slice(0, 10));
                 currentDate.setDate(currentDate.getDate() + 1);
             }
@@ -232,5 +300,7 @@
             alert(shareOptions);
         }
     </script>
+</body>
+</html>
 </body>
 </html>
