@@ -71,31 +71,58 @@
 </head>
 <body>
     <header>
-        <h1>Fred's Calendar View</h1>
+        <h1 data-translate="Fred's Calendar View">Fred's Calendar View</h1>
         <nav>
-            <a href="/">Enter Data</a>
-            <a href="/enter-data-tabular.html">Enter Data - Tabular</a>
-            <a href="/history.html">View History</a>
-            <a href="/steps-graph.html">View Steps Graph</a>
-            <a href="/calendar-view.html">Calendar View</a>
-            <a href="/exercise-videos.html">Exercise Videos</a>
-            <a href="/help.html">Help</a>
+            <a href="/" data-translate="Enter Data">Enter Data</a>
+            <a href="/enter-data-tabular.html" data-translate="Enter Data - Tabular">Enter Data - Tabular</a>
+            <a href="/history.html" data-translate="View History">View History</a>
+            <a href="/steps-graph.html" data-translate="View Steps Graph">View Steps Graph</a>
+            <a href="/calendar-view.html" data-translate="Calendar View">Calendar View</a>
+            <a href="/exercise-videos.html" data-translate="Exercise Videos">Exercise Videos</a>
+            <a href="/help.html" data-translate="Help">Help</a>
+            <button id="lang-toggle"><img src="https://flagsapi.com/FR/flat/24.png" alt="French Flag"></button>
         </nav>
     </header>
     <main>
-        <h2>Activity Calendar</h2>
+        <h2 data-translate="Activity Calendar">Activity Calendar</h2>
         <div id="calendar-container">
             <!-- Calendar grid will be rendered here -->
         </div>
 
         <div class="legend" style="margin-top: 2em; text-align: center;">
-            <span class="legend-item"><span class="legend-color-box" style="background-color: #d4edda; border: 1px solid green;"></span> Exercises & Steps Done (Green)</span>
-            <span class="legend-item"><span class="legend-color-box" style="background-color: #fff3cd; border: 1px solid orange;"></span> Exercises Done Only (Amber)</span>
-            <span class="legend-item"><span class="legend-color-box" style="background-color: #f8d7da; border: 1px solid red;"></span> Nothing Entered (Red)</span>
+            <span class="legend-item"><span class="legend-color-box" style="background-color: #d4edda; border: 1px solid green;"></span> <span data-translate="Exercises & Steps Done (Green)">Exercises & Steps Done (Green)</span></span>
+            <span class="legend-item"><span class="legend-color-box" style="background-color: #fff3cd; border: 1px solid orange;"></span> <span data-translate="Exercises Done Only (Amber)">Exercises Done Only (Amber)</span></span>
+            <span class="legend-item"><span class="legend-color-box" style="background-color: #f8d7da; border: 1px solid red;"></span> <span data-translate="Nothing Entered (Red)">Nothing Entered (Red)</span></span>
         </div>
     </main>
 
+    <script src="translations.js"></script>
     <script>
+        const langToggleButton = document.getElementById('lang-toggle');
+        let currentLang = localStorage.getItem('language') || 'en';
+
+        function setLanguage(lang) {
+            document.querySelectorAll('[data-translate]').forEach(element => {
+                const key = element.getAttribute('data-translate');
+                if (translations[lang] && translations[lang][key]) {
+                    element.innerHTML = translations[lang][key];
+                }
+            });
+            currentLang = lang;
+            localStorage.setItem('language', lang);
+            if (langToggleButton) {
+                const flag = lang === 'en' ? 'FR' : 'GB';
+                langToggleButton.innerHTML = `<img src="https://flagsapi.com/${flag}/flat/24.png" alt="${flag} Flag">`;
+            }
+        }
+
+        if (langToggleButton) {
+            langToggleButton.addEventListener('click', () => {
+                const newLang = currentLang === 'en' ? 'fr' : 'en';
+                setLanguage(newLang);
+            });
+        }
+
         async function renderCalendar() {
             const calendarContainer = document.getElementById('calendar-container');
             calendarContainer.innerHTML = ''; // Clear previous calendar
@@ -220,9 +247,13 @@
             }
 
             calendarContainer.appendChild(calendarGrid);
+            setLanguage(currentLang);
         }
 
-        window.onload = renderCalendar;
+        window.onload = () => {
+            renderCalendar();
+            setLanguage(currentLang);
+        };
     </script>
 </body>
 </html>

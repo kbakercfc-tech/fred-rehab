@@ -8,40 +8,75 @@
 </head>
 <body>
     <header>
-        <h1>Fred's Exercise Videos</h1>
+        <h1 data-translate="Fred's Exercise Videos">Fred's Exercise Videos</h1>
         <nav>
-            <a href="/">Enter Data</a>
-            <a href="/enter-data-tabular.html">Enter Data - Tabular</a>
-            <a href="/history.html">View History</a>
-            <a href="/steps-graph.html">View Steps Graph</a>
-            <a href="/calendar-view.html">Calendar View</a>
-            <a href="/exercise-videos.html">Exercise Videos</a>
-            <a href="/help.html">Help</a>
+            <a href="/" data-translate="Enter Data">Enter Data</a>
+            <a href="/enter-data-tabular.html" data-translate="Enter Data - Tabular">Enter Data - Tabular</a>
+            <a href="/history.html" data-translate="View History">View History</a>
+            <a href="/steps-graph.html" data-translate="View Steps Graph">View Steps Graph</a>
+            <a href="/calendar-view.html" data-translate="Calendar View">Calendar View</a>
+            <a href="/exercise-videos.html" data-translate="Exercise Videos">Exercise Videos</a>
+            <a href="/help.html" data-translate="Help">Help</a>
+            <button id="lang-toggle"><img src="https://flagsapi.com/FR/flat/24.png" alt="French Flag"></button>
         </nav>
     </header>
     <main>
-        <h2>Upload New Exercise Video</h2>
+        <h2 data-translate="Upload New Exercise Video">Upload New Exercise Video</h2>
         <form id="upload-form" enctype="multipart/form-data">
             <div>
-                <label for="video-title">Video Title:</label>
-                <input type="text" id="video-title" name="title" required title="Enter a descriptive title for the video.">
+                <label for="video-title" data-translate="Video Title:">Video Title:</label>
+                <input type="text" id="video-title" name="title" required title="Enter a descriptive title for the video." data-translate="Enter a descriptive title for the video.">
             </div>
             <div>
-                <label for="video-file">Select Video File:</label>
-                <input type="file" id="video-file" name="video" accept="video/*" required title="Choose a video file from your computer to upload.">
+                <label for="video-file" data-translate="Select Video File:">Select Video File:</label>
+                <input type="file" id="video-file" name="video" accept="video/*" required title="Choose a video file from your computer to upload." data-translate="Choose a video file from your computer to upload.">
             </div>
-            <button type="submit" title="Click to upload the video to the server.">Upload Video</button>
+            <button type="submit" title="Click to upload the video to the server." data-translate="Upload Video">Upload Video</button>
         </form>
 
         <hr>
 
-        <h2>Uploaded Videos</h2>
+        <h2 data-translate="Uploaded Videos">Uploaded Videos</h2>
         <div id="video-list">
             <!-- Videos will be loaded here -->
         </div>
     </main>
 
+    <script src="translations.js"></script>
     <script>
+        const langToggleButton = document.getElementById('lang-toggle');
+        let currentLang = localStorage.getItem('language') || 'en';
+
+        function setLanguage(lang) {
+            document.querySelectorAll('[data-translate]').forEach(element => {
+                const key = element.getAttribute('data-translate');
+                if (translations[lang] && translations[lang][key]) {
+                    if (element.tagName === 'BUTTON' && element.id !== 'lang-toggle') {
+                        element.textContent = translations[lang][key];
+                    } else if (element.tagName === 'INPUT') {
+                        element.title = translations[lang][key];
+                    }
+                    else if (element.tagName !== 'BUTTON') {
+                        element.innerHTML = translations[lang][key];
+                    }
+                }
+            });
+            currentLang = lang;
+            localStorage.setItem('language', lang);
+            if(langToggleButton) {
+                const flag = lang === 'en' ? 'FR' : 'GB';
+                langToggleButton.innerHTML = `<img src="https://flagsapi.com/${flag}/flat/24.png" alt="${flag} Flag">`;
+            }
+        }
+
+        if(langToggleButton) {
+            langToggleButton.addEventListener('click', () => {
+                const newLang = currentLang === 'en' ? 'fr' : 'en';
+                setLanguage(newLang);
+            });
+        }
+
+
         document.getElementById('upload-form').addEventListener('submit', async (event) => {
             event.preventDefault();
             const formData = new FormData(event.target);
@@ -68,7 +103,8 @@
             const videos = await response.json();
 
             if (videos.length === 0) {
-                videoList.innerHTML = '<p>No videos uploaded yet.</p>';
+                videoList.innerHTML = '<p data-translate="No videos uploaded yet.">No videos uploaded yet.</p>';
+                setLanguage(currentLang);
                 return;
             }
 
@@ -78,7 +114,7 @@
                 videoContainer.innerHTML = `
                     <h3>${video.title}</h3>
                     <video controls src="${video.filepath}" style="max-width: 100%;"></video>
-                    <button class="delete-video-btn" data-id="${video.id}" title="Delete this video from the server.">Delete</button>
+                    <button class="delete-video-btn" data-id="${video.id}" title="Delete this video from the server." data-translate="Delete">Delete</button>
                 `;
                 videoList.appendChild(videoContainer);
             });
@@ -101,9 +137,13 @@
                     }
                 });
             });
+            setLanguage(currentLang);
         }
 
-        window.onload = loadVideos;
+        window.onload = () => {
+            loadVideos();
+            setLanguage(currentLang);
+        };
     </script>
 </body>
 </html>

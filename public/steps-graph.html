@@ -9,67 +9,20 @@
 </head>
 <body>
     <header>
-        <h1>Fred's Steps Graph</h1>
+        <h1 data-translate="Fred's Steps Graph">Fred's Steps Graph</h1>
         <nav>
-            <a href="/">Enter Data</a>
-            <a href="/enter-data-tabular.html">Enter Data - Tabular</a>
-            <a href="/history.html">View History</a>
-            <a href="/steps-graph.html">View Steps Graph</a>
-            <a href="/calendar-view.html">Calendar View</a>
-            <a href="/exercise-videos.html">Exercise Videos</a>
-            <a href="/help.html">Help</a>
+            <a href="/" data-translate="Enter Data">Enter Data</a>
+            <a href="/enter-data-tabular.html" data-translate="Enter Data - Tabular">Enter Data - Tabular</a>
+            <a href="/history.html" data-translate="View History">View History</a>
+            <a href="/steps-graph.html" data-translate="View Steps Graph">View Steps Graph</a>
+            <a href="/calendar-view.html" data-translate="Calendar View">Calendar View</a>
+            <a href="/exercise-videos.html" data-translate="Exercise Videos">Exercise Videos</a>
+            <a href="/help.html" data-translate="Help">Help</a>
+            <button id="lang-toggle"><img src="https://flagsapi.com/FR/flat/24.png" alt="French Flag"></button>
         </nav>
     </header>
-    <main>
-        <div class="graph-and-summary-wrapper">
-            <div class="chart-flex-container">
-                <div class="chart-section">
-                    <div class="filter-controls">
-                        <label for="filter-type">View:</label>
-                        <select id="filter-type" onchange="toggleDatePickers()" title="Select a time period to display on the graph.">
-                            <option value="all">All Entries</option>
-                            <option value="30days">Last 30 Days</option>
-                            <option value="custom">Select Period</option>
-                        </select>
-                        <div id="custom-date-pickers" style="display: none;">
-                            <label for="start-date">From:</label>
-                            <input type="date" id="start-date" title="Select the start date for your custom period.">
-                            <label for="end-date">To:</label>
-                            <input type="date" id="end-date" title="Select the end date for your custom period.">
-                        </div>
-                        <button onclick="applyFilter()" title="Apply the selected date filter to the graph.">Apply Filter</button>
-                    </div>
-                    <div class="chart-controls">
-                        <button onclick="renderChart('line')" title="Display the data as a Line Chart.">Line Chart</button>
-                        <button onclick="renderChart('bar')" title="Display the data as a Bar Chart.">Bar Chart</button>
-                        <button onclick="shareGraph()" title="Share a link to this steps graph page.">Share Graph</button>
-                    </div>
-                    <div id="chart-container">
-                        <canvas id="stepsChart"></canvas>
-                    </div>
-                    <div class="legend-and-summary-wrapper">
-                        <div class="legend">
-                            <span class="legend-item"><span class="legend-color-box" style="background-color: green;"></span> Exercises Done</span>
-                            <span class="legend-item"><span class="legend-color-box" style="background-color: orange;"></span> Exercises Not Done</span>
-                            <span class="legend-item"><span class="legend-color-box" style="border: 1px solid red;"></span> Largest Steps Day</span>
-                            <span class="legend-item"><span class="legend-color-box" style="background-color: grey;"></span> No Exercise Entry</span>
-                        </div>
-                        <div class="summary-boxes-vertical">
-                            <div class="summary-box">
-                                <h3>Largest Steps</h3>
-                                <p id="largest-steps" class="summary-value">0</p>
-                                <p id="largest-steps-date" class="summary-date"></p>
-                            </div>
-                            <div class="summary-box">
-                                <h3>Average Steps</h3>
-                                <p id="average-steps" class="summary-value">0</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </main>
+...
+    <script src="translations.js"></script>
     <script>
         let chart;
         let chartData; // Declare chartData globally
@@ -78,6 +31,41 @@
         const customDatePickers = document.getElementById('custom-date-pickers');
         const startDateInput = document.getElementById('start-date');
         const endDateInput = document.getElementById('end-date');
+        const langToggleButton = document.getElementById('lang-toggle');
+        let currentLang = localStorage.getItem('language') || 'en';
+
+        function setLanguage(lang) {
+            document.querySelectorAll('[data-translate]').forEach(element => {
+                const key = element.getAttribute('data-translate');
+                if (translations[lang] && translations[lang][key]) {
+                    if (element.tagName === 'BUTTON' && element.id !== 'lang-toggle') {
+                        element.textContent = translations[lang][key];
+                    } else if (element.tagName === 'INPUT') {
+                        element.title = translations[lang][key];
+                    }
+                    else if (element.tagName === 'OPTION') {
+                        element.textContent = translations[lang][key];
+                    }
+                    else if (element.tagName !== 'BUTTON') {
+                        element.innerHTML = translations[lang][key];
+                    }
+                }
+            });
+            currentLang = lang;
+            localStorage.setItem('language', lang);
+            if(langToggleButton) {
+                const flag = lang === 'en' ? 'FR' : 'GB';
+                langToggleButton.innerHTML = `<img src="https://flagsapi.com/${flag}/flat/24.png" alt="${flag} Flag">`;
+            }
+        }
+
+        if(langToggleButton) {
+            langToggleButton.addEventListener('click', () => {
+                const newLang = currentLang === 'en' ? 'fr' : 'en';
+                setLanguage(newLang);
+            });
+        }
+
 
         // Set max date for date pickers
         const todayForPicker = new Date();
@@ -259,9 +247,13 @@
             };
 
             renderChart('bar'); // Default to bar chart
+            setLanguage(currentLang);
         }
 
-        window.onload = loadChartData;
+        window.onload = () => {
+            loadChartData();
+            setLanguage(currentLang);
+        };
 
         async function shareGraph() {
             const shareUrl = window.location.href;

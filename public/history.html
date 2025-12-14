@@ -8,38 +8,70 @@
 </head>
 <body>
     <header>
-        <h1>Fred's Rehab History</h1>
+        <h1 data-translate="Fred's Rehab History">Fred's Rehab History</h1>
         <nav>
-            <a href="/">Enter Data</a>
-            <a href="/enter-data-tabular.html">Enter Data - Tabular</a>
-            <a href="/history.html">View History</a>
-            <a href="/steps-graph.html">View Steps Graph</a>
-            <a href="/calendar-view.html">Calendar View</a>
-            <a href="/exercise-videos.html">Exercise Videos</a>
-            <a href="/help.html">Help</a>
+            <a href="/" data-translate="Enter Data">Enter Data</a>
+            <a href="/enter-data-tabular.html" data-translate="Enter Data - Tabular">Enter Data - Tabular</a>
+            <a href="/history.html" data-translate="View History">View History</a>
+            <a href="/steps-graph.html" data-translate="View Steps Graph">View Steps Graph</a>
+            <a href="/calendar-view.html" data-translate="Calendar View">Calendar View</a>
+            <a href="/exercise-videos.html" data-translate="Exercise Videos">Exercise Videos</a>
+            <a href="/help.html" data-translate="Help">Help</a>
+            <button id="lang-toggle"><img src="https://flagsapi.com/FR/flat/24.png" alt="French Flag"></button>
         </nav>
     </header>
     <main>
         <table id="history-table">
             <thead>
                 <tr>
-                    <th>Date</th>
-                    <th>Exercises Done</th>
-                    <th>Repetitions</th>
-                    <th>Steps</th>
-                    <th>Comments</th>
+                    <th data-translate="Date">Date</th>
+                    <th data-translate="Exercises Done">Exercises Done</th>
+                    <th data-translate="Repetitions">Repetitions</th>
+                    <th data-translate="Steps">Steps</th>
+                    <th data-translate="Comments">Comments</th>
                 </tr>
             </thead>
             <tbody>
             </tbody>
         </table>
         <div style="display: flex; justify-content: space-between; margin-top: 1.5em; gap: 1em;">
-            <button onclick="shareHistory()">Share History</button>
-            <button onclick="clearHistory()" style="background-color: #dc3545;">Clear All History</button>
+            <button onclick="shareHistory()" data-translate="Share History">Share History</button>
+            <button onclick="clearHistory()" style="background-color: #dc3545;" data-translate="Clear All History">Clear All History</button>
         </div>
     </main>
 
+    <script src="translations.js"></script>
     <script>
+        const langToggleButton = document.getElementById('lang-toggle');
+        let currentLang = localStorage.getItem('language') || 'en';
+
+        function setLanguage(lang) {
+            document.querySelectorAll('[data-translate]').forEach(element => {
+                const key = element.getAttribute('data-translate');
+                if (translations[lang] && translations[lang][key]) {
+                    if (element.tagName === 'BUTTON' && element.id !== 'lang-toggle') {
+                        element.textContent = translations[lang][key];
+                    } else if (element.tagName !== 'BUTTON') {
+                        element.innerHTML = translations[lang][key];
+                    }
+                }
+            });
+            currentLang = lang;
+            localStorage.setItem('language', lang);
+            if (langToggleButton) {
+                const flag = lang === 'en' ? 'FR' : 'GB';
+                langToggleButton.innerHTML = `<img src="https://flagsapi.com/${flag}/flat/24.png" alt="${flag} Flag">`;
+            }
+        }
+
+        if (langToggleButton) {
+            langToggleButton.addEventListener('click', () => {
+                const newLang = currentLang === 'en' ? 'fr' : 'en';
+                setLanguage(newLang);
+            });
+        }
+
+
         // Helper function to format date to DD-MMM-YY
         function formatDateDDMMMYY(dateString) {
             const date = new Date(dateString);
@@ -131,6 +163,7 @@
             }
 
             window.historyEmailBody = emailBody; // Store for access by shareHistory function
+            setLanguage(currentLang);
         }
 
         async function clearHistory() {
@@ -185,6 +218,8 @@
             alert(shareOptions);
         }
 
-        window.onload = loadData;
+        window.onload = () => {
+            loadData();
+            setLanguage(currentLang);
+        };
     </script>
-

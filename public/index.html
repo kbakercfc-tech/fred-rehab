@@ -8,64 +8,94 @@
 </head>
 <body>
     <header>
-        <h1>Fred's Rehab Tracker</h1>
+        <h1 data-translate="Fred's Rehab Tracker">Fred's Rehab Tracker</h1>
         <nav>
-            <a href="/">Enter Data</a>
-            <a href="/enter-data-tabular.html">Enter Data - Tabular</a>
-            <a href="/history.html">View History</a>
-            <a href="/steps-graph.html">View Steps Graph</a>
-            <a href="/calendar-view.html">Calendar View</a>
-            <a href="/exercise-videos.html">Exercise Videos</a>
-            <a href="/help.html">Help</a>
+            <a href="/" data-translate="Enter Data">Enter Data</a>
+            <a href="/enter-data-tabular.html" data-translate="Enter Data - Tabular">Enter Data - Tabular</a>
+            <a href="/history.html" data-translate="View History">View History</a>
+            <a href="/steps-graph.html" data-translate="View Steps Graph">View Steps Graph</a>
+            <a href="/calendar-view.html" data-translate="Calendar View">Calendar View</a>
+            <a href="/exercise-videos.html" data-translate="Exercise Videos">Exercise Videos</a>
+            <a href="/help.html" data-translate="Help">Help</a>
+            <button id="lang-toggle"><img src="https://flagsapi.com/FR/flat/24.png" alt="French Flag"></button>
         </nav>
     </header>
     <main>
         <form id="rehab-form">
-            <h2>Log Activity</h2>
+            <h2 data-translate="Log Activity">Log Activity</h2>
             <div class="fred-photo-wrapper">
                 <img src="images/fred.jpg" alt="Fred's Photo" class="fred-photo">
                 <img src="images/santa_hat.png" alt="Santa Hat" class="santa-hat">
             </div>
             <div>
-                <label for="date">Date:</label>
-                <input type="date" id="date" name="date" min="2025-10-24" max="<%= new Date().toISOString().slice(0, 10) %>" onchange="checkDataForDate()" title="Select the date for this activity entry.">
+                <label for="date" data-translate="Date:">Date:</label>
+                <input type="date" id="date" name="date" min="2025-10-24" max="<%= new Date().toISOString().slice(0, 10) %>" onchange="checkDataForDate()" title="Select the date for this activity entry." data-translate="Select the date for this activity entry.">
             </div>
             <hr>
             <div>
-                <label for="exercise-done">Exercise Done:</label>
-                <select id="exercise-done" name="exercise-done" title="Select 'Yes' if Fred completed his exercise, 'No' otherwise.">
-                    <option value="Yes">Yes</option>
-                    <option value="No">No</option>
+                <label for="exercise-done" data-translate="Exercise Done:">Exercise Done:</label>
+                <select id="exercise-done" name="exercise-done" title="Select 'Yes' if Fred completed his exercise, 'No' otherwise." data-translate="Select 'Yes' if Fred completed his exercise, 'No' otherwise.">
+                    <option value="Yes" data-translate="Yes">Yes</option>
+                    <option value="No" data-translate="No">No</option>
                 </select>
             </div>
             <div>
-                <label for="exercise-quantity">Repetitions:</label>
-                <select id="exercise-quantity" name="exercise-quantity" title="Enter the number of repetitions completed. Defaults to 4 if 'Exercise Done' is 'Yes'.">
+                <label for="exercise-quantity" data-translate="Repetitions:">Repetitions:</label>
+                <select id="exercise-quantity" name="exercise-quantity" title="Enter the number of repetitions completed. Defaults to 4 if 'Exercise Done' is 'Yes'." data-translate="Enter the number of repetitions completed. Defaults to 4 if 'Exercise Done' is 'Yes'.">
                     <option value="1">1</option>
                     <option value="2">2</option>
                     <option value="3">3</option>
                     <option value="4">4</option>
                 </select>
             </div>
-            <button type="button" onclick="addExercise()">Save Exercise</button>
+            <button type="button" onclick="addExercise()" data-translate="Save Exercise">Save Exercise</button>
             <hr>
             <div>
-                <label for="steps-quantity">Steps Walked:</label>
-                <input type="number" id="steps-quantity" name="steps-quantity" title="Enter the total number of steps Fred walked for this day.">
+                <label for="steps-quantity" data-translate="Steps Walked:">Steps Walked:</label>
+                <input type="number" id="steps-quantity" name="steps-quantity" title="Enter the total number of steps Fred walked for this day." data-translate="Enter the total number of steps Fred walked for this day.">
             </div>
             <div>
-                <label for="comments">Comments:</label>
-                <textarea id="comments" name="comments" rows="3" title="Add any relevant comments or observations about Fred's activity."></textarea>
+                <label for="comments" data-translate="Comments:">Comments:</label>
+                <textarea id="comments" name="comments" rows="3" title="Add any relevant comments or observations about Fred's activity." data-translate="Add any relevant comments or observations about Fred's activity."></textarea>
             </div>
-            <button type="button" onclick="addSteps()">Save Steps</button>
+            <button type="button" onclick="addSteps()" data-translate="Save Steps">Save Steps</button>
         </form>
     </main>
 
+    <script src="translations.js"></script>
     <script>
         const dateInput = document.getElementById('date');
         const exerciseDoneSelect = document.getElementById('exercise-done');
         const stepsInput = document.getElementById('steps-quantity');
         const exerciseQuantitySelect = document.getElementById('exercise-quantity');
+        const langToggleButton = document.getElementById('lang-toggle');
+
+        let currentLang = localStorage.getItem('language') || 'en';
+
+        function setLanguage(lang) {
+            document.querySelectorAll('[data-translate]').forEach(element => {
+                const key = element.getAttribute('data-translate');
+                if (translations[lang] && translations[lang][key]) {
+                    if (element.tagName === 'INPUT' || element.tagName === 'TEXTAREA') {
+                        element.title = translations[lang][key];
+                    } else if (element.tagName === 'BUTTON' && element.id !== 'lang-toggle') {
+                        element.textContent = translations[lang][key];
+                    }
+                    else if (element.tagName !== 'BUTTON') {
+                        element.textContent = translations[lang][key];
+                    }
+                }
+            });
+            currentLang = lang;
+            localStorage.setItem('language', lang);
+            const flag = lang === 'en' ? 'FR' : 'GB';
+            langToggleButton.innerHTML = `<img src="https://flagsapi.com/${flag}/flat/24.png" alt="${flag} Flag">`;
+        }
+
+        langToggleButton.addEventListener('click', () => {
+            const newLang = currentLang === 'en' ? 'fr' : 'en';
+            setLanguage(newLang);
+        });
 
         // Set date to today
         dateInput.valueAsDate = new Date();
@@ -149,7 +179,7 @@
             }
 
             const response = await fetch(`/api/steps?date=${date}`);
-            const steps = await response.json();
+            const steps = await stepsResponse.json();
 
             if (steps.length > 0) {
                 if (!confirm('Data for this date already exists. Do you want to overwrite it?')) {
@@ -181,7 +211,10 @@
             checkDataForDate();
         }
 
-        window.onload = loadData;
+        window.onload = () => {
+            loadData();
+            setLanguage(currentLang);
+        };
     </script>
 </body>
 </html>
