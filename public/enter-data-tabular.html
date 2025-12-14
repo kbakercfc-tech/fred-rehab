@@ -82,6 +82,7 @@
             <a href="/steps-graph.html">View Steps Graph</a>
             <a href="/calendar-view.html">Calendar View</a>
             <a href="/exercise-videos.html">Exercise Videos</a>
+            <a href="/help.html">Help</a>
         </nav>
     </header>
     <main>
@@ -93,20 +94,20 @@
         <div id="date-selection">
             <div>
                 <label for="start-date">Start Date:</label>
-                <input type="date" id="start-date">
+                <input type="date" id="start-date" title="Select the start date for the data entry table.">
             </div>
             <div>
                 <label for="end-date">End Date:</label>
-                <input type="date" id="end-date">
+                <input type="date" id="end-date" title="Select the end date for the data entry table (up to 30 days from start date).">
             </div>
-            <button id="generate-table-btn" onclick="generateTable()">Generate Table</button>
+            <button id="generate-table-btn" onclick="generateTable()" title="Click to generate the table for the selected date range.">Generate Table</button>
         </div>
 
         <div id="data-entry-table-container">
             <!-- Dynamic table will be generated here -->
         </div>
 
-        <button id="save-all-btn" onclick="saveAllData()" style="display: none;">Save All Data</button>
+        <button id="save-all-btn" onclick="saveAllData()" style="display: none;" title="Save all entered data for the entire table.">Save All Data</button>
 
     </main>
 
@@ -209,21 +210,21 @@
                 row.innerHTML = `
                     <td>${dateString}</td>
                     <td>
-                        <select class="exercise-done" data-date="${dateString}">
+                        <select class="exercise-done" data-date="${dateString}" title="Select 'Yes' if Fred completed his exercise, 'No' otherwise.">
                             <option value="Yes" ${exercisesDone === 'Yes' ? 'selected' : ''}>Yes</option>
                             <option value="No" ${exercisesDone === 'No' ? 'selected' : ''}>No</option>
                         </select>
                     </td>
                     <td>
-                        <select class="repetitions" data-date="${dateString}" ${exercisesDone === 'No' ? 'disabled' : ''}>
+                        <select class="repetitions" data-date="${dateString}" ${exercisesDone === 'No' ? 'disabled' : ''} title="Enter the number of repetitions completed. Defaults to 4 if 'Exercise Done' is 'Yes'.">
                             <option value="1" ${repetitionsValue === '1' ? 'selected' : ''}>1</option>
                             <option value="2" ${repetitionsValue === '2' ? 'selected' : ''}>2</option>
                             <option value="3" ${repetitionsValue === '3' ? 'selected' : ''}>3</option>
                             <option value="4" ${repetitionsValue === '4' ? 'selected' : ''}>4</option>
                         </select>
                     </td>
-                    <td><input type="text" class="steps-count" value="${stepsCount}" data-date="${dateString}"></td>
-                    <td><textarea class="comments" data-date="${dateString}" rows="1">${comments}</textarea></td>
+                    <td><input type="text" class="steps-count" value="${stepsCount}" data-date="${dateString}" title="Enter the total number of steps Fred walked for this day."></td>
+                    <td><textarea class="comments" data-date="${dateString}" rows="1" title="Add any relevant comments or observations about Fred's activity."></textarea></td>
                 `;
 
                 // Add event listener to enable/disable repetitions

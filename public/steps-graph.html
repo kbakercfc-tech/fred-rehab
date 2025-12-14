@@ -17,6 +17,7 @@
             <a href="/steps-graph.html">View Steps Graph</a>
             <a href="/calendar-view.html">Calendar View</a>
             <a href="/exercise-videos.html">Exercise Videos</a>
+            <a href="/help.html">Help</a>
         </nav>
     </header>
     <main>
@@ -25,23 +26,23 @@
                 <div class="chart-section">
                     <div class="filter-controls">
                         <label for="filter-type">View:</label>
-                        <select id="filter-type" onchange="toggleDatePickers()">
+                        <select id="filter-type" onchange="toggleDatePickers()" title="Select a time period to display on the graph.">
                             <option value="all">All Entries</option>
                             <option value="30days">Last 30 Days</option>
                             <option value="custom">Select Period</option>
                         </select>
                         <div id="custom-date-pickers" style="display: none;">
                             <label for="start-date">From:</label>
-                            <input type="date" id="start-date">
+                            <input type="date" id="start-date" title="Select the start date for your custom period.">
                             <label for="end-date">To:</label>
-                            <input type="date" id="end-date">
+                            <input type="date" id="end-date" title="Select the end date for your custom period.">
                         </div>
-                        <button onclick="applyFilter()">Apply Filter</button>
+                        <button onclick="applyFilter()" title="Apply the selected date filter to the graph.">Apply Filter</button>
                     </div>
                     <div class="chart-controls">
-                        <button onclick="renderChart('line')">Line Chart</button>
-                        <button onclick="renderChart('bar')">Bar Chart</button>
-                        <button onclick="shareGraph()">Share Graph</button>
+                        <button onclick="renderChart('line')" title="Display the data as a Line Chart.">Line Chart</button>
+                        <button onclick="renderChart('bar')" title="Display the data as a Bar Chart.">Bar Chart</button>
+                        <button onclick="shareGraph()" title="Share a link to this steps graph page.">Share Graph</button>
                     </div>
                     <div id="chart-container">
                         <canvas id="stepsChart"></canvas>

@@ -16,6 +16,7 @@
             <a href="/steps-graph.html">View Steps Graph</a>
             <a href="/calendar-view.html">Calendar View</a>
             <a href="/exercise-videos.html">Exercise Videos</a>
+            <a href="/help.html">Help</a>
         </nav>
     </header>
     <main>
@@ -27,19 +28,19 @@
             </div>
             <div>
                 <label for="date">Date:</label>
-                <input type="date" id="date" name="date" min="2025-10-24" max="<%= new Date().toISOString().slice(0, 10) %>" onchange="checkDataForDate()">
+                <input type="date" id="date" name="date" min="2025-10-24" max="<%= new Date().toISOString().slice(0, 10) %>" onchange="checkDataForDate()" title="Select the date for this activity entry.">
             </div>
             <hr>
             <div>
                 <label for="exercise-done">Exercise Done:</label>
-                <select id="exercise-done" name="exercise-done">
+                <select id="exercise-done" name="exercise-done" title="Select 'Yes' if Fred completed his exercise, 'No' otherwise.">
                     <option value="Yes">Yes</option>
                     <option value="No">No</option>
                 </select>
             </div>
             <div>
                 <label for="exercise-quantity">Repetitions:</label>
-                <select id="exercise-quantity" name="exercise-quantity">
+                <select id="exercise-quantity" name="exercise-quantity" title="Enter the number of repetitions completed. Defaults to 4 if 'Exercise Done' is 'Yes'.">
                     <option value="1">1</option>
                     <option value="2">2</option>
                     <option value="3">3</option>
@@ -50,11 +51,11 @@
             <hr>
             <div>
                 <label for="steps-quantity">Steps Walked:</label>
-                <input type="number" id="steps-quantity" name="steps-quantity">
+                <input type="number" id="steps-quantity" name="steps-quantity" title="Enter the total number of steps Fred walked for this day.">
             </div>
             <div>
                 <label for="comments">Comments:</label>
-                <textarea id="comments" name="comments" rows="3"></textarea>
+                <textarea id="comments" name="comments" rows="3" title="Add any relevant comments or observations about Fred's activity."></textarea>
             </div>
             <button type="button" onclick="addSteps()">Save Steps</button>
         </form>

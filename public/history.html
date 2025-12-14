@@ -16,6 +16,7 @@
             <a href="/steps-graph.html">View Steps Graph</a>
             <a href="/calendar-view.html">Calendar View</a>
             <a href="/exercise-videos.html">Exercise Videos</a>
+            <a href="/help.html">Help</a>
         </nav>
     </header>
     <main>
@@ -33,7 +34,7 @@
             </tbody>
         </table>
         <div style="display: flex; justify-content: space-between; margin-top: 1.5em; gap: 1em;">
-            <button onclick="shareHistory()">Share History via Email</button>
+            <button onclick="shareHistory()">Share History</button>
             <button onclick="clearHistory()" style="background-color: #dc3545;">Clear All History</button>
         </div>
     </main>
@@ -146,10 +147,42 @@
             }
         }
 
-        function shareHistory() {
-            const subject = encodeURIComponent("Fred's Rehab History");
-            const body = encodeURIComponent(window.historyEmailBody);
-            window.location.href = `mailto:?subject=${subject}&body=${body}`;
+        async function shareHistory() {
+            const shareUrl = window.location.href;
+            const shareTitle = "Fred's Rehab History";
+            const shareText = "Check out Fred's rehab progress history!";
+
+            if (navigator.share) {
+                // Use Web Share API if available
+                try {
+                    await navigator.share({
+                        title: shareTitle,
+                        text: shareText,
+                        url: shareUrl,
+                    });
+                    console.log('Web Share API used successfully!');
+                } catch (error) {
+                    console.error('Error sharing using Web Share API:', error);
+                    fallbackShare(shareTitle, shareText, shareUrl);
+                }
+            } else {
+                // Fallback for browsers that do not support Web Share API
+                fallbackShare(shareTitle, shareText, shareUrl);
+            }
+        }
+
+        function fallbackShare(title, text, url) {
+            const emailSubject = encodeURIComponent(title);
+            const emailBody = encodeURIComponent(`${text}\n\nView the history here: ${url}\n\n${window.historyEmailBody}`); // Include table data
+            const whatsappText = encodeURIComponent(`${text} ${url}`);
+
+            const shareOptions = `
+                Share this history:
+                \n\nEmail: mailto:?subject=${emailSubject}&body=${emailBody}
+                \nWhatsApp: https://wa.me/?text=${whatsappText}
+                \n\n(Copy the link to share on other platforms: ${url})
+            `;
+            alert(shareOptions);
         }
 
         window.onload = loadData;

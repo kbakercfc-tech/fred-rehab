@@ -16,6 +16,7 @@
             <a href="/steps-graph.html">View Steps Graph</a>
             <a href="/calendar-view.html">Calendar View</a>
             <a href="/exercise-videos.html">Exercise Videos</a>
+            <a href="/help.html">Help</a>
         </nav>
     </header>
     <main>
@@ -23,13 +24,13 @@
         <form id="upload-form" enctype="multipart/form-data">
             <div>
                 <label for="video-title">Video Title:</label>
-                <input type="text" id="video-title" name="title" required>
+                <input type="text" id="video-title" name="title" required title="Enter a descriptive title for the video.">
             </div>
             <div>
                 <label for="video-file">Select Video File:</label>
-                <input type="file" id="video-file" name="video" accept="video/*" required>
+                <input type="file" id="video-file" name="video" accept="video/*" required title="Choose a video file from your computer to upload.">
             </div>
-            <button type="submit">Upload Video</button>
+            <button type="submit" title="Click to upload the video to the server.">Upload Video</button>
         </form>
 
         <hr>
@@ -77,7 +78,7 @@
                 videoContainer.innerHTML = `
                     <h3>${video.title}</h3>
                     <video controls src="${video.filepath}" style="max-width: 100%;"></video>
-                    <button class="delete-video-btn" data-id="${video.id}">Delete</button>
+                    <button class="delete-video-btn" data-id="${video.id}" title="Delete this video from the server.">Delete</button>
                 `;
                 videoList.appendChild(videoContainer);
             });

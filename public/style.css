@@ -50,6 +50,14 @@ main {
     align-items: center; 
 }
 
+main section {
+    width: 100%; /* Ensure sections take full width of main's content area */
+    max-width: 800px; /* Align with form's max-width for consistency */
+    margin: 1em auto; /* Center sections horizontally with some vertical spacing */
+    padding: 0; /* Remove any default padding */
+    text-align: left; /* Ensure text aligns to the left within the section */
+}
+
 h1, h2 {
     color: #2c3e50;
     margin-top: 0;
@@ -262,8 +270,8 @@ tr:hover {
 .filter-controls button {
     padding: 0.4em 0.8em; /* Smaller padding */
     font-size: 0.9em; /* Smaller font size */
-    height: 32px; /* Fixed height for alignment */
-    vertical-align: middle; /* Align vertically */
+    height: auto; /* Allow height to adjust naturally, matching other buttons */
+    vertical-align: initial; /* Revert vertical alignment */
     min-width: 80px; /* Smaller min-width for inputs */
     width: auto; /* Allow width to adjust naturally */
 }
@@ -288,20 +296,21 @@ input.steps-count {
     justify-content: center; /* Center horizontally */
     position: relative; /* For absolute positioning of hat */
     margin-bottom: 1em; /* Space below title */
-    padding-left: 80px; /* Space for the hat */
+    /* padding-left: 80px; */ /* Removed to fix alignment issues */
 }
 
 .tabular-title-container h2 {
     margin: 0; /* Remove default margin from h2 */
     line-height: 1; /* Adjust line height for better alignment */
+    margin-left: 40px; /* Space for the hat */
 }
 
 .santa-hat-tabular {
     position: absolute;
-    width: 70px; /* Same size as regular santa-hat */
+    width: 60px; /* Slightly smaller */
     height: auto;
     left: 0; /* Position to the left of the container */
-    top: -15px; /* Adjust vertically */
+    top: -10px; /* Adjust vertically */
     transform: rotate(-10deg); /* Slight tilt */
     z-index: 10;
 }

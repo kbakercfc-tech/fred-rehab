@@ -307,6 +307,10 @@ app.get('/enter-data-tabular.html', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'enter-data-tabular.html'));
 });
 
+app.get('/help.html', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'help.html'));
+});
+
 app.get('/calendar-view.html', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'calendar-view.html'));
 });
