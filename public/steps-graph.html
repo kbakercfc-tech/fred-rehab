@@ -172,12 +172,14 @@
             const today = new Date();
             today.setHours(0, 0, 0, 0); // Normalize to start of day
 
-            let actualStartDate;
-            let actualEndDate = today;
+            let actualStartDate = null;
+            let actualEndDate = null;
 
+            // Determine actual start and end dates based on filterType
             if (filterType === '30days') {
                 actualStartDate = new Date(today);
                 actualStartDate.setDate(today.getDate() - 29); // Last 30 days including today
+                actualEndDate = today;
             } else if (filterType === 'custom') {
                 const customStart = new Date(startDateInput.value);
                 const customEnd = new Date(endDateInput.value);
@@ -188,16 +190,18 @@
                 }
                 actualStartDate = customStart;
                 actualEndDate = customEnd;
-            } else { // 'all'
-                actualStartDate = new Date('2025-10-24'); // Fixed start date for all entries
             }
-            
-            // Format dates for API requests
-            const formattedStartDate = actualStartDate.toISOString().slice(0, 10);
-            const formattedEndDate = actualEndDate.toISOString().slice(0, 10);
+            // For 'all' filter, actualStartDate and actualEndDate remain null,
+            // meaning no date parameters are added to the API request URL.
+            // The API is expected to return all data based on the index.js modification.
 
-            stepsApiUrl += `?startDate=${formattedStartDate}&endDate=${formattedEndDate}`;
-            exercisesApiUrl += `?startDate=${formattedStartDate}&endDate=${formattedEndDate}`;
+            // Construct API URLs based on actualStartDate and actualEndDate
+            if (actualStartDate && actualEndDate) { // ONLY IF actualStartDate and actualEndDate are NOT null
+                const formattedStartDate = actualStartDate.toISOString().slice(0, 10);
+                const formattedEndDate = actualEndDate.toISOString().slice(0, 10);
+                stepsApiUrl += `?startDate=${formattedStartDate}&endDate=${formattedEndDate}`;
+                exercisesApiUrl += `?startDate=${formattedStartDate}&endDate=${formattedEndDate}`;
+            }
 
 
             const stepsResponse = await fetch(stepsApiUrl);
@@ -205,12 +209,55 @@
             const exercisesResponse = await fetch(exercisesApiUrl);
             const exercises = await exercisesResponse.json();
 
-            const allDates = [];
-            let currentDate = new Date(actualStartDate);
-            while (currentDate <= actualEndDate) {
-                allDates.push(currentDate.toISOString().slice(0, 10));
-                currentDate.setDate(currentDate.getDate() + 1);
+            console.log("API Response - Raw Steps Data:", steps);
+            console.log("API Response - Raw Exercises Data:", exercises);
+
+            // Collect all unique dates from fetched data
+            let allFetchedDates = new Set();
+            steps.forEach(s => allFetchedDates.add(s.date));
+            exercises.forEach(e => allFetchedDates.add(e.date));
+
+            console.log("All unique fetched dates (from API responses):", Array.from(allFetchedDates).sort());
+
+            let minDate = null;
+            let maxDate = null;
+
+            if (allFetchedDates.size > 0) {
+                const sortedUniqueDates = Array.from(allFetchedDates).sort();
+                // Ensure dates are parsed consistently, ideally as UTC to avoid timezone issues.
+                // SQLite dates are YYYY-MM-DD, which Date constructor handles as UTC if 'Z' is appended.
+                minDate = new Date(sortedUniqueDates[0] + 'T00:00:00Z');
+                maxDate = new Date(sortedUniqueDates[sortedUniqueDates.length - 1] + 'T00:00:00Z');
+            } else {
+                // If no data fetched, default to today's date, normalized to UTC midnight.
+                const todayUtc = new Date();
+                todayUtc.setUTCHours(0, 0, 0, 0);
+                minDate = todayUtc;
+                maxDate = todayUtc;
             }
+
+            // Ensure minDate and maxDate are used for display range
+            let displayStartDate = minDate;
+            let displayEndDate = maxDate;
+
+            console.log("Calculated displayStartDate:", displayStartDate.toISOString().slice(0, 10));
+            console.log("Calculated displayEndDate:", displayEndDate.toISOString().slice(0, 10));
+
+
+            const allDates = [];
+            let currentDate = new Date(displayStartDate);
+            currentDate.setUTCHours(0,0,0,0); // Normalize to UTC midnight for consistent iteration
+
+            // Ensure displayEndDate is also normalized to UTC midnight for comparison
+            let comparisonEndDate = new Date(displayEndDate);
+            comparisonEndDate.setUTCHours(0,0,0,0);
+
+            // Loop while currentDate is less than or equal to comparisonEndDate (day by day)
+            while (currentDate.getTime() <= comparisonEndDate.getTime()) {
+                allDates.push(currentDate.toISOString().slice(0, 10));
+                currentDate.setUTCDate(currentDate.getUTCDate() + 1); // Increment UTC date by one day
+            }
+            console.log("Final allDates array for chart:", allDates);
 
             const stepsData = allDates.map(date => {
                 const step = steps.find(s => s.date === date);
@@ -323,7 +370,7 @@
                 }
             } else {
                 // Fallback for browsers that do not support Web Share API
-                fallbackShare(shareTitle, shareText, shareUrl);
+                    fallbackShare(shareTitle, shareText, shareUrl);
             }
         }
 

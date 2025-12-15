@@ -86,15 +86,16 @@ app.get('/api/exercises', (req, res) => {
     if (req.query.startDate && req.query.endDate) {
         conditions.push('date BETWEEN ? AND ?');
         params.push(req.query.startDate, req.query.endDate);
-    } else if (req.query.date) { // Keep existing single date filter
+        sql += ' WHERE ' + conditions.join(' AND ');
+        sql += ' ORDER BY date DESC'; // Keep DESC for filtered ranges
+    } else if (req.query.date) {
         conditions.push('date = ?');
         params.push(req.query.date);
-    }
-
-    if (conditions.length > 0) {
         sql += ' WHERE ' + conditions.join(' AND ');
+        sql += ' ORDER BY date DESC'; // Keep DESC for single date filter
     }
-    sql += ' ORDER BY date DESC';
+    // If no date parameters, no WHERE clause and no ORDER BY.
+    // The client will handle sorting/ranging.
 
     db.all(sql, params, (err, rows) => {
         if (err) {
@@ -132,15 +133,16 @@ app.get('/api/steps', (req, res) => {
     if (req.query.startDate && req.query.endDate) {
         conditions.push('date BETWEEN ? AND ?');
         params.push(req.query.startDate, req.query.endDate);
-    } else if (req.query.date) { // Keep existing single date filter
+        sql += ' WHERE ' + conditions.join(' AND ');
+        sql += ' ORDER BY date DESC'; // Keep DESC for filtered ranges
+    } else if (req.query.date) {
         conditions.push('date = ?');
         params.push(req.query.date);
-    }
-
-    if (conditions.length > 0) {
         sql += ' WHERE ' + conditions.join(' AND ');
+        sql += ' ORDER BY date DESC'; // Keep DESC for single date filter
     }
-    sql += ' ORDER BY date DESC';
+    // If no date parameters, no WHERE clause and no ORDER BY.
+    // The client will handle sorting/ranging.
 
     db.all(sql, params, (err, rows) => {
         if (err) {
