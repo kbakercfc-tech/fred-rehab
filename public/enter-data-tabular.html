@@ -88,7 +88,6 @@
     </header>
     <main>
         <div class="tabular-title-container">
-            <img src="images/santa_hat.png" alt="Santa Hat" class="santa-hat-tabular">
             <h2 data-translate="Tabular Activity Entry">Tabular Activity Entry</h2>
         </div>
 
@@ -129,7 +128,14 @@
                 if (translations[lang] && translations[lang][key]) {
                     if (element.dataset.translateTarget) {
                         document.querySelector(element.dataset.translateTarget).textContent = translations[lang][key];
-                    } else {
+                    } else if (element.tagName === 'OPTION') { // Special handling for options
+                        element.textContent = translations[lang][key];
+                    } else if (element.tagName === 'INPUT') { // Special handling for input titles
+                        element.title = translations[lang][key];
+                    } else if (element.tagName === 'BUTTON' && element.id !== 'lang-toggle') { // Special handling for buttons
+                        element.textContent = translations[lang][key];
+                    }
+                    else if (element.tagName !== 'BUTTON' && element.tagName !== 'SELECT') { // Generic text content
                         element.textContent = translations[lang][key];
                     }
                 }
@@ -190,7 +196,7 @@
             headerRow.innerHTML = `
                 <th data-translate="Date">Date</th>
                 <th data-translate="Exercise Done">Exercise Done</th>
-                <th data-translate="Repetitions">Repetitions</th>
+                <th data-translate="Weights Done">Weights Done</th>
                 <th data-translate="Steps">Steps</th>
                 <th data-translate="Comments">Comments</th>
             `;
@@ -226,14 +232,7 @@
                 const steps = existingData.steps || {};
 
                 const exercisesDone = exercise.done || 'No';
-                let repetitionsValue;
-
-                if (exercise.quantity !== undefined && exercise.quantity !== null) {
-                    repetitionsValue = String(exercise.quantity); // Use saved quantity
-                } else {
-                    // If no quantity saved, then apply the default logic based on exercisesDone
-                    repetitionsValue = (exercisesDone === 'Yes' ? '4' : '1');
-                }
+                const weightsDone = exercise.weights_done || 'No'; // Get weights_done
 
                 const stepsCount = steps.quantity || '';
                 const comments = steps.comments || '';
@@ -247,28 +246,16 @@
                         </select>
                     </td>
                     <td>
-                        <select class="repetitions" data-date="${dateString}" ${exercisesDone === 'No' ? 'disabled' : ''} title="Enter the number of repetitions completed. Defaults to 4 if 'Exercise Done' is 'Yes'." data-translate="Enter the number of repetitions completed. Defaults to 4 if 'Exercise Done' is 'Yes'.">
-                            <option value="1" ${repetitionsValue === '1' ? 'selected' : ''}>1</option>
-                            <option value="2" ${repetitionsValue === '2' ? 'selected' : ''}>2</option>
-                            <option value="3" ${repetitionsValue === '3' ? 'selected' : ''}>3</option>
-                            <option value="4" ${repetitionsValue === '4' ? 'selected' : ''}>4</option>
+                        <select class="weights-done-select" data-date="${dateString}" title="Select 'Yes' if Fred completed his weights, 'No' otherwise.">
+                            <option value="Yes" ${weightsDone === 'Yes' ? 'selected' : ''} data-translate="Yes">Yes</option>
+                            <option value="No" ${weightsDone === 'No' ? 'selected' : ''} data-translate="No">No</option>
                         </select>
                     </td>
                     <td><input type="text" class="steps-count" value="${stepsCount}" data-date="${dateString}" title="Enter the total number of steps Fred walked for this day." data-translate="Enter the total number of steps Fred walked for this day."></td>
                     <td><textarea class="comments" data-date="${dateString}" rows="1" title="Add any relevant comments or observations about Fred's activity." data-translate="Add any relevant comments or observations about Fred's activity."></textarea></td>
                 `;
 
-                // Add event listener to enable/disable repetitions
-                const exerciseDoneSelect = row.querySelector('.exercise-done');
-                const repetitionsSelect = row.querySelector('.repetitions');
-                exerciseDoneSelect.addEventListener('change', () => {
-                    repetitionsSelect.disabled = (exerciseDoneSelect.value === 'No');
-                    if (exerciseDoneSelect.value === 'Yes') {
-                        repetitionsSelect.value = '4'; // Immediately set to 4 if Yes
-                    } else {
-                        repetitionsSelect.value = '1'; // Reset to 1 if No
-                    }
-                });
+                // No event listener needed for weightsDoneSelect
             });
 
             table.appendChild(tbody);
@@ -277,28 +264,56 @@
             setLanguage(currentLang);
         }
 
+        function speak(message) {
+            if ('speechSynthesis' in window) {
+                const utterance = new SpeechSynthesisUtterance(message);
+                window.speechSynthesis.speak(utterance);
+            } else {
+                console.log("Speech synthesis not supported in this browser.");
+            }
+        }
+
         async function saveAllData() {
             const tableRows = document.querySelectorAll('#data-entry-table tbody tr');
             const allDataToSave = [];
+            let newMaxStepsInBatch = 0;
+            let newMaxStepsDate = null;
 
             tableRows.forEach(row => {
                 const date = row.querySelector('.exercise-done').dataset.date;
                 const exerciseDone = row.querySelector('.exercise-done').value;
-                const repetitions = row.querySelector('.repetitions').value;
+                const weightsDone = row.querySelector('.weights-done-select').value;
                 const stepsCount = row.querySelector('.steps-count').value;
                 const comments = row.querySelector('.comments').value;
-
-                // Default repetitions to 4 if exerciseDone is 'Yes' and repetitions is 0, empty, or 1 (the default dropdown value)
-                const finalRepetitions = (exerciseDone === 'Yes' && (repetitions === "0" || !repetitions || repetitions === "1")) ? 4 : parseInt(repetitions);
+                
+                const steps = parseInt(stepsCount) || 0;
+                if (steps > newMaxStepsInBatch) {
+                    newMaxStepsInBatch = steps;
+                    newMaxStepsDate = date;
+                }
 
                 allDataToSave.push({
                     date,
                     exerciseDone,
-                    repetitions: finalRepetitions,
-                    stepsCount: parseInt(stepsCount) || 0,
+                    weightsDone,
+                    stepsCount: steps,
                     comments
                 });
             });
+            
+            let currentMaxSteps = 0;
+            try {
+                const datesToExclude = allDataToSave.map(d => d.date);
+                const maxStepsResponse = await fetch(`/api/steps/max?exclude_dates=${datesToExclude.join(',')}`);
+                if (maxStepsResponse.ok) {
+                    const maxStepsData = await maxStepsResponse.json();
+                    currentMaxSteps = maxStepsData.max_steps || 0;
+                } else {
+                    console.error("Failed to fetch max steps.");
+                }
+            } catch (error) {
+                console.error("Error fetching max steps:", error);
+            }
 
             console.log("Data to save:", allDataToSave);
 
@@ -311,6 +326,9 @@
             });
 
             if (response.ok) {
+                if (newMaxStepsInBatch > currentMaxSteps) {
+                    speak(`Congratulations you did more steps on date ${newMaxStepsDate} than ever before`);
+                }
                 alert('All data saved successfully!');
                 generateTable(); // Refresh the table to show updated data
             } else {

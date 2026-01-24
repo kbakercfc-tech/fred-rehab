@@ -39,7 +39,7 @@ db.serialize(() => {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         done TEXT NOT NULL,
         date TEXT NOT NULL,
-        quantity INTEGER NOT NULL
+        weights_done TEXT NOT NULL
     )`);
     db.run(`CREATE TABLE IF NOT EXISTS steps (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -79,7 +79,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // API Endpoints
 app.get('/api/exercises', (req, res) => {
-    let sql = 'SELECT * FROM exercises';
+    let sql = 'SELECT id, done, date, weights_done FROM exercises';
     const params = [];
     const conditions = [];
 
@@ -107,7 +107,7 @@ app.get('/api/exercises', (req, res) => {
 });
 
 app.post('/api/exercises', (req, res) => {
-    const { done, quantity, date } = req.body;
+    const { done, weights_done, date } = req.body; // Change quantity to weights_done
     db.serialize(() => {
         db.run('DELETE FROM exercises WHERE date = ?', [date], function(err) {
             if (err) {
@@ -115,7 +115,7 @@ app.post('/api/exercises', (req, res) => {
                 return;
             }
         });
-        db.run('INSERT INTO exercises (done, quantity, date) VALUES (?, ?, ?)', [done, quantity, date], function(err) {
+        db.run('INSERT INTO exercises (done, weights_done, date) VALUES (?, ?, ?)', [done, weights_done, date], function(err) {
             if (err) {
                 res.status(500).send(err.message);
                 return;
@@ -150,6 +150,26 @@ app.get('/api/steps', (req, res) => {
             return;
         }
         res.json(rows);
+    });
+});
+
+app.get('/api/steps/max', (req, res) => {
+    let sql = 'SELECT MAX(quantity) as max_steps FROM steps';
+    let params = [];
+    if (req.query.exclude_dates) {
+        const dates = req.query.exclude_dates.split(',');
+        if (dates.length > 0 && dates[0]) { // Ensure there are dates to exclude
+            const placeholders = dates.map(() => '?').join(',');
+            sql += ` WHERE date NOT IN (${placeholders})`;
+            params = dates;
+        }
+    }
+    db.get(sql, params, (err, row) => {
+        if (err) {
+            res.status(500).send(err.message);
+            return;
+        }
+        res.json(row);
     });
 });
 
@@ -268,18 +288,17 @@ app.post('/api/batch-save-data', bodyParser.json(), (req, res) => {
     db.serialize(() => {
         db.run('BEGIN TRANSACTION;');
         const stmtExerciseDelete = db.prepare('DELETE FROM exercises WHERE date = ?');
-        const stmtExerciseInsert = db.prepare('INSERT INTO exercises (done, quantity, date) VALUES (?, ?, ?)');
+        const stmtExerciseInsert = db.prepare('INSERT INTO exercises (done, weights_done, date) VALUES (?, ?, ?)'); // Changed quantity to weights_done
         const stmtStepsDelete = db.prepare('DELETE FROM steps WHERE date = ?');
         const stmtStepsInsert = db.prepare('INSERT INTO steps (quantity, date, comments) VALUES (?, ?, ?)');
 
         dataToSave.forEach(data => {
-            const { date, exerciseDone, repetitions, stepsCount, comments } = data;
+            const { date, exerciseDone, weightsDone, stepsCount, comments } = data; // Changed repetitions to weightsDone
 
             // Save Exercise data
             stmtExerciseDelete.run(date);
-            if (exerciseDone && exerciseDone !== 'No') { // Only insert if exercise was done
-                stmtExerciseInsert.run(exerciseDone, repetitions, date);
-            }
+            // Always insert exercise data, regardless of exerciseDone status
+            stmtExerciseInsert.run(exerciseDone, weightsDone, date);
             
             // Save Steps data
             stmtStepsDelete.run(date);

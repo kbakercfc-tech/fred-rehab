@@ -26,7 +26,7 @@
                 <tr>
                     <th data-translate="Date">Date</th>
                     <th data-translate="Exercises Done">Exercises Done</th>
-                    <th data-translate="Repetitions">Repetitions</th>
+                    <th data-translate="Weights Done">Weights Done</th>
                     <th data-translate="Steps">Steps</th>
                     <th data-translate="Comments">Comments</th>
                 </tr>
@@ -137,29 +137,29 @@
             }
 
             let emailBody = "Fred's Rehab History:\n\n";
-            emailBody += "Date\tExercises Done\tRepetitions\tSteps\tComments\n";
+            emailBody += "Date\tExercises Done\tWeights Done\tSteps\tComments\n"; // Updated header
             emailBody += "--------------------------------------------------------------------------\n";
 
             for (const date of sortedDates) {
                 const row = tableBody.insertRow();
                 const dateCell = row.insertCell();
                 const exerciseDoneCell = row.insertCell();
-                const repetitionsCell = row.insertCell();
+                const weightsDoneCell = row.insertCell(); // New cell for Weights Done
                 const stepsCell = row.insertCell();
                 const commentsCell = row.insertCell();
 
                 const exercisesDone = data[date].exercise ? data[date].exercise.done : 'No';
-                const repetitions = data[date].exercise ? data[date].exercise.quantity : 'N/A';
+                const weightsDone = data[date].exercise ? data[date].exercise.weights_done : 'N/A'; // Get weights_done
                 const stepsCount = data[date].steps ? data[date].steps.quantity.toLocaleString() : 0;
                 const comments = data[date].steps && data[date].steps.comments ? data[date].steps.comments : '';
 
                 dateCell.textContent = formatDateDDMMMYY(date); // Format date for display
                 exerciseDoneCell.textContent = exercisesDone;
-                repetitionsCell.textContent = repetitions;
+                weightsDoneCell.textContent = weightsDone; // Display weights_done
                 stepsCell.textContent = stepsCount;
                 commentsCell.textContent = comments;
 
-                emailBody += `${formatDateDDMMMYY(date)}\t${exercisesDone}\t${repetitions}\t${stepsCount}\t${comments}\n`;
+                emailBody += `${formatDateDDMMMYY(date)}\t${exercisesDone}\t${weightsDone}\t${stepsCount}\t${comments}\n`; // Update emailBody
             }
 
             window.historyEmailBody = emailBody; // Store for access by shareHistory function

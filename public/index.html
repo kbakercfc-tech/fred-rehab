@@ -25,7 +25,6 @@
             <h2 data-translate="Log Activity">Log Activity</h2>
             <div class="fred-photo-wrapper">
                 <img src="images/fred.jpg" alt="Fred's Photo" class="fred-photo">
-                <img src="images/santa_hat.png" alt="Santa Hat" class="santa-hat">
             </div>
             <div>
                 <label for="date" data-translate="Date:">Date:</label>
@@ -40,12 +39,10 @@
                 </select>
             </div>
             <div>
-                <label for="exercise-quantity" data-translate="Repetitions:" data-translate-target="#exercise-quantity-label">Repetitions:</label>
-                <select id="exercise-quantity" name="exercise-quantity" title="Enter the number of repetitions completed. Defaults to 4 if 'Exercise Done' is 'Yes'." data-translate="Enter the number of repetitions completed. Defaults to 4 if 'Exercise Done' is 'Yes'.">
-                    <option value="1">1</option>
-                    <option value="2">2</option>
-                    <option value="3">3</option>
-                    <option value="4">4</option>
+                <label for="weights-done" data-translate="Weights Done:">Weights Done:</label>
+                <select id="weights-done" name="weights-done" title="Select 'Yes' if Fred completed his weights, 'No' otherwise.">
+                    <option value="Yes" data-translate="Yes">Yes</option>
+                    <option value="No" data-translate="No">No</option>
                 </select>
             </div>
             <button type="button" onclick="addExercise()" data-translate="Save Exercise">Save Exercise</button>
@@ -66,8 +63,8 @@
     <script>
         const dateInput = document.getElementById('date');
         const exerciseDoneSelect = document.getElementById('exercise-done');
+        const weightsDoneSelect = document.getElementById('weights-done'); // Changed from exerciseQuantitySelect
         const stepsInput = document.getElementById('steps-quantity');
-        const exerciseQuantitySelect = document.getElementById('exercise-quantity');
         const langToggleButton = document.getElementById('lang-toggle');
 
         let currentLang = localStorage.getItem('language') || 'en';
@@ -78,7 +75,14 @@
                 if (translations[lang] && translations[lang][key]) {
                     if (element.dataset.translateTarget) {
                         document.querySelector(element.dataset.translateTarget).textContent = translations[lang][key];
-                    } else {
+                    } else if (element.tagName === 'OPTION') { // Special handling for options
+                        element.textContent = translations[lang][key];
+                    } else if (element.tagName === 'INPUT') { // Special handling for input titles
+                        element.title = translations[lang][key];
+                    } else if (element.tagName === 'BUTTON' && element.id !== 'lang-toggle') { // Special handling for buttons
+                        element.textContent = translations[lang][key];
+                    }
+                    else if (element.tagName !== 'BUTTON' && element.tagName !== 'SELECT') { // Generic text content
                         element.textContent = translations[lang][key];
                     }
                 }
@@ -107,12 +111,10 @@
 
             if (exercises.length === 0) {
                 exerciseDoneSelect.value = "No";
-                exerciseQuantitySelect.disabled = true;
-                exerciseQuantitySelect.value = "4"; // Default to 4 if no data and "No" exercise
+                weightsDoneSelect.value = "No"; // Default weights to No
             } else {
                 exerciseDoneSelect.value = exercises[0].done;
-                exerciseQuantitySelect.disabled = (exercises[0].done === "No");
-                exerciseQuantitySelect.value = exercises[0].quantity || "4"; // Default to 4 if not set
+                weightsDoneSelect.value = exercises[0].weights_done || "No"; // Get weights_done or default to No
             }
 
             const stepsResponse = await fetch(`/api/steps?date=${date}`);
@@ -126,22 +128,13 @@
             }
         }
 
-        exerciseDoneSelect.addEventListener('change', () => {
-            exerciseQuantitySelect.disabled = (exerciseDoneSelect.value === "No");
-        });
-
+        // Removed event listener for exerciseDoneSelect changing exerciseQuantitySelect
 
         // Functions to add data will be here
         async function addExercise() {
             const done = exerciseDoneSelect.value;
-            let quantity = exerciseQuantitySelect.value; // Use exerciseQuantitySelect directly
+            const weightsDone = weightsDoneSelect.value; // Get weightsDone value
             const date = dateInput.value;
-
-            // If exercise is done and quantity is not set, default to 4
-            if (done === "Yes" && (!quantity || quantity === "0")) {
-                quantity = "4";
-            }
-
 
             const response = await fetch(`/api/exercises?date=${date}`);
             const exercises = await response.json();
@@ -157,7 +150,7 @@
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
                 },
-                body: `done=${done}&quantity=${quantity}&date=${date}`
+                body: `done=${done}&weights_done=${weightsDone}&date=${date}` // Send weights_done
             });
             if (postResponse.ok) {
                 // However, we should re-check data for the current date to update fields
@@ -165,18 +158,40 @@
             }
         }
 
+        function speak(message) {
+            if ('speechSynthesis' in window) {
+                const utterance = new SpeechSynthesisUtterance(message);
+                window.speechSynthesis.speak(utterance);
+            } else {
+                console.log("Speech synthesis not supported in this browser.");
+            }
+        }
+
         async function addSteps() {
             const quantity = document.getElementById('steps-quantity').value;
             const date = dateInput.value;
-            const comments = document.getElementById('comments').value; // Get comments value
+            const comments = document.getElementById('comments').value;
 
             if (!quantity) {
                 alert('Please fill in the number of steps.');
                 return;
             }
 
+            let currentMaxSteps = 0;
+            try {
+                const maxStepsResponse = await fetch(`/api/steps/max?exclude_dates=${date}`);
+                if (maxStepsResponse.ok) {
+                    const maxStepsData = await maxStepsResponse.json();
+                    currentMaxSteps = maxStepsData.max_steps || 0;
+                } else {
+                    console.error("Failed to fetch max steps.");
+                }
+            } catch (error) {
+                console.error("Error fetching max steps:", error);
+            }
+
             const response = await fetch(`/api/steps?date=${date}`);
-            const steps = await stepsResponse.json();
+            const steps = await response.json();
 
             if (steps.length > 0) {
                 if (!confirm('Data for this date already exists. Do you want to overwrite it?')) {
@@ -189,13 +204,17 @@
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
                 },
-                body: `quantity=${quantity}&date=${date}&comments=${comments}` // Include comments in body
+                body: `quantity=${quantity}&date=${date}&comments=${comments}`
             });
             if (postResponse.ok) {
+                if (parseInt(quantity, 10) > currentMaxSteps) {
+                    speak("Congratulations, that is more steps than you have ever done before.");
+                }
                 checkDataForDate();
-                document.getElementById('steps-quantity').value = ''; // Clear steps after submission
-                document.getElementById('comments').value = ''; // Clear comments after submission
+                document.getElementById('steps-quantity').value = '';
+                document.getElementById('comments').value = '';
             } else {
+                alert("Failed to save steps. See console for details.");
                 console.error("Failed to save steps and comments.");
             }
         }

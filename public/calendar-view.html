@@ -54,7 +54,6 @@
         .day-content {
             text-align: left;
             font-size: 0.75em; /* Smaller content font */
-            color: #555;
             width: 100%; /* Take full width of cell */
             padding-top: 5px; /* Space between number and content */
         }
@@ -67,6 +66,9 @@
             background-color: #f8f9fa; /* Lighter empty days */
             border: 1px solid #eee;
         }
+        /* New colors for consistency with Steps Graph */
+        .day-darkgreen { background-color: #006400; color: white; } /* Dark Green for Both */
+        .day-blue { background-color: #ADD8E6; } /* Light Blue for Weights Only */
     </style>
 </head>
 <body>
@@ -90,8 +92,10 @@
         </div>
 
         <div class="legend" style="margin-top: 2em; text-align: center;">
-            <span class="legend-item"><span class="legend-color-box" style="background-color: #d4edda; border: 1px solid green;"></span> <span data-translate="Exercises & Steps Done (Green)">Exercises & Steps Done (Green)</span></span>
-            <span class="legend-item"><span class="legend-color-box" style="background-color: #fff3cd; border: 1px solid orange;"></span> <span data-translate="Exercises Done Only (Amber)">Exercises Done Only (Amber)</span></span>
+            <span class="legend-item"><span class="legend-color-box" style="background-color: darkgreen;"></span> <span data-translate="Exercises & Weights Done">Exercises & Weights Done</span></span>
+            <span class="legend-item"><span class="legend-color-box" style="background-color: #ADD8E6;"></span> <span data-translate="Only Weights done">Only Weights done</span></span>
+            <span class="legend-item"><span class="legend-color-box" style="background-color: #d4edda;"></span> <span data-translate="Only Exercises Done">Only Exercises Done</span></span>
+            <span class="legend-item"><span class="legend-color-box" style="background-color: #f1f1f1;"></span> <span data-translate="No exercise or weights done">No exercise or weights done</span></span>
             <span class="legend-item"><span class="legend-color-box" style="background-color: #f8d7da; border: 1px solid red;"></span> <span data-translate="Nothing Entered (Red)">Nothing Entered (Red)</span></span>
         </div>
     </main>
@@ -192,28 +196,38 @@
                 dayCell.classList.add('day-cell');
 
                 let colorClass = '';
-                let hasExercise = false;
+                let hasExerciseDone = false;
+                let hasWeightsDone = false;
                 let hasSteps = false;
 
-                if (dayData) {
-                    if (dayData.exercise && dayData.exercise.done === 'Yes') {
-                        hasExercise = true;
+                if (dayData && dayData.exercise) {
+                    if (dayData.exercise.done === 'Yes') {
+                        hasExerciseDone = true;
                     }
-                    if (dayData.steps && dayData.steps.quantity > 0) {
-                        hasSteps = true;
+                    if (dayData.exercise.weights_done === 'Yes') {
+                        hasWeightsDone = true;
                     }
-
-                    if (hasExercise && hasSteps) {
-                        colorClass = 'day-green';
-                    } else if (hasExercise && !hasSteps) {
-                        colorClass = 'day-amber';
-                    } else { // No exercise, or no exercise with steps, or something else
-                        colorClass = 'day-red';
-                    }
-                } else {
-                    colorClass = 'day-red'; // Nothing entered for this day
+                }
+                if (dayData && dayData.steps && dayData.steps.quantity > 0) {
+                    hasSteps = true;
                 }
 
+                // Determine base color based on exercise and weights status
+                if (hasExerciseDone && hasWeightsDone) {
+                    colorClass = 'day-darkgreen'; // Both exercises and weights done
+                } else if (hasWeightsDone) {
+                    colorClass = 'day-blue'; // Weights done only
+                } else if (hasExerciseDone) {
+                    colorClass = 'day-green'; // Exercises done only
+                } else {
+                    colorClass = 'day-grey'; // No positive exercise activity
+                }
+
+                // If literally no data at all for the day, mark red
+                if (!dayData || (!hasExerciseDone && !hasWeightsDone && !hasSteps)) {
+                    colorClass = 'day-red';
+                }
+                
                 dayCell.classList.add(colorClass);
 
                 const dayNumber = document.createElement('div');
@@ -221,14 +235,17 @@
                 dayNumber.textContent = iterDate.getDate();
                 dayCell.appendChild(dayNumber);
 
-                // Add content (Steps/Reps)
+                // Add content (Steps/Weights)
                 const dayContent = document.createElement('div');
                 dayContent.classList.add('day-content');
-                if (dayData && dayData.steps && dayData.steps.quantity > 0) {
+                if (hasSteps) {
                     dayContent.innerHTML += `Steps: ${dayData.steps.quantity.toLocaleString()}<br>`;
                 }
-                if (dayData && dayData.exercise && dayData.exercise.done === 'Yes') {
-                    dayContent.innerHTML += `Reps: ${dayData.exercise.quantity}`;
+                if (hasWeightsDone) {
+                    dayContent.innerHTML += `Weights Done<br>`;
+                }
+                if (hasExerciseDone) {
+                    dayContent.innerHTML += `Exercise Done`;
                 }
                 dayCell.appendChild(dayContent);
 
