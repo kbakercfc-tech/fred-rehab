@@ -99,9 +99,11 @@ app.get('/api/exercises', (req, res) => {
 
     db.all(sql, params, (err, rows) => {
         if (err) {
+            console.error("API Error - /api/exercises:", err.message); // Debug log
             res.status(500).send(err.message);
             return;
         }
+        console.log("API Response - /api/exercises (rows):", rows); // Debug log
         res.json(rows);
     });
 });
@@ -146,9 +148,11 @@ app.get('/api/steps', (req, res) => {
 
     db.all(sql, params, (err, rows) => {
         if (err) {
+            console.error("API Error - /api/steps:", err.message); // Debug log
             res.status(500).send(err.message);
             return;
         }
+        console.log("API Response - /api/steps (rows):", rows); // Debug log
         res.json(rows);
     });
 });
