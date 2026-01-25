@@ -22,13 +22,13 @@ const db = new sqlite3.Database(DB_PATH, (err) => {
                  db.close();
                  return console.error("Error checking 'exercises' table schema:", err.message);
              }
-             const needsMigration = columns.some(col => col.na === 'repetitions');
-             if (!needsMigration) {
-                 console.log("No migration needed. The 'exercises' table already appears to have the new schema.");
-                 db.close();
-                 return;
-             }
-             console.log("Migration is required. Starting the process...");
+            const hasWeightsDone = columns.some(col => col.name === 'weights_done'); // Check for new column
+            if (hasWeightsDone) {
+                console.log("No migration needed. The 'exercises' table already has the 'weights_done' column.");
+                db.close();
+                return;
+            }
+            console.log("Migration is required. Starting the process...");
              const migrationScript = `
                  BEGIN TRANSACTION;
                  ALTER TABLE exercises RENAME TO exercises_old
