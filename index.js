@@ -8,7 +8,7 @@ const app = express();
 const port = process.env.PORT || 3000; // Use process.env.PORT for Render
 
 // Set up the database
-const DB_PATH = process.env.DATABASE_PATH || './rehab.db';
+const DB_PATH = '/var/data/rehab.db';
 const db = new sqlite3.Database(DB_PATH, sqlite3.OPEN_READWRITE | sqlite3.OPEN_CREATE, (err) => {
     if (err) {
         console.error(`Error connecting to database at ${DB_PATH}:`, err.message);
