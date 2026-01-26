@@ -17,7 +17,8 @@ const db = new sqlite3.Database(DB_PATH, sqlite3.OPEN_READWRITE | sqlite3.OPEN_C
 });
 
 // Set up multer for file uploads
-const UPLOAD_DESTINATION = process.env.UPLOAD_PATH || 'public/uploads/';
+const UPLOAD_DESTINATION_RELATIVE = process.env.UPLOAD_PATH || 'public/uploads/';
+const UPLOAD_DESTINATION = path.join(__dirname, UPLOAD_DESTINATION_RELATIVE);
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
         // Ensure the upload directory exists
@@ -76,6 +77,9 @@ db.serialize(() => {
 
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
+// Additionally, serve uploaded video files from the UPLOAD_DESTINATION via the /uploads route
+// This ensures that even if UPLOAD_PATH is set outside 'public', videos are accessible.
+app.use('/uploads', express.static(UPLOAD_DESTINATION));
 
 // API Endpoints
 app.get('/api/exercises', (req, res) => {
