@@ -75,25 +75,24 @@ form {
 
 .fred-photo-wrapper {
     position: absolute;
-    top: 0.25em; /* Position wrapper relative to form's padding */
-    right: 0.25em;
+    top: -1em; /* Position wrapper relative to form's padding */
+    right: -1em;
     width: 135px; /* Same size as fred-photo */
     height: 135px;
     border-radius: 50%;
 }
 
 .fred-photo {
-    width: 135px; 
+    width: 135px;
     height: 135px;
     border-radius: 50%;
     object-fit: cover;
     position: absolute; /* Positioned relative to form */
-    top: 0.5em; /* Adjusted position */
-    right: 0.5em; /* Adjusted position */
+    top: -0.75em; /* Adjusted position */
+    right: -0.75em; /* Adjusted position */
     border: 2px solid #007bff;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
-
 .santa-hat {
     position: absolute; /* Positioned relative to form */
     width: 70px; /* Adjusted size */
