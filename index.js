@@ -365,12 +365,27 @@ app.post('/api/batch-save-data', bodyParser.json(), (req, res) => {
 
 // Fitbit OAuth Routes
 app.get("/auth/fitbit", (req, res) => {
-    const state = req.query.from || '/';
-    res.redirect(fitbitClient.getAuthorizeUrl('activity', FITBIT_CALLBACK_URL, state));
+    // 1. Try 'from' query param
+    // 2. Try 'Referer' header (the page you were just on)
+    // 3. Default to '/'
+    let fromPage = req.query.from;
+    
+    if (!fromPage && req.get('Referer')) {
+        const url = new URL(req.get('Referer'));
+        fromPage = url.pathname;
+    }
+    
+    fromPage = fromPage || '/';
+    
+    console.log(`Fitbit Auth started from: ${fromPage}`);
+    const authorizeUrl = fitbitClient.getAuthorizeUrl('activity', FITBIT_CALLBACK_URL, fromPage);
+    res.redirect(authorizeUrl);
 });
 
 app.get("/auth/fitbit/callback", (req, res) => {
     const state = req.query.state || '/';
+    console.log(`Fitbit Auth callback received. State (target page): ${state}`);
+    
     fitbitClient.getAccessToken(req.query.code, FITBIT_CALLBACK_URL).then(result => {
         const { access_token, refresh_token, expires_in } = result;
         const expires_at = Math.floor(Date.now() / 1000) + expires_in;
@@ -381,6 +396,7 @@ app.get("/auth/fitbit/callback", (req, res) => {
                     console.error("Error saving Fitbit tokens:", err.message);
                     return res.status(500).send("Error saving Fitbit tokens.");
                 }
+                console.log(`Redirecting user back to: ${state}`);
                 res.redirect(`${state}?fitbit=connected`);
             });
     }).catch(err => {

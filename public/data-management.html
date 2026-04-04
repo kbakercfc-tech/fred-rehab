@@ -34,6 +34,13 @@
             margin-bottom: 0;
             padding-bottom: 0;
         }
+        /* Ensure consistent button sizing */
+        .management-section .fitbit-btn {
+            padding: 0.4em 0.8em;
+            font-size: 0.8em;
+            min-width: 120px;
+            text-align: center;
+        }
     </style>
 </head>
 <body>
@@ -57,27 +64,27 @@
             <p data-translate="Use these tools to keep Fred's activity records safe or to move data between devices.">Use these tools to keep Fred's activity records safe or to move data between devices.</p>
 
             <div class="management-section">
-                <h3 data-translate="Fitbit Connection">1. Fitbit Connection</h3>
+                <h3 data-translate="Fitbit Connection Status">1. Fitbit Connection Status</h3>
                 <p data-translate="Link or unlink Fred's Fitbit account to enable automatic step syncing.">Link or unlink Fred's Fitbit account to enable automatic step syncing.</p>
-                <div style="display: flex; justify-content: flex-end;">
+                <div style="display: flex; justify-content: flex-start;">
                     <div style="background-color: #f8f9fa; padding: 0.8em 1.2em; border-radius: 8px; border: 1px solid #dee2e6; display: flex; align-items: center; gap: 15px; min-width: 300px;">
                         <span id="fitbit-status-text" class="status-disconnected" style="font-size: 0.85em; font-weight: bold; margin-bottom: 0;">Checking connection...</span>
                         <div style="margin-left: auto;">
-                            <a href="/auth/fitbit?from=/data-management.html" id="fitbit-connect" class="fitbit-btn" data-translate="Connect Fitbit" style="display:none; padding: 0.4em 0.8em; font-size: 0.8em;">Connect Fitbit</a>
-                            <button type="button" id="fitbit-disconnect" class="fitbit-btn disconnect" onclick="disconnectFitbit()" style="display:none; padding: 0.4em 0.8em; font-size: 0.8em;" data-translate="Disconnect">Disconnect</button>
+                            <a href="/auth/fitbit?from=/data-management.html" id="fitbit-connect" class="fitbit-btn" data-translate="Connect Fitbit" style="display:none;">Connect Fitbit</a>
+                            <button type="button" id="fitbit-disconnect" class="fitbit-btn disconnect" onclick="disconnectFitbit()" style="display:none;" data-translate="Disconnect">Disconnect</button>
                         </div>
                     </div>
                 </div>
             </div>
 
             <div class="management-section">
-                <h3 data-translate="Backup Everything">2. Backup Everything</h3>
+                <h3 data-translate="Manual Backup">2. Manual Backup</h3>
                 <p data-translate="Download a single secure file containing all steps, exercises, comments, and uploaded videos.">Download a single secure file containing all steps, exercises, comments, and uploaded videos.</p>
-                <button onclick="downloadBackup()" class="fitbit-btn" style="padding: 1em 2em; font-size: 1em;" data-translate="Create Full Backup Now">Create Full Backup Now</button>
+                <button onclick="downloadBackup()" class="fitbit-btn" data-translate="Create Full Backup Now">Create Full Backup Now</button>
             </div>
 
             <div class="management-section">
-                <h3 data-translate="Automatic Backups">2. Automatic Backups</h3>
+                <h3 data-translate="Automatic Backups">3. Automatic Backups</h3>
                 <p data-translate="Schedule Fred's app to automatically save data to the server disk.">Schedule Fred's app to automatically save data to the server disk.</p>
                 <div style="display: flex; gap: 15px; align-items: center; margin-top: 1em;">
                     <label for="backup-frequency" style="margin-bottom: 0;" data-translate="Backup Frequency:">Backup Frequency:</label>
@@ -99,14 +106,14 @@
             </div>
 
             <div class="management-section">
-                <h3 data-translate="Restore from Backup">3. Restore from Backup</h3>
+                <h3 data-translate="Restore from Backup">4. Restore from Backup</h3>
                 <div class="warning-box">
                     <strong data-translate="Warning:">Warning:</strong> <span data-translate="Restoring will completely replace all current data with the contents of the backup file. This cannot be undone.">Restoring will completely replace all current data with the contents of the backup file. This cannot be undone.</span>
                 </div>
                 <p data-translate="Select a previously created backup (.zip) file:">Select a previously created backup (.zip) file:</p>
                 <div style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
                     <input type="file" id="backup-file" accept=".zip" style="padding: 0.8em; border: 1px solid #ccc; border-radius: 4px; background: #f9f9f9;">
-                    <button onclick="restoreBackup()" class="fitbit-btn disconnect" style="padding: 1em 2em; font-size: 1em;" data-translate="Restore This Backup">Restore This Backup</button>
+                    <button onclick="restoreBackup()" class="fitbit-btn disconnect" data-translate="Restore This Backup">Restore This Backup</button>
                 </div>
             </div>
         </div>
@@ -225,6 +232,7 @@
                     statusText.textContent = "Fitbit not connected";
                     statusText.className = "status-disconnected";
                     connectBtn.style.display = 'inline-block';
+                    connectBtn.href = "/auth/fitbit?from=/data-management.html"; // Ensure redirect is set
                     disconnectBtn.style.display = 'none';
                 }
             } catch (err) { 
