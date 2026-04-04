@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fred's Rehab - Data Management</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .management-card {
+            background-color: white;
+            padding: 2em;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            margin-bottom: 2em;
+            max-width: 800px;
+            width: 100%;
+        }
+        .warning-box {
+            background-color: #fff3cd;
+            color: #856404;
+            padding: 1em;
+            border-radius: 4px;
+            border: 1px solid #ffeeba;
+            margin-bottom: 1.5em;
+            font-size: 0.9em;
+        }
+        .management-section {
+            margin-bottom: 2em;
+            padding-bottom: 2em;
+            border-bottom: 1px solid #eee;
+        }
+        .management-section:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1 data-translate="Fred's Rehab - Data Management">Fred's Rehab - Data Management</h1>
+        <nav>
+            <a href="/" data-translate="Enter Data">Enter Data</a>
+            <a href="/enter-data-tabular.html" data-translate="Enter Data - Tabular">Enter Data - Tabular</a>
+            <a href="/history.html" data-translate="View History">View History</a>
+            <a href="/steps-graph.html" data-translate="View Steps Graph">View Steps Graph</a>
+            <a href="/calendar-view.html" data-translate="Calendar View">Calendar View</a>
+            <a href="/exercise-videos.html" data-translate="Exercise Videos">Exercise Videos</a>
+            <a href="/data-management.html" data-translate="Data Management">Data Management</a>
+            <a href="/help.html" data-translate="Help">Help</a>
+            <button id="lang-toggle"><img src="https://flagsapi.com/FR/flat/24.png" alt="French Flag"></button>
+        </nav>
+    </header>
+    <main>
+        <div class="management-card">
+            <h2 data-translate="Protect Fred's Data">Protect Fred's Data</h2>
+            <p data-translate="Use these tools to keep Fred's activity records safe or to move data between devices.">Use these tools to keep Fred's activity records safe or to move data between devices.</p>
+
+            <div class="management-section">
+                <h3 data-translate="Backup Everything">1. Backup Everything</h3>
+                <p data-translate="Download a single secure file containing all steps, exercises, comments, and uploaded videos.">Download a single secure file containing all steps, exercises, comments, and uploaded videos.</p>
+                <button onclick="downloadBackup()" class="fitbit-btn" style="padding: 1em 2em; font-size: 1em;" data-translate="Create Full Backup Now">Create Full Backup Now</button>
+            </div>
+
+            <div class="management-section">
+                <h3 data-translate="Automatic Backups">2. Automatic Backups</h3>
+                <p data-translate="Schedule Fred's app to automatically save data to the server disk.">Schedule Fred's app to automatically save data to the server disk.</p>
+                <div style="display: flex; gap: 15px; align-items: center; margin-top: 1em;">
+                    <label for="backup-frequency" style="margin-bottom: 0;" data-translate="Backup Frequency:">Backup Frequency:</label>
+                    <select id="backup-frequency" style="width: auto; padding: 0.5em;">
+                        <option value="off" data-translate="Off">Off</option>
+                        <option value="daily" data-translate="Daily">Daily</option>
+                        <option value="weekly" data-translate="Weekly">Weekly</option>
+                        <option value="monthly" data-translate="Monthly">Monthly</option>
+                    </select>
+                    <button onclick="saveSettings()" class="fitbit-btn" data-translate="Save Setting">Save Setting</button>
+                    <button onclick="runAutoBackupNow()" class="fitbit-btn" style="background-color: #6c757d;" data-translate="Run Backup Now">Run Backup Now</button>
+                </div>
+                
+                <h4 style="margin-top: 1.5em;" data-translate="Recent Automated Backups">Recent Automated Backups (Stored on Server)</h4>
+                <div id="auto-backups-container" style="font-size: 0.9em; margin-top: 10px;">
+                    <!-- Table will be injected here -->
+                    <p data-translate="Loading backups...">Loading backups...</p>
+                </div>
+            </div>
+
+            <div class="management-section">
+                <h3 data-translate="Restore from Backup">3. Restore from Backup</h3>
+                <div class="warning-box">
+                    <strong data-translate="Warning:">Warning:</strong> <span data-translate="Restoring will completely replace all current data with the contents of the backup file. This cannot be undone.">Restoring will completely replace all current data with the contents of the backup file. This cannot be undone.</span>
+                </div>
+                <p data-translate="Select a previously created backup (.zip) file:">Select a previously created backup (.zip) file:</p>
+                <div style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
+                    <input type="file" id="backup-file" accept=".zip" style="padding: 0.8em; border: 1px solid #ccc; border-radius: 4px; background: #f9f9f9;">
+                    <button onclick="restoreBackup()" class="fitbit-btn disconnect" style="padding: 1em 2em; font-size: 1em;" data-translate="Restore This Backup">Restore This Backup</button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="translations.js"></script>
+    <script>
+        const langToggleButton = document.getElementById('lang-toggle');
+        let currentLang = localStorage.getItem('language') || 'en';
+
+        function setLanguage(lang) {
+            document.querySelectorAll('[data-translate]').forEach(element => {
+                const key = element.getAttribute('data-translate');
+                if (translations[lang] && translations[lang][key]) {
+                    if (element.tagName === 'BUTTON' && element.id !== 'lang-toggle') {
+                        element.textContent = translations[lang][key];
+                    } else if (element.tagName !== 'BUTTON') {
+                        element.innerHTML = translations[lang][key];
+                    }
+                }
+            });
+            currentLang = lang;
+            localStorage.setItem('language', lang);
+            if (langToggleButton) {
+                const flag = lang === 'en' ? 'FR' : 'GB';
+                langToggleButton.innerHTML = `<img src="https://flagsapi.com/${flag}/flat/24.png" alt="${flag} Flag">`;
+            }
+        }
+
+        if (langToggleButton) {
+            langToggleButton.addEventListener('click', () => {
+                const newLang = currentLang === 'en' ? 'fr' : 'en';
+                setLanguage(newLang);
+            });
+        }
+
+        async function downloadBackup() {
+            const btn = document.querySelector('button[onclick="downloadBackup()"]');
+            btn.disabled = true;
+            btn.textContent = "Creating Backup...";
+            
+            window.location.href = '/api/backup';
+            
+            setTimeout(() => {
+                btn.disabled = false;
+                btn.textContent = "Create Full Backup Now";
+            }, 3000);
+        }
+
+        async function restoreBackup() {
+            const fileInput = document.getElementById('backup-file');
+            if (fileInput.files.length === 0) {
+                alert("Please select a backup file (.zip) first.");
+                return;
+            }
+
+            const confirmMsg = "CRITICAL ACTION:\n\nYou are about to overwrite EVERY entry and video in this app with the data from your backup file.\n\nAre you sure you want to proceed?";
+            if (!confirm(confirmMsg)) return;
+
+            const btn = document.querySelector('button[onclick="restoreBackup()"]');
+            btn.disabled = true;
+            btn.textContent = "Restoring Data...";
+
+            const formData = new FormData();
+            formData.append('backup', fileInput.files[0]);
+
+            try {
+                const response = await fetch('/api/restore', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (response.ok) {
+                    const msg = await response.text();
+                    alert(msg);
+                    window.location.href = '/'; // Back to home
+                } else {
+                    alert("Failed to restore backup. Please ensure the file is a valid Fred Rehab backup.");
+                    btn.disabled = false;
+                    btn.textContent = "Restore This Backup";
+                }
+            } catch (err) {
+                console.error("Restore Error:", err);
+                alert("An error occurred during restoration.");
+                btn.disabled = false;
+                btn.textContent = "Restore This Backup";
+            }
+        }
+
+        async function loadSettings() {
+            try {
+                const response = await fetch('/api/settings');
+                const settings = await response.json();
+                if (settings.backup_frequency) {
+                    document.getElementById('backup-frequency').value = settings.backup_frequency;
+                }
+            } catch (err) { console.error("Failed to load settings."); }
+        }
+
+        async function saveSettings() {
+            const freq = document.getElementById('backup-frequency').value;
+            try {
+                const response = await fetch('/api/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ key: 'backup_frequency', value: freq })
+                });
+                if (response.ok) alert("Backup frequency updated!");
+            } catch (err) { alert("Failed to save settings."); }
+        }
+
+        async function runAutoBackupNow() {
+            const btn = document.querySelector('button[onclick="runAutoBackupNow()"]');
+            btn.disabled = true;
+            btn.textContent = "Running...";
+            
+            try {
+                const response = await fetch('/api/backups/run-now', { method: 'POST' });
+                if (response.ok) {
+                    alert("Automated backup completed on server!");
+                    loadAutoBackups();
+                } else {
+                    alert("Failed to run backup.");
+                }
+            } catch (err) {
+                alert("An error occurred.");
+            } finally {
+                btn.disabled = false;
+                btn.textContent = "Run Backup Now";
+            }
+        }
+
+        async function loadAutoBackups() {
+            const container = document.getElementById('auto-backups-container');
+            try {
+                const response = await fetch('/api/backups/list');
+                const backups = await response.json();
+
+                if (backups.length === 0) {
+                    container.innerHTML = `<p data-translate="No automated backups found.">No automated backups found yet.</p>`;
+                    return;
+                }
+
+                let html = `<table>
+                    <thead>
+                        <tr>
+                            <th data-translate="Date Created">Date Created</th>
+                            <th data-translate="Filename">Filename</th>
+                            <th data-translate="Action">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>`;
+                
+                backups.forEach(b => {
+                    const date = new Date(b.date).toLocaleString();
+                    html += `<tr>
+                        <td>${date}</td>
+                        <td>${b.filename}</td>
+                        <td>
+                            <a href="/api/backups/download/${b.filename}" class="fitbit-btn" style="padding: 0.3em 0.8em; font-size: 0.8em;" data-translate="Download">Download</a>
+                        </td>
+                    </tr>`;
+                });
+
+                html += `</tbody></table>`;
+                container.innerHTML = html;
+                setLanguage(currentLang);
+            } catch (err) {
+                container.innerHTML = `<p style="color: red;">Failed to load backup list.</p>`;
+            }
+        }
+
+        window.onload = () => {
+            setLanguage(currentLang);
+            loadSettings();
+            loadAutoBackups();
+        };
+    </script>
+</body>
+</html>

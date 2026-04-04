@@ -38,6 +38,70 @@ header nav a:hover {
     border-color: transparent; /* Revert to transparent on hover */
 }
 
+header nav a.fitbit-btn {
+    background-color: #00B0B9; /* Fitbit Teal */
+    color: white;
+    border: none;
+    margin-left: 1.5em;
+}
+
+/* Global Fitbit Button Styles */
+.fitbit-btn, #fitbit-sync {
+    background-color: #00B0B9; /* Fitbit Teal */
+    color: white;
+    border: none;
+    padding: 0.6em 1.2em;
+    border-radius: 4px;
+    font-weight: bold;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 0.85em;
+    transition: background-color 0.3s ease;
+    margin-top: 0; /* Reset default button margin */
+}
+
+.fitbit-btn:hover, #fitbit-sync:hover {
+    background-color: #008a91;
+    color: white;
+}
+
+.fitbit-btn.disconnect {
+    background-color: #f44336; /* Red for disconnect */
+}
+
+.fitbit-btn.disconnect:hover {
+    background-color: #d32f2f;
+}
+
+#fitbit-status-bar {
+    margin: 0.5em 0;
+    padding: 0.5em;
+    background-color: transparent;
+    border: none;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 10px;
+}
+
+#fitbit-status-text {
+    font-size: 0.9em;
+    padding: 0.4em 0.8em;
+    border-radius: 20px;
+    font-weight: bold;
+}
+
+.status-connected {
+    background-color: #d4edda;
+    color: #155724;
+}
+
+.status-disconnected {
+    background-color: #e2e3e5;
+    color: #383d41;
+}
+
 main {
     padding: 2em;
     max-width: 1600px; 
@@ -279,13 +343,30 @@ tr:hover {
     max-width: 150px; /* Limit date input width */
 }
 
-/* Styling for the steps input in tabular data entry */
-input.steps-count {
-    width: 100%; /* Match width of other table inputs */
-    padding: 0.5em; /* Match padding of other table inputs */
-    font-size: 0.9em; /* Match font size of other table inputs */
-    box-sizing: border-box; /* Include padding in width */
-    text-align: right; /* Keep text aligned to the right */
+/* Fitbit Styles */
+.input-group {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.input-group input {
+    flex: 1;
+}
+
+#fitbit-sync {
+    margin-top: 0;
+    background-color: #00B0B9;
+    white-space: nowrap;
+}
+
+#fitbit-sync:hover {
+    background-color: #008a91;
+}
+
+#fitbit-sync:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
 }
 
 /* Tabular title container with hat */

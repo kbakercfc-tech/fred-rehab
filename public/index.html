@@ -16,6 +16,7 @@
             <a href="/steps-graph.html" data-translate="View Steps Graph">View Steps Graph</a>
             <a href="/calendar-view.html" data-translate="Calendar View">Calendar View</a>
             <a href="/exercise-videos.html" data-translate="Exercise Videos">Exercise Videos</a>
+            <a href="/data-management.html" data-translate="Data Management">Data Management</a>
             <a href="/help.html" data-translate="Help">Help</a>
             <button id="lang-toggle"><img src="https://flagsapi.com/FR/flat/24.png" alt="French Flag"></button>
         </nav>
@@ -48,8 +49,16 @@
             <button type="button" onclick="addExercise()" data-translate="Save Exercise">Save Exercise</button>
             <hr>
             <div>
+                <div id="fitbit-status-bar">
+                    <span id="fitbit-status-text" class="status-disconnected" style="font-size: 0.85em; font-weight: bold;">Checking connection...</span>
+                    <a href="/auth/fitbit" id="fitbit-connect" class="fitbit-btn" data-translate="Connect Fitbit" style="display:none;">Connect Fitbit</a>
+                    <button type="button" id="fitbit-disconnect" class="fitbit-btn disconnect" onclick="disconnectFitbit()" style="display:none;" data-translate="Disconnect">Disconnect</button>
+                </div>
                 <label for="steps-quantity" data-translate="Steps Walked:">Steps Walked:</label>
-                <input type="number" id="steps-quantity" name="steps-quantity" title="Enter the total number of steps Fred walked for this day." data-translate="Enter the total number of steps Fred walked for this day.">
+                <div class="input-group">
+                    <input type="number" id="steps-quantity" name="steps-quantity" title="Enter the total number of steps Fred walked for this day." data-translate="Enter the total number of steps Fred walked for this day.">
+                    <button type="button" id="fitbit-sync" onclick="syncFitbit()" data-translate="Sync from Fitbit">Sync from Fitbit</button>
+                </div>
             </div>
             <div>
                 <label for="comments" data-translate="Comments:">Comments:</label>
@@ -219,18 +228,108 @@
             }
         }
 
+        async function checkFitbitStatus() {
+            try {
+                const statusResponse = await fetch('/api/fitbit/status');
+                const { connected } = await statusResponse.json();
+                
+                const fitbitBtn = document.getElementById('fitbit-connect');
+                const disconnectBtn = document.getElementById('fitbit-disconnect');
+                const syncBtn = document.getElementById('fitbit-sync');
+                const statusText = document.getElementById('fitbit-status-text');
 
-        // Function to load and display data - not strictly needed for this page
-        // Keeping it for consistency in case future changes require displaying current day's summary
-        async function loadData() {
-            // For the input page, checkDataForDate handles relevant field updates
-            checkDataForDate();
+                if (connected) {
+                    statusText.textContent = "Fitbit is Connected";
+                    statusText.className = "status-connected";
+                    fitbitBtn.style.display = 'none';
+                    disconnectBtn.style.display = 'inline-block';
+                    syncBtn.style.display = 'inline-block';
+                } else {
+                    statusText.textContent = "Fitbit not connected";
+                    statusText.className = "status-disconnected";
+                    fitbitBtn.style.display = 'inline-block';
+                    disconnectBtn.style.display = 'none';
+                    syncBtn.style.display = 'none';
+                }
+            } catch (err) {
+                console.error("Error checking Fitbit status:", err);
+            }
         }
 
-        window.onload = () => {
+        async function disconnectFitbit() {
+            if (!confirm("Are you sure you want to disconnect Fred's Fitbit?")) return;
+            
+            try {
+                const response = await fetch('/api/fitbit/disconnect', { method: 'POST' });
+                if (response.ok) {
+                    alert("Disconnected from Fitbit.");
+                    checkFitbitStatus();
+                } else {
+                    alert("Failed to disconnect.");
+                }
+            } catch (err) {
+                console.error("Disconnect Error:", err);
+                alert("An error occurred during disconnection.");
+            }
+        }
+
+        async function syncFitbit() {
+            const date = dateInput.value;
+            const syncBtn = document.getElementById('fitbit-sync');
+            const stepsInput = document.getElementById('steps-quantity');
+            
+            syncBtn.disabled = true;
+            syncBtn.textContent = "Syncing...";
+
+            try {
+                const response = await fetch('/api/fitbit/sync', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ date })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    // Update the field first so Fred sees the result immediately
+                    stepsInput.value = data.steps;
+                    
+                    // Add a brief highlight effect to the input
+                    stepsInput.style.backgroundColor = '#e8f5e9'; // Light green
+                    setTimeout(() => {
+                        stepsInput.style.backgroundColor = ''; // Back to normal
+                    }, 1000);
+
+                    // Optional: A more subtle notification instead of alert
+                    console.log("Steps synced:", data.steps);
+                } else if (response.status === 401) {
+                    alert("Fitbit session expired. Please reconnect.");
+                    checkFitbitStatus();
+                } else {
+                    alert("Failed to sync from Fitbit. Make sure Fred has synced his watch to his phone recently.");
+                }
+            } catch (err) {
+                console.error("Sync Error:", err);
+                alert("An error occurred during sync.");
+            } finally {
+                syncBtn.disabled = false;
+                syncBtn.textContent = "Sync from Fitbit";
+            }
+        }
+
+        window.onload = async () => {
+            // Priority 1: Fitbit status
+            try {
+                await checkFitbitStatus();
+            } catch (err) {
+                console.error("Fitbit status check failed:", err);
+                document.getElementById('fitbit-status-text').textContent = "Status Check Failed";
+            }
+
+            // Priority 2: Other data and language
             loadData();
             setLanguage(currentLang);
         };
-    </script>
-</body>
-</html>
+        </script>
+        </body>
+        </html>

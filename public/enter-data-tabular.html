@@ -25,7 +25,7 @@
             padding: 0.8em 1.5em;
         }
         #data-entry-table-container {
-            margin-top: 2em;
+            margin-top: 0;
             overflow-x: auto; /* Allow horizontal scrolling for table */
         }
         #data-entry-table {
@@ -70,6 +70,34 @@
             padding: 1em 2em;
             font-size: 1.1em;
         }
+
+        /* Fitbit Styles */
+        .fitbit-btn {
+            background-color: #00B0B9;
+            color: white;
+            border: none;
+            padding: 0.6em 1.2em;
+            border-radius: 4px;
+            font-weight: bold;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 0.85em;
+            transition: background-color 0.3s ease;
+        }
+        .fitbit-btn:hover { background-color: #008a91; }
+        .fitbit-btn.disconnect { background-color: #f44336; }
+        .fitbit-btn.disconnect:hover { background-color: #d32f2f; }
+        
+        #fitbit-status-text {
+            font-size: 0.8em;
+            padding: 0.4em 0.8em;
+            border-radius: 20px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .status-connected { background-color: #d4edda; color: #155724; }
+        .status-disconnected { background-color: #e2e3e5; color: #383d41; }
     </style>
 </head>
 <body>
@@ -82,6 +110,7 @@
             <a href="/steps-graph.html" data-translate="View Steps Graph">View Steps Graph</a>
             <a href="/calendar-view.html" data-translate="Calendar View">Calendar View</a>
             <a href="/exercise-videos.html" data-translate="Exercise Videos">Exercise Videos</a>
+            <a href="/data-management.html" data-translate="Data Management">Data Management</a>
             <a href="/help.html" data-translate="Help">Help</a>
             <button id="lang-toggle"><img src="https://flagsapi.com/FR/flat/24.png" alt="French Flag"></button>
         </nav>
@@ -93,18 +122,33 @@
 
         <div id="date-selection">
             <div>
-                <label for="start-date" data-translate="Start Date:" data-translate-target="#start-date-label">Start Date:</label>
-                <input type="date" id="start-date" title="Select the start date for the data entry table." data-translate="Select the start date for the data entry table.">
+                <label for="start-date" data-translate="Start Date:">Start Date:</label>
+                <input type="date" id="start-date" title="Select the start date for the data entry table.">
             </div>
             <div>
-                <label for="end-date" data-translate="End Date:" data-translate-target="#end-date-label">End Date:</label>
-                <input type="date" id="end-date" title="Select the end date for the data entry table (up to 30 days from start date)." data-translate="Select the end date for the data entry table (up to 30 days from start date).">
+                <label for="end-date" data-translate="End Date:">End Date:</label>
+                <input type="date" id="end-date" title="Select the end date for the data entry table.">
             </div>
-            <button id="generate-table-btn" onclick="generateTable()" title="Click to generate the table for the selected date range." data-translate="Generate Table">Generate Table</button>
+            <button id="generate-table-btn" onclick="generateTable()" data-translate="Generate Table">Generate Table</button>
         </div>
 
-        <div id="data-entry-table-container">
-            <!-- Dynamic table will be generated here -->
+        <div style="display: flex; align-items: flex-start; gap: 20px; width: 100%; margin-top: 1em;">
+            <div id="data-entry-table-container" style="flex: 1;">
+                <!-- Dynamic table will be generated here -->
+            </div>
+            
+            <div id="fitbit-tabular-section" style="background-color: #f8f9fa; padding: 1em; border-radius: 8px; border: 1px solid #dee2e6; width: 200px; margin-top: 52px; flex-shrink: 0;">
+                <div style="text-align: center; margin-bottom: 0.8em;">
+                    <span id="fitbit-status-text" class="status-disconnected" style="display: block;">Checking connection...</span>
+                    <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 10px;">
+                        <a href="/auth/fitbit?from=/enter-data-tabular.html" id="fitbit-connect" class="fitbit-btn" data-translate="Connect" style="display:none; padding: 0.5em;">Connect</a>
+                        <button type="button" id="fitbit-disconnect" class="fitbit-btn disconnect" onclick="disconnectFitbit()" style="display:none; padding: 0.5em;" data-translate="Disconnect">Disconnect</button>
+                    </div>
+                </div>
+                <div style="text-align: center; border-top: 1px solid #eee; padding-top: 0.8em;">
+                    <button type="button" id="fitbit-sync-all" class="fitbit-btn" onclick="syncAllFitbit()" style="display:none; width: 100%; padding: 0.6em; font-size: 0.8em;" data-translate="Sync All from Fitbit">Sync All from Fitbit</button>
+                </div>
+            </div>
         </div>
 
         <button id="save-all-btn" onclick="saveAllData()" style="display: none;" title="Save all entered data for the entire table." data-translate="Save All Data">Save All Data</button>
@@ -338,10 +382,91 @@
         }
 
         // Initial table generation on load
-        window.onload = () => { 
+        window.onload = async () => { 
+            // Priority 1: Fitbit
+            try { await checkFitbitStatus(); } catch(e) { console.error(e); }
+
             generateTable();
             setLanguage(currentLang);
         };
-    </script>
-</body>
-</html>
+
+        async function checkFitbitStatus() {
+            try {
+                const response = await fetch('/api/fitbit/status');
+                const { connected } = await response.json();
+                const fitbitBtn = document.getElementById('fitbit-connect');
+                const disconnectBtn = document.getElementById('fitbit-disconnect');
+                const syncAllBtn = document.getElementById('fitbit-sync-all');
+                const statusText = document.getElementById('fitbit-status-text');
+
+                if (connected) {
+                    statusText.textContent = "Fitbit is connected";
+                    statusText.className = "status-connected";
+                    fitbitBtn.style.display = 'none';
+                    disconnectBtn.style.display = 'inline-block';
+                    syncAllBtn.style.display = 'block';
+                } else {
+                    statusText.textContent = "Fitbit not connected";
+                    statusText.className = "status-disconnected";
+                    fitbitBtn.style.display = 'inline-block';
+                    disconnectBtn.style.display = 'none';
+                    syncAllBtn.style.display = 'none';
+                }
+            } catch (err) {
+                console.error("Fitbit status check failed:", err);
+            }
+        }
+
+        async function disconnectFitbit() {
+            if (!confirm("Are you sure you want to disconnect Fred's Fitbit?")) return;
+            try {
+                const response = await fetch('/api/fitbit/disconnect', { method: 'POST' });
+                if (response.ok) {
+                    alert("Disconnected from Fitbit.");
+                    checkFitbitStatus();
+                }
+            } catch (err) { alert("Failed to disconnect."); }
+        }
+
+        async function syncAllFitbit() {
+            const syncBtn = document.getElementById('fitbit-sync-all');
+            const rows = document.querySelectorAll('#data-entry-table tbody tr');
+
+            if (rows.length === 0) {
+                alert("Please generate a table first.");
+                return;
+            }
+
+            syncBtn.disabled = true;
+            syncBtn.textContent = "Syncing All...";
+
+            let successCount = 0;
+            for (const row of rows) {
+                const date = row.cells[0].textContent;
+                const stepsInput = row.querySelector('.steps-count');
+
+                try {
+                    const response = await fetch('/api/fitbit/sync', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ date })
+                    });
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        stepsInput.value = data.steps;
+                        stepsInput.style.backgroundColor = '#e8f5e9';
+                        successCount++;
+                    }
+                } catch (err) {
+                    console.error(`Sync failed for ${date}:`, err);
+                }
+            }
+
+            syncBtn.disabled = false;
+            syncBtn.textContent = "Sync All from Fitbit";
+            alert(`Synced steps for ${successCount} out of ${rows.length} days.`);
+        }
+        </script>
+        </body>
+        </html>

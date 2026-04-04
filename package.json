@@ -10,9 +10,13 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "adm-zip": "^0.5.17",
     "body-parser": "^2.2.1",
+    "dotenv": "^17.4.0",
     "express": "^5.2.1",
+    "fitbit-node": "^2.2.0",
     "multer": "^2.0.2",
+    "node-cron": "^4.2.1",
     "sqlite3": "^5.1.7"
   }
 }

@@ -16,6 +16,7 @@
             <a href="/steps-graph.html" data-translate="View Steps Graph">View Steps Graph</a>
             <a href="/calendar-view.html" data-translate="Calendar View">Calendar View</a>
             <a href="/exercise-videos.html" data-translate="Exercise Videos">Exercise Videos</a>
+            <a href="/data-management.html" data-translate="Data Management">Data Management</a>
             <a href="/help.html" data-translate="Help">Help</a>
             <button id="lang-toggle"><img src="https://flagsapi.com/FR/flat/24.png" alt="French Flag"></button>
         </nav>
@@ -112,6 +113,42 @@
             });
         }
         
+        async function downloadBackup() {
+            window.location.href = '/api/backup';
+        }
+
+        async function restoreBackup() {
+            const fileInput = document.getElementById('backup-file');
+            if (fileInput.files.length === 0) {
+                alert("Please select a backup file (.zip) first.");
+                return;
+            }
+
+            const confirmMsg = "CRITICAL WARNING:\n\nThis will completely OVERWRITE Fred's current steps, exercises, and videos with the ones in the backup file.\n\nAre you absolutely sure you want to proceed?";
+            if (!confirm(confirmMsg)) return;
+
+            const formData = new FormData();
+            formData.append('backup', fileInput.files[0]);
+
+            try {
+                const response = await fetch('/api/restore', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (response.ok) {
+                    const msg = await response.text();
+                    alert(msg);
+                    window.location.reload();
+                } else {
+                    alert("Failed to restore backup. Check console for errors.");
+                }
+            } catch (err) {
+                console.error("Restore Error:", err);
+                alert("An error occurred during restoration.");
+            }
+        }
+
         window.onload = () => {
             setLanguage(currentLang);
         };
