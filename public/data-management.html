@@ -57,7 +57,21 @@
             <p data-translate="Use these tools to keep Fred's activity records safe or to move data between devices.">Use these tools to keep Fred's activity records safe or to move data between devices.</p>
 
             <div class="management-section">
-                <h3 data-translate="Backup Everything">1. Backup Everything</h3>
+                <h3 data-translate="Fitbit Connection">1. Fitbit Connection</h3>
+                <p data-translate="Link or unlink Fred's Fitbit account to enable automatic step syncing.">Link or unlink Fred's Fitbit account to enable automatic step syncing.</p>
+                <div style="display: flex; justify-content: flex-end;">
+                    <div style="background-color: #f8f9fa; padding: 0.8em 1.2em; border-radius: 8px; border: 1px solid #dee2e6; display: flex; align-items: center; gap: 15px; min-width: 300px;">
+                        <span id="fitbit-status-text" class="status-disconnected" style="font-size: 0.85em; font-weight: bold; margin-bottom: 0;">Checking connection...</span>
+                        <div style="margin-left: auto;">
+                            <a href="/auth/fitbit?from=/data-management.html" id="fitbit-connect" class="fitbit-btn" data-translate="Connect Fitbit" style="display:none; padding: 0.4em 0.8em; font-size: 0.8em;">Connect Fitbit</a>
+                            <button type="button" id="fitbit-disconnect" class="fitbit-btn disconnect" onclick="disconnectFitbit()" style="display:none; padding: 0.4em 0.8em; font-size: 0.8em;" data-translate="Disconnect">Disconnect</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="management-section">
+                <h3 data-translate="Backup Everything">2. Backup Everything</h3>
                 <p data-translate="Download a single secure file containing all steps, exercises, comments, and uploaded videos.">Download a single secure file containing all steps, exercises, comments, and uploaded videos.</p>
                 <button onclick="downloadBackup()" class="fitbit-btn" style="padding: 1em 2em; font-size: 1em;" data-translate="Create Full Backup Now">Create Full Backup Now</button>
             </div>
@@ -192,6 +206,44 @@
             } catch (err) { console.error("Failed to load settings."); }
         }
 
+        async function checkFitbitStatus() {
+            console.log("Checking Fitbit status on Data Management page...");
+            try {
+                const response = await fetch('/api/fitbit/status');
+                const { connected } = await response.json();
+                console.log("Fitbit status:", connected);
+                const statusText = document.getElementById('fitbit-status-text');
+                const connectBtn = document.getElementById('fitbit-connect');
+                const disconnectBtn = document.getElementById('fitbit-disconnect');
+
+                if (connected) {
+                    statusText.textContent = "Fitbit is connected";
+                    statusText.className = "status-connected";
+                    connectBtn.style.display = 'none';
+                    disconnectBtn.style.display = 'inline-block';
+                } else {
+                    statusText.textContent = "Fitbit not connected";
+                    statusText.className = "status-disconnected";
+                    connectBtn.style.display = 'inline-block';
+                    disconnectBtn.style.display = 'none';
+                }
+            } catch (err) { 
+                console.error("Status check failed:", err);
+                document.getElementById('fitbit-status-text').textContent = "Status Check Failed";
+            }
+        }
+
+        async function disconnectFitbit() {
+            if (!confirm("Are you sure you want to disconnect Fred's Fitbit?")) return;
+            try {
+                const response = await fetch('/api/fitbit/disconnect', { method: 'POST' });
+                if (response.ok) {
+                    alert("Disconnected from Fitbit.");
+                    checkFitbitStatus();
+                }
+            } catch (err) { alert("Failed to disconnect."); }
+        }
+
         async function saveSettings() {
             const freq = document.getElementById('backup-frequency').value;
             try {
@@ -267,6 +319,7 @@
 
         window.onload = () => {
             setLanguage(currentLang);
+            checkFitbitStatus();
             loadSettings();
             loadAutoBackups();
         };

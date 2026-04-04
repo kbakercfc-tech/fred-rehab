@@ -11,4 +11,6 @@ rehab.db
 
 # Environment variables file
 .env
-.env
+
+# Local backups
+backups/
