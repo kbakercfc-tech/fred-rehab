@@ -456,6 +456,14 @@
                         const data = await response.json();
                         stepsInput.value = data.steps;
                         stepsInput.style.backgroundColor = '#e8f5e9';
+                        
+                        // Add auto-comment
+                        const commentsArea = row.querySelector('.comments');
+                        const autoComment = "Auto-sourced from Fitbit";
+                        if (!commentsArea.value.includes(autoComment)) {
+                            commentsArea.value = commentsArea.value ? commentsArea.value + "\n" + autoComment : autoComment;
+                        }
+                        
                         successCount++;
                     }
                 } catch (err) {

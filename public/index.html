@@ -294,6 +294,13 @@
                     // Update the field first so Fred sees the result immediately
                     stepsInput.value = data.steps;
                     
+                    // Add auto-comment
+                    const commentsInput = document.getElementById('comments');
+                    const autoComment = "Auto-sourced from Fitbit";
+                    if (!commentsInput.value.includes(autoComment)) {
+                        commentsInput.value = commentsInput.value ? commentsInput.value + "\n" + autoComment : autoComment;
+                    }
+                    
                     // Add a brief highlight effect to the input
                     stepsInput.style.backgroundColor = '#e8f5e9'; // Light green
                     setTimeout(() => {

@@ -49,6 +49,8 @@
                     <div class="chart-controls">
                         <button onclick="renderChart('line')" title="Display the data as a Line Chart." data-translate="Line Chart">Line Chart</button>
                         <button onclick="renderChart('bar')" title="Display the data as a Bar Chart." data-translate="Bar Chart">Bar Chart</button>
+                        <button onclick="renderChart('histogram')" title="Display the step distribution as a Histogram." data-translate="Histogram">Histogram</button>
+                        <button onclick="renderChart('boxplot')" title="Display the step distribution as a Box Plot." data-translate="Box Plot">Box Plot</button>
                         <button onclick="shareGraph()" title="Share a link to this steps graph page." data-translate="Share Graph">Share Graph</button>
                     </div>
                     <div id="chart-container">
@@ -149,27 +151,166 @@
 
         // renderChart function (globally accessible)
         function renderChart(type) {
-            if (chart) {
-                chart.destroy();
-            }
-            const ctx = document.getElementById('stepsChart').getContext('2d');
-            if (!ctx) {
-                return;
-            }
-            chart = new Chart(ctx, {
-                type: type,
-                data: chartData,
-                options: {
-                    scales: {
-                        x: {
-                            
-                        },
-                        y: {
-                            beginAtZero: true
-                        }
-                    }
+            if (!chartData) return;
+            
+            try {
+                if (chart) {
+                    chart.destroy();
                 }
-            });
+                const ctx = document.getElementById('stepsChart').getContext('2d');
+                if (!ctx) return;
+
+                let finalType = (type === 'histogram' || type === 'boxplot') ? 'bar' : type;
+                let finalData = JSON.parse(JSON.stringify(chartData));
+                let plugins = [];
+
+                if (type === 'histogram') {
+                    const recordedSteps = chartData.datasets[0].data.filter(s => s > 0).sort((a, b) => a - b);
+                    if (recordedSteps.length === 0) {
+                        alert("No step data available.");
+                        return;
+                    }
+
+                    const mean = recordedSteps.reduce((a, b) => a + b, 0) / recordedSteps.length;
+                    let median;
+                    const mid = Math.floor(recordedSteps.length / 2);
+                    if (recordedSteps.length % 2 === 0) {
+                        median = (recordedSteps[mid - 1] + recordedSteps[mid]) / 2;
+                    } else {
+                        median = recordedSteps[mid];
+                    }
+
+                    const binSize = 1000;
+                    const maxSteps = Math.max(...recordedSteps);
+                    const numBins = Math.ceil(maxSteps / binSize) || 1;
+                    const bins = new Array(numBins).fill(0);
+                    const binLabels = [];
+
+                    for (let i = 0; i < numBins; i++) {
+                        binLabels.push(`${i * binSize}-${(i + 1) * binSize}`);
+                    }
+
+                    recordedSteps.forEach(s => {
+                        const binIndex = Math.min(Math.floor(s / binSize), numBins - 1);
+                        bins[binIndex]++;
+                    });
+
+                    finalData = {
+                        labels: binLabels,
+                        datasets: [{
+                            label: translations[currentLang]['Number of Days'] || 'Days',
+                            data: bins,
+                            backgroundColor: '#00B0B9',
+                            borderColor: '#008a91',
+                            borderWidth: 1,
+                            barPercentage: 1,
+                            categoryPercentage: 1
+                        }]
+                    };
+
+                    plugins.push({
+                        id: 'statsLines',
+                        afterDraw(chart) {
+                            const { ctx, chartArea: { top, bottom, left, width }, scales: { x } } = chart;
+                            const drawLine = (value, color, label, offsetLabelY) => {
+                                // Calculate X position based on value and binSize
+                                // (value / binSize) is the fraction of bins across the total width
+                                const xPos = left + (value / (numBins * binSize)) * width;
+                                
+                                if (xPos >= left && xPos <= left + width) {
+                                    ctx.save();
+                                    ctx.strokeStyle = color;
+                                    ctx.lineWidth = 3;
+                                    ctx.setLineDash([5, 5]);
+                                    ctx.beginPath();
+                                    ctx.moveTo(xPos, top);
+                                    ctx.lineTo(xPos, bottom);
+                                    ctx.stroke();
+                                    
+                                    const text = `${label}: ${Math.round(value)}`;
+                                    ctx.font = 'bold 12px Arial';
+                                    const textWidth = ctx.measureText(text).width;
+                                    ctx.fillStyle = 'white';
+                                    ctx.fillRect(xPos - (textWidth/2) - 4, top - offsetLabelY - 14, textWidth + 8, 18);
+                                    ctx.fillStyle = color;
+                                    ctx.textAlign = 'center';
+                                    ctx.fillText(text, xPos, top - offsetLabelY);
+                                    ctx.restore();
+                                }
+                            };
+                            drawLine(mean, '#ff5722', translations[currentLang]['Mean'] || 'Mean', 25);
+                            drawLine(median, '#9c27b0', translations[currentLang]['Median'] || 'Median', 5);
+                        }
+                    });
+                } else if (type === 'boxplot') {
+                    // ... (boxplot logic remains same but inside try/catch)
+                    const recordedSteps = chartData.datasets[0].data.filter(s => s > 0).sort((a, b) => a - b);
+                    if (recordedSteps.length === 0) {
+                        alert("No step data available.");
+                        return;
+                    }
+                    const min = recordedSteps[0];
+                    const max = recordedSteps[recordedSteps.length - 1];
+                    const getQuartile = (q) => {
+                        const pos = (recordedSteps.length - 1) * q;
+                        const base = Math.floor(pos);
+                        const rest = pos - base;
+                        return recordedSteps[base + 1] !== undefined ? recordedSteps[base] + rest * (recordedSteps[base + 1] - recordedSteps[base]) : recordedSteps[base];
+                    };
+                    const q1 = getQuartile(0.25);
+                    const median = getQuartile(0.5);
+                    const q3 = getQuartile(0.75);
+                    const label = translations[currentLang]['Steps Distribution'] || 'Steps Distribution';
+                    finalData = {
+                        labels: [label],
+                        datasets: [{ label: 'IQR', data: [[q1, q3]], backgroundColor: 'rgba(0, 176, 185, 0.5)', borderColor: '#00B0B9', borderWidth: 2, barThickness: 100 }]
+                    };
+                    plugins.push({
+                        id: 'boxPlotExtras',
+                        afterDraw(chart) {
+                            const { ctx, scales: { x, y } } = chart;
+                            const xMid = x.getPixelForValue(label);
+                            ctx.save();
+                            ctx.strokeStyle = '#008a91';
+                            ctx.lineWidth = 2;
+                            const yMedian = y.getPixelForValue(median);
+                            ctx.beginPath(); ctx.moveTo(xMid - 50, yMedian); ctx.lineTo(xMid + 50, yMedian); ctx.stroke();
+                            const yMin = y.getPixelForValue(min); const yMax = y.getPixelForValue(max);
+                            const yQ1 = y.getPixelForValue(q1); const yQ3 = y.getPixelForValue(q3);
+                            ctx.setLineDash([2, 2]); ctx.beginPath(); ctx.moveTo(xMid, yMin); ctx.lineTo(xMid, yQ1); ctx.moveTo(xMid, yMax); ctx.lineTo(xMid, yQ3); ctx.stroke();
+                            ctx.setLineDash([]); ctx.beginPath(); ctx.moveTo(xMid - 20, yMin); ctx.lineTo(xMid + 20, yMin); ctx.moveTo(xMid - 20, yMax); ctx.lineTo(xMid + 20, yMax); ctx.stroke();
+                            ctx.fillStyle = '#333'; ctx.font = '11px Arial'; ctx.textAlign = 'left';
+                            ctx.fillText(`${translations[currentLang]['Max'] || 'Max'}: ${max}`, xMid + 60, yMax);
+                            ctx.fillText(`Q3: ${Math.round(q3)}`, xMid + 60, yQ3);
+                            ctx.fillText(`${translations[currentLang]['Median'] || 'Median'}: ${Math.round(median)}`, xMid + 60, yMedian);
+                            ctx.fillText(`Q1: ${Math.round(q1)}`, xMid + 60, yQ1);
+                            ctx.fillText(`${translations[currentLang]['Min'] || 'Min'}: ${min}`, xMid + 60, yMin);
+                            ctx.restore();
+                        }
+                    });
+                }
+
+                chart = new Chart(ctx, {
+                    type: finalType,
+                    data: finalData,
+                    options: {
+                        layout: { padding: { top: 35, right: type === 'boxplot' ? 120 : 10 } },
+                        scales: {
+                            x: { title: { display: type === 'histogram', text: translations[currentLang]['Step Range'] || 'Step Range' } },
+                            y: { 
+                                beginAtZero: true, 
+                                suggestedMax: type === 'boxplot' ? Math.max(...chartData.datasets[0].data.filter(s => s > 0)) * 1.1 : undefined,
+                                title: { display: true, text: type === 'histogram' ? (translations[currentLang]['Days'] || 'Days') : (translations[currentLang]['Steps'] || 'Steps') }
+                            }
+                        },
+                        plugins: { legend: { display: (type !== 'histogram' && type !== 'boxplot') } }
+                    },
+                    plugins: plugins
+                });
+            } catch (err) {
+                console.error("Chart Render Error:", err);
+                alert("An error occurred while drawing the chart. Please try again.");
+            }
         }
 
         async function loadChartData() {
