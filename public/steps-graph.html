@@ -574,11 +574,25 @@
                 };
 
                 // Update All Challenges
-                updateMilestone('london', 300000, "Congratulations Fred! You've reached London!", "Only {remaining} steps left until London!");
-                updateMilestone('paris', 800000, "Incroyable! Fred, you've reached Paris!", "{remaining} steps to go until you reach Paris!");
-                updateMilestone('berlin', 1500000, "Wunderbar! Fred, you've reached Berlin!", "{remaining} steps left until Berlin!");
-                updateMilestone('moscow', 3200000, "Amazing! Fred, you've reached Moscow!", "Keep going, {remaining} steps to Moscow!");
-                updateMilestone('joburg', 12000000, "Legendary! Fred, you've reached Johannesburg!", "The ultimate goal: {remaining} steps to Joburg!");
+                updateMilestone('london', 300000, 
+                    "Congratulations Fred! You've reached London! / Cheers, Fred!", 
+                    "Only {remaining} steps left until London! / Mind the gap, Fred!");
+                
+                updateMilestone('paris', 800000, 
+                    "Incroyable! Fred, you've reached Paris! / Félicitations, Fred !", 
+                    "{remaining} steps until Paris! / En route pour Paris !");
+                
+                updateMilestone('berlin', 1500000, 
+                    "Wunderbar! Fred, you've reached Berlin! / Gut gemacht, Fred!", 
+                    "{remaining} steps left until Berlin! / Auf geht's nach Berlin!");
+                
+                updateMilestone('moscow', 3200000, 
+                    "Amazing! Fred, you've reached Moscow! / Поздравляем, Фред!", 
+                    "Keep going, {remaining} steps to Moscow! / В Москву, Фред!");
+                
+                updateMilestone('joburg', 12000000, 
+                    "Legendary! Fred, you've reached Johannesburg! / Siyakuhalalisela, Fred!", 
+                    "Ultimate goal: {remaining} steps to Joburg! / Hamba kahle, Fred!");
 
             } catch (err) {
                 console.error("Error updating milestones:", err);
