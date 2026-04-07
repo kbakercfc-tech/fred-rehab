@@ -65,7 +65,7 @@
                             <span class="legend-item"><span class="legend-color-box" style="background-color: darkgreen;"></span> <span data-translate="Exercises & Weights Done">Exercises & Weights Done</span></span>
                             <span class="legend-item"><span class="legend-color-box" style="background-color: #ADD8E6;"></span> <span data-translate="Only Weights done">Only Weights done</span></span>
                             <span class="legend-item"><span class="legend-color-box" style="background-color: #d4edda;"></span> <span data-translate="Only Exercises Done">Only Exercises Done</span></span>
-                            <span class="legend-item"><span class="legend-color-box" style="background-color: #f1f1f1;"></span> <span data-translate="No exercise or weights done">No exercise or weights done</span></span>
+                            <span class="legend-item"><span class="legend-color-box" style="background-color: #dcdcdc;"></span> <span data-translate="No exercise or weights done">No exercise or weights done</span></span>
                             <span class="legend-item"><span class="legend-color-box" style="border: 1px solid red;"></span> <span data-translate="Largest Steps Day">Largest Steps Day</span></span>
                         </div>
                         <div class="summary-boxes-vertical">
@@ -121,6 +121,39 @@
                         <div id="paris-progress-bar" class="progress-bar" style="background-color: #9b59b6;">0%</div>
                     </div>
                     <p id="paris-status" class="milestone-status">On your way to France!</p>
+                </div>
+
+                <div class="milestone-card" style="border-left-color: #e67e22;">
+                    <div class="milestone-info">
+                        <span class="milestone-title" data-translate="Stoke to Berlin Challenge">Stoke to Berlin Challenge</span>
+                        <span class="milestone-distance">~1,500,000 steps (750 miles)</span>
+                    </div>
+                    <div class="progress-container">
+                        <div id="berlin-progress-bar" class="progress-bar" style="background-color: #e67e22;">0%</div>
+                    </div>
+                    <p id="berlin-status" class="milestone-status">Heading towards Germany!</p>
+                </div>
+
+                <div class="milestone-card" style="border-left-color: #e74c3c;">
+                    <div class="milestone-info">
+                        <span class="milestone-title" data-translate="Stoke to Moscow Challenge">Stoke to Moscow Challenge</span>
+                        <span class="milestone-distance">~3,200,000 steps (1,600 miles)</span>
+                    </div>
+                    <div class="progress-container">
+                        <div id="moscow-progress-bar" class="progress-bar" style="background-color: #e74c3c;">0%</div>
+                    </div>
+                    <p id="moscow-status" class="milestone-status">The long road to Russia!</p>
+                </div>
+
+                <div class="milestone-card" style="border-left-color: #27ae60;">
+                    <div class="milestone-info">
+                        <span class="milestone-title" data-translate="Stoke to Johannesburg Challenge">Stoke to Johannesburg Challenge</span>
+                        <span class="milestone-distance">~12,000,000 steps (6,000 miles)</span>
+                    </div>
+                    <div class="progress-container">
+                        <div id="joburg-progress-bar" class="progress-bar" style="background-color: #27ae60;">0%</div>
+                    </div>
+                    <p id="joburg-status" class="milestone-status">The ultimate journey to South Africa!</p>
                 </div>
             </div>
         </div>
@@ -210,6 +243,7 @@
                 let plugins = [];
 
                 if (type === 'histogram') {
+                    // ... (histogram logic remains same)
                     const recordedSteps = chartData.datasets[0].data.filter(s => s > 0).sort((a, b) => a - b);
                     if (recordedSteps.length === 0) {
                         alert("No step data available.");
@@ -258,8 +292,6 @@
                         afterDraw(chart) {
                             const { ctx, chartArea: { top, bottom, left, width }, scales: { x } } = chart;
                             const drawLine = (value, color, label, offsetLabelY) => {
-                                // Calculate X position based on value and binSize
-                                // (value / binSize) is the fraction of bins across the total width
                                 const xPos = left + (value / (numBins * binSize)) * width;
                                 
                                 if (xPos >= left && xPos <= left + width) {
@@ -287,6 +319,12 @@
                             drawLine(median, '#9c27b0', translations[currentLang]['Median'] || 'Median', 5);
                         }
                     });
+                } else if (type === 'line') {
+                    // Line chart needs a single border color for the whole line
+                    finalData.datasets[0].borderColor = '#00B0B9';
+                    finalData.datasets[0].borderWidth = 3;
+                    finalData.datasets[0].pointBackgroundColor = chartData.datasets[0].borderColor; // Red for the max point
+                    finalData.datasets[0].pointRadius = chartData.datasets[0].borderWidth; // Larger for the max point
                 } else if (type === 'boxplot') {
                     // ... (boxplot logic remains same but inside try/catch)
                     const recordedSteps = chartData.datasets[0].data.filter(s => s > 0).sort((a, b) => a - b);
@@ -454,7 +492,7 @@
             let dataPoints = allDates.map(date => {
                 const step = steps.find(s => s.date === date);
                 const exercise = exercises.find(ex => ex.date === date);
-                let backgroundColor = '#f1f1f1'; // No exercise or weights done
+                let backgroundColor = '#dcdcdc'; // No exercise or weights done (Darker Light Grey)
                 if (exercise) {
                     if (exercise.weights_done === 'Yes' && exercise.done === 'Yes') {
                         backgroundColor = 'darkgreen';
@@ -499,7 +537,15 @@
                 if (clubData.level !== 'None') {
                     const displayLevel = clubData.level === 'Member' ? 'Member' : `${clubData.level} Member`;
                     clubStatus.innerHTML = `<strong>Current Level: ${displayLevel}</strong>`;
-                    clubStatus.style.color = '#27ae60';
+                    
+                    // Set color based on level
+                    const levelColors = {
+                        'Member': '#3498db', // Blue
+                        'Bronze': '#cd7f32', // Bronze
+                        'Silver': '#95a5a6', // Silver (darker grey)
+                        'Gold': '#daa520'    // Gold
+                    };
+                    clubStatus.style.color = levelColors[clubData.level] || '#27ae60';
                 }
 
                 const totalResponse = await fetch('/api/steps/total');
@@ -507,43 +553,33 @@
                 const totalSteps = totalData.total_steps || 0;
                 document.getElementById('total-steps').textContent = totalSteps.toLocaleString();
 
-                // Update London Challenge Milestone
-                const londonGoal = 300000;
-                const londonProgress = Math.min((totalSteps / londonGoal) * 100, 100).toFixed(1);
-                const londonBar = document.getElementById('london-progress-bar');
-                const londonStatus = document.getElementById('london-status');
-                
-                londonBar.style.width = londonProgress + '%';
-                londonBar.textContent = londonProgress + '%';
-                
-                if (totalSteps >= londonGoal) {
-                    londonBar.style.backgroundColor = '#2ecc71'; // Green
-                    londonStatus.textContent = "Congratulations Fred! You've reached London!";
-                    londonStatus.style.color = '#27ae60';
-                    londonStatus.style.fontWeight = 'bold';
-                } else {
-                    const remaining = (londonGoal - totalSteps).toLocaleString();
-                    londonStatus.textContent = `Only ${remaining} steps left until London!`;
-                }
+                // Milestone Helper
+                const updateMilestone = (idPrefix, goal, completionMsg, inProgressMsg) => {
+                    const progress = Math.min((totalSteps / goal) * 100, 100).toFixed(1);
+                    const bar = document.getElementById(`${idPrefix}-progress-bar`);
+                    const status = document.getElementById(`${idPrefix}-status`);
+                    
+                    bar.style.width = progress + '%';
+                    bar.textContent = progress + '%';
+                    
+                    if (totalSteps >= goal) {
+                        bar.style.backgroundColor = '#2ecc71'; 
+                        status.textContent = completionMsg;
+                        status.style.color = '#27ae60';
+                        status.style.fontWeight = 'bold';
+                    } else {
+                        const remaining = (goal - totalSteps).toLocaleString();
+                        status.textContent = inProgressMsg.replace('{remaining}', remaining);
+                    }
+                };
 
-                // Update Paris Challenge Milestone
-                const parisGoal = 800000;
-                const parisProgress = Math.min((totalSteps / parisGoal) * 100, 100).toFixed(1);
-                const parisBar = document.getElementById('paris-progress-bar');
-                const parisStatus = document.getElementById('paris-status');
-                
-                parisBar.style.width = parisProgress + '%';
-                parisBar.textContent = parisProgress + '%';
-                
-                if (totalSteps >= parisGoal) {
-                    parisBar.style.backgroundColor = '#2ecc71'; // Green
-                    parisStatus.textContent = "Incroyable! Fred, you've reached Paris!";
-                    parisStatus.style.color = '#27ae60';
-                    parisStatus.style.fontWeight = 'bold';
-                } else {
-                    const remaining = (parisGoal - totalSteps).toLocaleString();
-                    parisStatus.textContent = `${remaining} steps to go until you reach Paris!`;
-                }
+                // Update All Challenges
+                updateMilestone('london', 300000, "Congratulations Fred! You've reached London!", "Only {remaining} steps left until London!");
+                updateMilestone('paris', 800000, "Incroyable! Fred, you've reached Paris!", "{remaining} steps to go until you reach Paris!");
+                updateMilestone('berlin', 1500000, "Wunderbar! Fred, you've reached Berlin!", "{remaining} steps left until Berlin!");
+                updateMilestone('moscow', 3200000, "Amazing! Fred, you've reached Moscow!", "Keep going, {remaining} steps to Moscow!");
+                updateMilestone('joburg', 12000000, "Legendary! Fred, you've reached Johannesburg!", "The ultimate goal: {remaining} steps to Joburg!");
+
             } catch (err) {
                 console.error("Error updating milestones:", err);
             }
