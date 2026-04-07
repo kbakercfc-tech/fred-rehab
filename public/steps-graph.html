@@ -25,7 +25,11 @@
     <main>
         <div class="graph-and-summary-wrapper">
             <div class="chart-flex-container">
-                <div class="chart-section">
+                <div class="chart-section" style="position: relative;">
+                    <div class="fred-photo-wrapper">
+                        <img src="images/fred.jpg" alt="Fred's Photo" class="fred-photo">
+                        <div id="club-badge" class="club-badge"></div>
+                    </div>
                     <div class="filter-controls">
                         <label for="filter-type" data-translate="View:">View:</label>
                         <select id="filter-type" onchange="toggleDatePickers()" title="Select a time period to display on the graph.">
@@ -74,8 +78,49 @@
                                 <h3 data-translate="Average Steps">Average Steps</h3>
                                 <p id="average-steps" class="summary-value">0</p>
                             </div>
+                            <div class="summary-box milestone-box">
+                                <h3 data-translate="Total Steps">Total Steps</h3>
+                                <p id="total-steps" class="summary-value">0</p>
+                            </div>
                         </div>
                     </div>
+                </div>
+            </div>
+            
+            <div class="milestones-section">
+                <h2 data-translate="Fun Milestones">Fun Milestones</h2>
+                
+                <div class="milestone-card" style="border-left-color: #3498db;">
+                    <div class="milestone-info">
+                        <span class="milestone-title">10,000 Steps Club</span>
+                        <span id="club-count-display" class="milestone-distance">0 times achieved</span>
+                    </div>
+                    <p id="club-level-status" class="milestone-status">Walk 10,000 steps to join the club!</p>
+                    <div style="font-size: 0.8em; margin-top: 10px; color: #7f8c8d;">
+                        Bronze: 5 times | Silver: 10 times | Gold: 15 times
+                    </div>
+                </div>
+
+                <div class="milestone-card">
+                    <div class="milestone-info">
+                        <span class="milestone-title" data-translate="Stoke to London Challenge">Stoke to London Challenge</span>
+                        <span class="milestone-distance">~300,000 steps (150 miles)</span>
+                    </div>
+                    <div class="progress-container">
+                        <div id="london-progress-bar" class="progress-bar">0%</div>
+                    </div>
+                    <p id="london-status" class="milestone-status">Keep walking, Fred!</p>
+                </div>
+
+                <div class="milestone-card" style="border-left-color: #9b59b6;">
+                    <div class="milestone-info">
+                        <span class="milestone-title" data-translate="Stoke to Paris Challenge">Stoke to Paris Challenge</span>
+                        <span class="milestone-distance">~800,000 steps (400 miles)</span>
+                    </div>
+                    <div class="progress-container">
+                        <div id="paris-progress-bar" class="progress-bar" style="background-color: #9b59b6;">0%</div>
+                    </div>
+                    <p id="paris-status" class="milestone-status">On your way to France!</p>
                 </div>
             </div>
         </div>
@@ -313,7 +358,30 @@
             }
         }
 
+        async function updateClubBadge() {
+            try {
+                const response = await fetch('/api/steps/club-status');
+                const data = await response.json();
+                const badge = document.getElementById('club-badge');
+                
+                if (data.level && data.level !== 'None') {
+                    badge.style.display = 'flex';
+                    badge.className = 'club-badge ' + 'badge-' + data.level.toLowerCase();
+                    if (data.level === 'Member') {
+                        badge.innerHTML = '10K<br>CLUB';
+                    } else {
+                        badge.innerHTML = `${data.level}<br>10K CLUB`;
+                    }
+                } else {
+                    badge.style.display = 'none';
+                }
+            } catch (err) {
+                console.error("Error fetching club status:", err);
+            }
+        }
+
         async function loadChartData() {
+            updateClubBadge();
             let stepsApiUrl = '/api/steps';
             let exercisesApiUrl = '/api/exercises';
             const filterType = filterTypeSelect.value;
@@ -407,6 +475,7 @@
             let largestSteps = 0;
             let largestStepsDate = 'N/A';
             const recordedStepsValues = dataPoints.filter(dp => dp.steps > 0).map(dp => dp.steps);
+            console.log("Steps found for chart:", recordedStepsValues);
             if (recordedStepsValues.length > 0) {
                 largestSteps = Math.max(...recordedStepsValues);
                 const largestStepsDataPoint = dataPoints.find(dp => dp.steps === largestSteps);
@@ -419,6 +488,65 @@
             document.getElementById('largest-steps').textContent = largestSteps.toLocaleString();
             document.getElementById('largest-steps-date').textContent = largestStepsDate !== 'N/A' ? `(${formatDateDDMMMYY(largestStepsDate)})` : '';
             document.getElementById('average-steps').textContent = averageSteps.toLocaleString();
+
+            // Fetch and Update Total Steps and Milestones
+            try {
+                // Club Status
+                const clubResponse = await fetch('/api/steps/club-status');
+                const clubData = await clubResponse.json();
+                document.getElementById('club-count-display').textContent = `${clubData.count} time${clubData.count !== 1 ? 's' : ''} achieved`;
+                const clubStatus = document.getElementById('club-level-status');
+                if (clubData.level !== 'None') {
+                    const displayLevel = clubData.level === 'Member' ? 'Member' : `${clubData.level} Member`;
+                    clubStatus.innerHTML = `<strong>Current Level: ${displayLevel}</strong>`;
+                    clubStatus.style.color = '#27ae60';
+                }
+
+                const totalResponse = await fetch('/api/steps/total');
+                const totalData = await totalResponse.json();
+                const totalSteps = totalData.total_steps || 0;
+                document.getElementById('total-steps').textContent = totalSteps.toLocaleString();
+
+                // Update London Challenge Milestone
+                const londonGoal = 300000;
+                const londonProgress = Math.min((totalSteps / londonGoal) * 100, 100).toFixed(1);
+                const londonBar = document.getElementById('london-progress-bar');
+                const londonStatus = document.getElementById('london-status');
+                
+                londonBar.style.width = londonProgress + '%';
+                londonBar.textContent = londonProgress + '%';
+                
+                if (totalSteps >= londonGoal) {
+                    londonBar.style.backgroundColor = '#2ecc71'; // Green
+                    londonStatus.textContent = "Congratulations Fred! You've reached London!";
+                    londonStatus.style.color = '#27ae60';
+                    londonStatus.style.fontWeight = 'bold';
+                } else {
+                    const remaining = (londonGoal - totalSteps).toLocaleString();
+                    londonStatus.textContent = `Only ${remaining} steps left until London!`;
+                }
+
+                // Update Paris Challenge Milestone
+                const parisGoal = 800000;
+                const parisProgress = Math.min((totalSteps / parisGoal) * 100, 100).toFixed(1);
+                const parisBar = document.getElementById('paris-progress-bar');
+                const parisStatus = document.getElementById('paris-status');
+                
+                parisBar.style.width = parisProgress + '%';
+                parisBar.textContent = parisProgress + '%';
+                
+                if (totalSteps >= parisGoal) {
+                    parisBar.style.backgroundColor = '#2ecc71'; // Green
+                    parisStatus.textContent = "Incroyable! Fred, you've reached Paris!";
+                    parisStatus.style.color = '#27ae60';
+                    parisStatus.style.fontWeight = 'bold';
+                } else {
+                    const remaining = (parisGoal - totalSteps).toLocaleString();
+                    parisStatus.textContent = `${remaining} steps to go until you reach Paris!`;
+                }
+            } catch (err) {
+                console.error("Error updating milestones:", err);
+            }
 
             // Calculate running average on time-sorted data before applying display sort
             const timeSortedData = [...dataPoints].sort((a, b) => new Date(a.date) - new Date(b.date));

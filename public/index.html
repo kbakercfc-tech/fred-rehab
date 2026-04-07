@@ -26,6 +26,7 @@
             <h2 data-translate="Log Activity">Log Activity</h2>
             <div class="fred-photo-wrapper">
                 <img src="images/fred.jpg" alt="Fred's Photo" class="fred-photo">
+                <div id="club-badge" class="club-badge"></div>
             </div>
             <div>
                 <label for="date" data-translate="Date:">Date:</label>
@@ -135,6 +136,7 @@
                 const quantityToDisplay = steps[0].quantity;
                 stepsInput.value = quantityToDisplay; // Assign raw number, not formatted string
             }
+            updateClubBadge(); // Update badge on date change or initial load
         }
 
         // Removed event listener for exerciseDoneSelect changing exerciseQuantitySelect
@@ -144,26 +146,28 @@
             const done = exerciseDoneSelect.value;
             const weightsDone = weightsDoneSelect.value; // Get weightsDone value
             const date = dateInput.value;
+const response = await fetch(`/api/exercises?date=${date}`);
+const exercises = await response.json();
 
-            const response = await fetch(`/api/exercises?date=${date}`);
-            const exercises = await response.json();
+if (exercises.length > 0) {
+    if (!confirm('Data for this date already exists. Do you want to overwrite it?')) {
+        return;
+    }
+}
 
-            if (exercises.length > 0) {
-                if (!confirm('Data for this date already exists. Do you want to overwrite it?')) {
-                    return;
-                }
-            }
-
-            const postResponse = await fetch('/api/exercises', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                },
-                body: `done=${done}&weights_done=${weightsDone}&date=${date}` // Send weights_done
-            });
+const postResponse = await fetch('/api/exercises', {
+    method: 'POST',
+    headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body: `done=${done}&weights_done=${weights_done}&date=${date}`
+});
             if (postResponse.ok) {
-                // However, we should re-check data for the current date to update fields
                 checkDataForDate();
+                updateClubBadge(); // Refresh badge
+            } else {
+                alert("Failed to save exercise. See console for details.");
+                console.error("Failed to save exercise.");
             }
         }
 
@@ -222,6 +226,7 @@
                 checkDataForDate();
                 document.getElementById('steps-quantity').value = '';
                 document.getElementById('comments').value = '';
+                updateClubBadge(); // Refresh badge in case level changed
             } else {
                 alert("Failed to save steps. See console for details.");
                 console.error("Failed to save steps and comments.");
@@ -324,6 +329,28 @@
             }
         }
 
+        async function updateClubBadge() {
+            try {
+                const response = await fetch('/api/steps/club-status');
+                const data = await response.json();
+                const badge = document.getElementById('club-badge');
+                
+                if (data.level && data.level !== 'None') {
+                    badge.style.display = 'flex';
+                    badge.className = 'club-badge ' + 'badge-' + data.level.toLowerCase();
+                    if (data.level === 'Member') {
+                        badge.innerHTML = '10K<br>CLUB';
+                    } else {
+                        badge.innerHTML = `${data.level}<br>10K CLUB`;
+                    }
+                } else {
+                    badge.style.display = 'none';
+                }
+            } catch (err) {
+                console.error("Error fetching club status:", err);
+            }
+        }
+
         window.onload = async () => {
             // Priority 1: Fitbit status
             try {
@@ -334,8 +361,9 @@
             }
 
             // Priority 2: Other data and language
-            loadData();
+            checkDataForDate();
             setLanguage(currentLang);
+            updateClubBadge();
         };
         </script>
         </body>

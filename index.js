@@ -28,7 +28,7 @@ const FITBIT_CALLBACK_URL = process.env.FITBIT_CALLBACK_URL || `http://localhost
 
 // Set up the database
 const DB_PATH = process.env.DATABASE_PATH || path.join(__dirname, 'rehab.db');
-const db = new sqlite3.Database(DB_PATH, sqlite3.OPEN_READWRITE | sqlite3.OPEN_CREATE, (err) => {
+let db = new sqlite3.Database(DB_PATH, sqlite3.OPEN_READWRITE | sqlite3.OPEN_CREATE, (err) => {
     if (err) {
         console.error(`Error connecting to database at ${DB_PATH}:`, err.message);
     }
@@ -190,6 +190,38 @@ app.get('/api/steps', (req, res) => {
         }
         console.log("API Response - /api/steps (rows):", rows); // Debug log
         res.json(rows);
+    });
+});
+
+app.get('/api/steps/total', (req, res) => {
+    const sql = 'SELECT quantity FROM steps';
+    db.all(sql, [], (err, rows) => {
+        if (err) {
+            console.error("Error fetching total steps:", err.message);
+            res.status(500).send(err.message);
+            return;
+        }
+        const total = rows.reduce((sum, row) => sum + (parseInt(row.quantity, 10) || 0), 0);
+        console.log("Total steps calculated (manual sum):", total);
+        res.json({ total_steps: total });
+    });
+});
+
+app.get('/api/steps/club-status', (req, res) => {
+    const sql = 'SELECT COUNT(*) as count FROM steps WHERE CAST(quantity AS INTEGER) >= 10000';
+    db.get(sql, [], (err, row) => {
+        if (err) {
+            res.status(500).send(err.message);
+            return;
+        }
+        const count = row.count || 0;
+        let level = 'None';
+        if (count >= 15) level = 'Gold';
+        else if (count >= 10) level = 'Silver';
+        else if (count >= 5) level = 'Bronze';
+        else if (count >= 1) level = 'Member';
+        
+        res.json({ count, level });
     });
 });
 
@@ -509,7 +541,7 @@ app.post('/api/restore', upload.single('backup'), (req, res) => {
             });
 
             // 3. Re-open DB connection
-            global.db = new sqlite3.Database(DB_PATH, sqlite3.OPEN_READWRITE | sqlite3.OPEN_CREATE, (openErr) => {
+            db = new sqlite3.Database(DB_PATH, sqlite3.OPEN_READWRITE | sqlite3.OPEN_CREATE, (openErr) => {
                 if (openErr) console.error("Error re-opening DB:", openErr);
                 
                 // Cleanup temporary uploaded zip

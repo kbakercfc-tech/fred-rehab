@@ -139,24 +139,49 @@ form {
 
 .fred-photo-wrapper {
     position: absolute;
-    top: -1em; /* Position wrapper relative to form's padding */
-    right: -1em;
-    width: 135px; /* Same size as fred-photo */
-    height: 135px;
-    border-radius: 50%;
+    top: 10px;
+    right: 10px;
+    width: 140px; 
+    height: 140px;
+    z-index: 50;
 }
 
 .fred-photo {
-    width: 135px;
-    height: 135px;
+    width: 100%;
+    height: 100%;
     border-radius: 50%;
     object-fit: cover;
-    position: absolute; /* Positioned relative to form */
-    top: -0.75em; /* Adjusted position */
-    right: -0.75em; /* Adjusted position */
-    border: 2px solid #007bff;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    border: 3px solid #007bff;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
 }
+
+.club-badge {
+    position: absolute;
+    bottom: -10px;
+    right: -10px;
+    width: 75px; /* Slightly larger */
+    height: 75px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 0.75em;
+    color: white;
+    text-align: center;
+    border: 4px solid white;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+    z-index: 100;
+    line-height: 1.1;
+    text-transform: uppercase;
+    display: none; /* Hidden by default, JS shows it */
+}
+
+.badge-member { background: linear-gradient(135deg, #3498db, #2980b9); }
+.badge-bronze { background: linear-gradient(135deg, #cd7f32, #a0522d); }
+.badge-silver { background: linear-gradient(135deg, #c0c0c0, #8e8e8e); }
+.badge-gold { background: linear-gradient(135deg, #ffd700, #daa520); }
+
 .santa-hat {
     position: absolute; /* Positioned relative to form */
     width: 70px; /* Adjusted size */
@@ -491,6 +516,74 @@ tr:hover {
     margin-top: 0.1em;
 }
 
+
+/* Milestones & Gamification */
+.milestones-section {
+    margin-top: 2em;
+    padding: 1.5em;
+    background-color: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+}
+
+.milestones-section h2 {
+    margin-top: 0;
+    color: #2c3e50;
+    border-bottom: 2px solid #f0f2f5;
+    padding-bottom: 0.5em;
+}
+
+.milestone-card {
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    padding: 1.5em;
+    margin-top: 1em;
+    border-left: 5px solid #00B0B9;
+}
+
+.milestone-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1em;
+}
+
+.milestone-title {
+    font-weight: bold;
+    font-size: 1.2em;
+    color: #2c3e50;
+}
+
+.milestone-distance {
+    color: #7f8c8d;
+    font-size: 0.9em;
+}
+
+.progress-container {
+    background-color: #e9ecef;
+    border-radius: 20px;
+    height: 25px;
+    width: 100%;
+    overflow: hidden;
+    margin-bottom: 0.8em;
+}
+
+.progress-bar {
+    background-color: #00B0B9;
+    height: 100%;
+    color: white;
+    text-align: center;
+    line-height: 25px;
+    font-size: 0.85em;
+    font-weight: bold;
+    transition: width 1s ease-in-out;
+}
+
+.milestone-status {
+    margin: 0;
+    font-style: italic;
+    color: #34495e;
+}
 
 @media (max-width: 768px) {
     header {

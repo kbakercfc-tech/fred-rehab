@@ -165,8 +165,16 @@
                 calendarGrid.appendChild(header);
             });
 
+            // Calculate offset for the first day to align with correct day of week
+            const firstDayOfWeek = startDate.getDay();
+            for (let i = 0; i < firstDayOfWeek; i++) {
+                const emptyCell = document.createElement('div');
+                emptyCell.classList.add('day-cell', 'empty-day');
+                calendarGrid.appendChild(emptyCell);
+            }
+
             let currentMonth = -1; // Initialize to an invalid month to force first header
-            let currentDayIndex = 0; // To track position in the 14-day grid
+            let currentDayIndex = firstDayOfWeek; // To track position in the 14-day grid
 
             // Iterate through each day from startDate to today
             let iterDate = new Date(startDate);
@@ -187,7 +195,16 @@
                     monthHeaderDiv.classList.add('month-name');
                     monthHeaderDiv.textContent = iterDate.toLocaleString('default', { month: 'long', year: 'numeric' });
                     calendarGrid.appendChild(monthHeaderDiv);
-                    currentDayIndex = 0; // Reset for new month header
+                    
+                    // Reset currentDayIndex to 0 and add empty cells for the new month's first day offset
+                    currentDayIndex = 0;
+                    const monthOffset = iterDate.getDay();
+                    for (let i = 0; i < monthOffset; i++) {
+                        const emptyCell = document.createElement('div');
+                        emptyCell.classList.add('day-cell', 'empty-day');
+                        calendarGrid.appendChild(emptyCell);
+                        currentDayIndex++;
+                    }
                 }
 
                 const dateString = iterDate.toISOString().slice(0, 10);
