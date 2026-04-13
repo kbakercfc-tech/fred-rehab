@@ -194,6 +194,7 @@
                 tAvgAll:      'Average \u2014 all days in period',
                 tBestDay:     'Best single day',
                 t10k:         'Days reaching 10,000+ steps',
+                tClubLevel:   '10,000 Steps Club level (all-time)',
                 of:           'of',
                 sPerDay:      'steps/day',
                 steps:        'steps',
@@ -241,6 +242,7 @@
                 tAvgAll:      'Moyenne \u2014 tous les jours de la période',
                 tBestDay:     'Meilleur jour',
                 t10k:         'Jours atteignant 10 000+ pas',
+                tClubLevel:   'Niveau du Club des 10 000 Pas (total)',
                 of:           'sur',
                 sPerDay:      'pas/jour',
                 steps:        'pas',
@@ -346,7 +348,7 @@
         }
 
         // ── Narrative ──
-        function buildNarrative({ periodDays, daysLogged, totalSteps, avgAll, avgActive, exerciseDays, weightsDays, exPct, wtPct, bestDay, trend, periodStart, periodEnd, achCount }) {
+        function buildNarrative({ periodDays, daysLogged, totalSteps, avgAll, avgActive, exerciseDays, weightsDays, exPct, wtPct, bestDay, trend, periodStart, periodEnd, achCount, clubLevel, clubCount }) {
             const paras = [];
 
             let p1 = `During the ${periodDays}-day reporting period from ${fmtLong(periodStart)} to ${fmtLong(periodEnd)}, Fred logged activity on ${daysLogged} ${daysLogged===1?'day':'days'}.`;
@@ -379,6 +381,11 @@
             }
 
             if (achCount > 0) paras.push(`Fred recorded ${achCount} notable achievement${achCount>1?'s':''} during this period, providing positive evidence of tangible progress in his recovery.`);
+
+            if (clubLevel && clubLevel !== 'None') {
+                const clubEmoji = { Gold: '🥇', Silver: '🥈', Bronze: '🥉', Member: '🏅' };
+                paras.push(`Fred is a ${clubLevel} member of the 10,000 Steps Club ${clubEmoji[clubLevel] || ''}, having achieved 10,000 or more steps on ${clubCount} ${clubCount === 1 ? 'day' : 'days'} in total across his rehabilitation programme.`);
+            }
 
             return paras;
         }
@@ -521,15 +528,16 @@
             const ago60Str = ago60.toISOString().slice(0,10);
 
             try {
-                const [stepsRes, exRes, achRes, totalRes, eta60Res] = await Promise.all([
+                const [stepsRes, exRes, achRes, totalRes, eta60Res, clubRes] = await Promise.all([
                     fetch(`/api/steps?startDate=${startDate}&endDate=${endDate}`),
                     fetch(`/api/exercises?startDate=${startDate}&endDate=${endDate}`),
                     fetch('/api/achievements'),
                     fetch('/api/steps/total'),
-                    fetch(`/api/steps?startDate=${ago60Str}&endDate=${todayStr}`)
+                    fetch(`/api/steps?startDate=${ago60Str}&endDate=${todayStr}`),
+                    fetch('/api/steps/club-status')
                 ]);
-                const [stepsData, exData, achAll, totalData, eta60Data] = await Promise.all([
-                    stepsRes.json(), exRes.json(), achRes.json(), totalRes.json(), eta60Res.json()
+                const [stepsData, exData, achAll, totalData, eta60Data, clubData] = await Promise.all([
+                    stepsRes.json(), exRes.json(), achRes.json(), totalRes.json(), eta60Res.json(), clubRes.json()
                 ]);
 
                 const allDates   = dateRange(startDate, endDate);
@@ -573,7 +581,7 @@
                 }
 
                 const periodAch = achAll.filter(a => a.start_date >= startDate && a.start_date <= endDate);
-                const stats = { periodDays, daysLogged, totalSteps, avgAll, avgActive, exerciseDays, weightsDays, exPct, wtPct, bestDay, trend, periodStart: startDate, periodEnd: endDate, achCount: periodAch.length };
+                const stats = { periodDays, daysLogged, totalSteps, avgAll, avgActive, exerciseDays, weightsDays, exPct, wtPct, bestDay, trend, periodStart: startDate, periodEnd: endDate, achCount: periodAch.length, clubLevel: clubData.level, clubCount: clubData.count };
                 lastReportStats = stats;
 
                 const narrative = buildNarrative(stats);
@@ -643,6 +651,7 @@
             <tr><td>${T.tAvgAll}</td><td>${Math.round(avgAll).toLocaleString()} ${T.sPerDay}</td></tr>
             <tr><td>${T.tBestDay}</td><td>${bestDay ? `${bestDay.steps.toLocaleString()} ${T.steps} (${fmtMed(bestDay.date)})` : '—'}</td></tr>
             <tr><td>${T.t10k}</td><td>${stepsData.filter(s => s.quantity >= 10000).length}</td></tr>
+            <tr><td>${T.tClubLevel}</td><td><strong>${clubData.level === 'None' ? '—' : clubData.level}</strong>${clubData.level !== 'None' ? ` (${clubData.count} ${T.days} ≥ 10,000)` : ''}</td></tr>
         </table>
     </div>
 
