@@ -8,9 +8,37 @@ const FitbitApiClient = require("fitbit-node");
 const AdmZip = require("adm-zip");
 const fs = require("fs");
 const cron = require("node-cron");
+const session = require('express-session');
 
 const app = express();
 const port = process.env.PORT || 3000; // Use process.env.PORT for Render
+
+// Session configuration
+app.use(session({
+    secret: process.env.SESSION_SECRET || 'fallback-secret-for-local-only',
+    resave: false,
+    saveUninitialized: false,
+    cookie: { 
+        secure: process.env.NODE_ENV === 'production',
+        maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    }
+}));
+
+// Auth mode: set AUTH_ENABLED=false in .env to disable login entirely (open access, everyone is editor)
+const AUTH_ENABLED = process.env.AUTH_ENABLED !== 'false';
+
+// Auth Middlewares
+const requireLogin = (req, res, next) => {
+    if (!AUTH_ENABLED) return next();
+    if (!req.session.role) return res.redirect('/login.html');
+    next();
+};
+
+const requireEditor = (req, res, next) => {
+    if (!AUTH_ENABLED) return next();
+    if (req.session.role !== 'editor') return res.status(403).send('Editor role required.');
+    next();
+};
 
 // Backup directory setup
 const BACKUP_DIR = process.env.DATABASE_PATH ? '/var/data/backups' : path.join(__dirname, 'backups');
@@ -98,6 +126,41 @@ db.serialize(() => {
         refresh_token TEXT NOT NULL,
         expires_at INTEGER NOT NULL
     )`);
+    db.run(`CREATE TABLE IF NOT EXISTS achievements (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        description TEXT,
+        start_date TEXT NOT NULL,
+        end_date TEXT
+    )`, () => {
+        // Migration: Check if old 'date' column exists and migrate to 'start_date'
+        db.all(`PRAGMA table_info(achievements)`, (err, columns) => {
+            if (err) return;
+            const hasDate = columns.some(c => c.name === 'date');
+            const hasStartDate = columns.some(c => c.name === 'start_date');
+            
+            if (hasDate && !hasStartDate) {
+                // This shouldn't happen if CREATE TABLE IF NOT EXISTS worked with new schema, 
+                // but for safety in SQLite environments where schema might be cached:
+                db.serialize(() => {
+                    db.run(`ALTER TABLE achievements ADD COLUMN start_date TEXT`);
+                    db.run(`ALTER TABLE achievements ADD COLUMN end_date TEXT`);
+                    db.run(`UPDATE achievements SET start_date = date`);
+                    // We can't easily drop columns in old SQLite, so we'll just leave 'date'
+                });
+            } else if (!hasDate && !hasStartDate) {
+                // New table was created with start_date already
+            }
+        });
+    });
+    db.run(`CREATE TABLE IF NOT EXISTS achievement_media (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        achievement_id INTEGER NOT NULL,
+        filename TEXT NOT NULL,
+        filepath TEXT NOT NULL,
+        media_type TEXT NOT NULL,
+        FOREIGN KEY (achievement_id) REFERENCES achievements(id) ON DELETE CASCADE
+    )`);
     db.run(`CREATE TABLE IF NOT EXISTS settings (
         key TEXT PRIMARY KEY,
         value TEXT
@@ -109,12 +172,53 @@ db.serialize(() => {
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 app.use(express.static(path.join(__dirname, 'public')));
-// Additionally, serve uploaded video files from the UPLOAD_DESTINATION via the /uploads route
-// This ensures that even if UPLOAD_PATH is set outside 'public', videos are accessible.
-app.use('/uploads', express.static(UPLOAD_DESTINATION));
 
-// API Endpoints
-app.get('/api/exercises', (req, res) => {
+// Auth Endpoints
+app.post('/api/login', (req, res) => {
+    const { password } = req.body;
+    const editorPassword = process.env.EDITOR_PASSWORD;
+    const viewerPassword = process.env.VIEWER_PASSWORD;
+
+    if (password === editorPassword) {
+        req.session.role = 'editor';
+        res.json({ success: true, role: 'editor' });
+    } else if (password === viewerPassword) {
+        req.session.role = 'viewer';
+        res.json({ success: true, role: 'viewer' });
+    } else {
+        res.status(401).json({ success: false, message: 'Invalid password' });
+    }
+});
+
+app.post('/api/logout', (req, res) => {
+    req.session.destroy();
+    res.json({ success: true });
+});
+
+app.get('/api/user-status', (req, res) => {
+    if (!AUTH_ENABLED) return res.json({ role: 'editor', authEnabled: false });
+    res.json({ role: req.session.role || null, authEnabled: true });
+});
+
+// Serve login page without restriction
+app.get('/login.html', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'login.html'));
+});
+
+// Special protection for Data Management (Editor only)
+app.get('/data-management.html', requireLogin, requireEditor, (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'data-management.html'));
+});
+
+app.get('/', requireLogin, (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// Additionally, serve uploaded video files from the UPLOAD_DESTINATION via the /uploads route
+app.use('/uploads', requireLogin, express.static(UPLOAD_DESTINATION));
+
+// API Endpoints - Protected
+app.get('/api/exercises', requireLogin, (req, res) => {
     let sql = 'SELECT id, done, date, weights_done FROM exercises';
     const params = [];
     const conditions = [];
@@ -144,7 +248,7 @@ app.get('/api/exercises', (req, res) => {
     });
 });
 
-app.post('/api/exercises', (req, res) => {
+app.post('/api/exercises', requireLogin, requireEditor, (req, res) => {
     const { done, weights_done, date } = req.body; // Change quantity to weights_done
     db.serialize(() => {
         db.run('DELETE FROM exercises WHERE date = ?', [date], function(err) {
@@ -163,7 +267,7 @@ app.post('/api/exercises', (req, res) => {
     });
 });
 
-app.get('/api/steps', (req, res) => {
+app.get('/api/steps', requireLogin, (req, res) => {
     let sql = 'SELECT id, date, quantity, comments FROM steps';
     const params = [];
     const conditions = [];
@@ -193,7 +297,7 @@ app.get('/api/steps', (req, res) => {
     });
 });
 
-app.get('/api/steps/total', (req, res) => {
+app.get('/api/steps/total', requireLogin, (req, res) => {
     const sql = 'SELECT quantity FROM steps';
     db.all(sql, [], (err, rows) => {
         if (err) {
@@ -207,7 +311,7 @@ app.get('/api/steps/total', (req, res) => {
     });
 });
 
-app.get('/api/steps/club-status', (req, res) => {
+app.get('/api/steps/club-status', requireLogin, (req, res) => {
     const sql = 'SELECT COUNT(*) as count FROM steps WHERE CAST(quantity AS INTEGER) >= 10000';
     db.get(sql, [], (err, row) => {
         if (err) {
@@ -225,7 +329,7 @@ app.get('/api/steps/club-status', (req, res) => {
     });
 });
 
-app.get('/api/steps/max', (req, res) => {
+app.get('/api/steps/max', requireLogin, (req, res) => {
     let sql = 'SELECT MAX(quantity) as max_steps FROM steps';
     let params = [];
     if (req.query.exclude_dates) {
@@ -245,7 +349,7 @@ app.get('/api/steps/max', (req, res) => {
     });
 });
 
-app.post('/api/steps', (req, res) => {
+app.post('/api/steps', requireLogin, requireEditor, (req, res) => {
     const { quantity, date, comments } = req.body;
     db.serialize(() => {
         db.run('DELETE FROM steps WHERE date = ?', [date], function(err) {
@@ -264,12 +368,18 @@ app.post('/api/steps', (req, res) => {
     });
 });
 
+// Web Share Target fallback (service worker handles this when installed;
+// this catches the rare case where the SW isn't active yet)
+app.post('/share-target', requireLogin, (req, res) => {
+    res.redirect('/exercise-videos.html');
+});
+
 // Video upload endpoints
-app.get('/exercise-videos.html', (req, res) => {
+app.get('/exercise-videos.html', requireLogin, (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'exercise-videos.html'));
 });
 
-app.post('/upload-video', upload.single('video'), (req, res) => {
+app.post('/upload-video', requireLogin, requireEditor, upload.single('video'), (req, res) => {
     if (!req.file) {
         return res.status(400).send('No file uploaded.');
     }
@@ -287,7 +397,7 @@ app.post('/upload-video', upload.single('video'), (req, res) => {
         });
 });
 
-app.get('/api/videos', (req, res) => {
+app.get('/api/videos', requireLogin, (req, res) => {
     db.all('SELECT * FROM videos ORDER BY upload_date DESC', (err, rows) => {
         if (err) {
             res.status(500).send(err.message);
@@ -297,7 +407,7 @@ app.get('/api/videos', (req, res) => {
     });
 });
 
-app.delete('/api/videos/:id', (req, res) => {
+app.delete('/api/videos/:id', requireLogin, requireEditor, (req, res) => {
     const videoId = req.params.id;
     db.get('SELECT filename, filepath FROM videos WHERE id = ?', [videoId], (err, row) => {
         if (err) {
@@ -331,7 +441,7 @@ app.delete('/api/videos/:id', (req, res) => {
 });
 
 // Clear History endpoint
-app.delete('/api/history', (req, res) => {
+app.delete('/api/history', requireLogin, requireEditor, (req, res) => {
     db.serialize(() => {
         db.run('DELETE FROM exercises', (err) => {
             if (err) {
@@ -350,7 +460,7 @@ app.delete('/api/history', (req, res) => {
 });
 
 // Batch save data endpoint
-app.post('/api/batch-save-data', bodyParser.json(), (req, res) => {
+app.post('/api/batch-save-data', requireLogin, requireEditor, bodyParser.json(), (req, res) => {
     const dataToSave = req.body; // Expecting an array of data objects
 
     if (!Array.isArray(dataToSave)) {
@@ -396,7 +506,7 @@ app.post('/api/batch-save-data', bodyParser.json(), (req, res) => {
 });
 
 // Fitbit OAuth Routes
-app.get("/auth/fitbit", (req, res) => {
+app.get("/auth/fitbit", requireLogin, requireEditor, (req, res) => {
     // 1. Try 'from' query param
     // 2. Try 'Referer' header (the page you were just on)
     // 3. Default to '/'
@@ -437,14 +547,14 @@ app.get("/auth/fitbit/callback", (req, res) => {
     });
 });
 
-app.get('/api/fitbit/status', (req, res) => {
+app.get('/api/fitbit/status', requireLogin, (req, res) => {
     db.get('SELECT id FROM fitbit_tokens WHERE id = 1', (err, row) => {
         if (err) return res.status(500).send(err.message);
         res.json({ connected: !!row });
     });
 });
 
-app.post('/api/fitbit/disconnect', (req, res) => {
+app.post('/api/fitbit/disconnect', requireLogin, requireEditor, (req, res) => {
     console.log("Attempting to disconnect Fitbit...");
     db.run('DELETE FROM fitbit_tokens WHERE id = 1', function(err) {
         if (err) {
@@ -456,7 +566,69 @@ app.post('/api/fitbit/disconnect', (req, res) => {
     });
 });
 
-app.post('/api/fitbit/sync', (req, res) => {
+// Promisify db helpers for use in async functions
+const dbGet = (sql, params) => new Promise((resolve, reject) =>
+    db.get(sql, params, (err, row) => err ? reject(err) : resolve(row)));
+const dbRun = (sql, params) => new Promise((resolve, reject) =>
+    db.run(sql, params, (err) => err ? reject(err) : resolve()));
+
+// Helper: fetch yesterday's steps from Fitbit and save to DB
+async function runFitbitAutoSync() {
+    console.log(`[${new Date().toISOString()}] Starting Fitbit auto-sync...`);
+
+    const tokenRow = await dbGet('SELECT * FROM fitbit_tokens WHERE id = 1', []);
+    if (!tokenRow) {
+        console.log('[Fitbit Auto-Sync] No Fitbit token found, skipping.');
+        return { skipped: true, reason: 'Fitbit is not connected' };
+    }
+
+    let { access_token, refresh_token, expires_at } = tokenRow;
+
+    if (Date.now() / 1000 > expires_at - 60) {
+        console.log('[Fitbit Auto-Sync] Token expired, refreshing...');
+        const refreshed = await fitbitClient.refreshAccessToken(access_token, refresh_token);
+        access_token = refreshed.access_token;
+        refresh_token = refreshed.refresh_token;
+        expires_at = Math.floor(Date.now() / 1000) + refreshed.expires_in;
+        await dbRun('UPDATE fitbit_tokens SET access_token = ?, refresh_token = ?, expires_at = ? WHERE id = 1',
+            [access_token, refresh_token, expires_at]);
+    }
+
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const dateStr = yesterday.toISOString().slice(0, 10);
+
+    const results = await fitbitClient.get(`/activities/steps/date/${dateStr}/1d.json`, access_token);
+    const body = results[0];
+    if (!body['activities-steps'] || !body['activities-steps'][0]) {
+        throw new Error('Unexpected Fitbit API response: ' + JSON.stringify(body));
+    }
+    const steps = parseInt(body['activities-steps'][0].value, 10);
+
+    // Preserve user-entered comments; only auto-set comment if empty or previously auto-sourced
+    const existing = await dbGet('SELECT comments FROM steps WHERE date = ?', [dateStr]);
+    const preserveComment = existing && existing.comments && !existing.comments.includes('Auto-sourced from Fitbit');
+    const comment = preserveComment ? existing.comments : 'Auto-sourced from Fitbit';
+
+    await dbRun('DELETE FROM steps WHERE date = ?', [dateStr]);
+    await dbRun('INSERT INTO steps (date, quantity, comments) VALUES (?, ?, ?)', [dateStr, steps, comment]);
+    await dbRun("REPLACE INTO settings (key, value) VALUES ('fitbit_last_sync', ?)", [new Date().toISOString()]);
+
+    console.log(`[Fitbit Auto-Sync] Saved ${steps} steps for ${dateStr}`);
+    return { date: dateStr, steps };
+}
+
+app.post('/api/fitbit/auto-sync-now', requireLogin, requireEditor, async (req, res) => {
+    try {
+        const result = await runFitbitAutoSync();
+        if (result.skipped) return res.status(400).json({ error: result.reason });
+        res.json(result);
+    } catch (err) {
+        res.status(500).json({ error: err.message || 'Sync failed' });
+    }
+});
+
+app.post('/api/fitbit/sync', requireLogin, requireEditor, (req, res) => {
     const { date } = req.body;
     db.get('SELECT * FROM fitbit_tokens WHERE id = 1', async (err, row) => {
         if (err || !row) return res.status(401).send("Fitbit not connected.");
@@ -490,7 +662,7 @@ app.post('/api/fitbit/sync', (req, res) => {
 });
 
 // Data Backup Endpoint
-app.get('/api/backup', (req, res) => {
+app.get('/api/backup', requireLogin, requireEditor, (req, res) => {
     try {
         const zip = new AdmZip();
         
@@ -518,7 +690,7 @@ app.get('/api/backup', (req, res) => {
 });
 
 // Data Restore Endpoint
-app.post('/api/restore', upload.single('backup'), (req, res) => {
+app.post('/api/restore', requireLogin, requireEditor, upload.single('backup'), (req, res) => {
     if (!req.file) return res.status(400).send("No backup file provided.");
 
     try {
@@ -556,7 +728,7 @@ app.post('/api/restore', upload.single('backup'), (req, res) => {
 });
 
 // Settings API
-app.get('/api/settings', (req, res) => {
+app.get('/api/settings', requireLogin, (req, res) => {
     db.all('SELECT * FROM settings', (err, rows) => {
         if (err) return res.status(500).send(err.message);
         const settings = {};
@@ -565,7 +737,7 @@ app.get('/api/settings', (req, res) => {
     });
 });
 
-app.post('/api/settings', (req, res) => {
+app.post('/api/settings', requireLogin, requireEditor, (req, res) => {
     const { key, value } = req.body;
     db.run('REPLACE INTO settings (key, value) VALUES (?, ?)', [key, value], (err) => {
         if (err) return res.status(500).send(err.message);
@@ -574,7 +746,7 @@ app.post('/api/settings', (req, res) => {
 });
 
 // Automated Backups API
-app.get('/api/backups/list', (req, res) => {
+app.get('/api/backups/list', requireLogin, (req, res) => {
     fs.readdir(BACKUP_DIR, (err, files) => {
         if (err) return res.status(500).send("Failed to list backups.");
         const backups = files
@@ -588,7 +760,7 @@ app.get('/api/backups/list', (req, res) => {
     });
 });
 
-app.get('/api/backups/download/:filename', (req, res) => {
+app.get('/api/backups/download/:filename', requireLogin, requireEditor, (req, res) => {
     const filePath = path.join(BACKUP_DIR, req.params.filename);
     if (fs.existsSync(filePath)) {
         res.download(filePath);
@@ -597,7 +769,7 @@ app.get('/api/backups/download/:filename', (req, res) => {
     }
 });
 
-app.post('/api/backups/run-now', async (req, res) => {
+app.post('/api/backups/run-now', requireLogin, requireEditor, async (req, res) => {
     try {
         await runAutomatedBackup();
         res.status(200).send("Automated backup triggered successfully.");
@@ -633,7 +805,15 @@ async function runAutomatedBackup() {
     }
 }
 
-// CRON JOB: Run every day at 2:00 AM
+// CRON JOB: Nightly Fitbit auto-sync at 2:00 AM GMT
+cron.schedule('0 2 * * *', () => {
+    db.get("SELECT value FROM settings WHERE key = 'fitbit_auto_sync'", (err, row) => {
+        if (err || !row || row.value !== 'on') return;
+        runFitbitAutoSync().catch(err => console.error('[Fitbit Auto-Sync Cron] Error:', err));
+    });
+}, { timezone: 'GMT' });
+
+// CRON JOB: Automated backup at 2:00 AM GMT
 cron.schedule('0 2 * * *', () => {
     db.get("SELECT value FROM settings WHERE key = 'backup_frequency'", (err, row) => {
         if (err || !row || row.value === 'off') return;
@@ -652,32 +832,144 @@ cron.schedule('0 2 * * *', () => {
 });
 
 
-app.get('/enter-data-tabular.html', (req, res) => {
+// Achievement endpoints
+app.get('/achievements.html', requireLogin, (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'achievements.html'));
+});
+
+app.get('/api/achievements', requireLogin, (req, res) => {
+    const sql = `
+        SELECT a.*, 
+               (SELECT json_group_array(json_object('id', m.id, 'filepath', m.filepath, 'media_type', m.media_type))
+                FROM achievement_media m 
+                WHERE m.achievement_id = a.id) as media
+        FROM achievements a 
+        ORDER BY a.start_date DESC
+    `;
+    db.all(sql, [], (err, rows) => {
+        if (err) {
+            res.status(500).send(err.message);
+            return;
+        }
+        // Parse the JSON string from the subquery
+        const achievements = rows.map(row => ({
+            ...row,
+            media: JSON.parse(row.media)
+        }));
+        res.json(achievements);
+    });
+});
+
+app.post('/api/achievements', requireLogin, requireEditor, upload.array('media'), (req, res) => {
+    const { name, description, start_date, end_date } = req.body;
+    const files = req.files || [];
+
+    db.run('INSERT INTO achievements (name, description, start_date, end_date) VALUES (?, ?, ?, ?)',
+        [name, description, start_date, end_date || null], function(err) {
+            if (err) {
+                console.error("Error inserting achievement:", err.message);
+                return res.status(500).send('Error saving achievement.');
+            }
+            const achievementId = this.lastID;
+
+            if (files.length === 0) {
+                return res.status(201).json({ id: achievementId });
+            }
+
+            const mediaPromises = files.map(file => {
+                const filename = file.filename;
+                const filepath = '/uploads/' + filename;
+                const mediaType = file.mimetype.startsWith('video/') ? 'video' : 'photo';
+                
+                return new Promise((resolve, reject) => {
+                    db.run('INSERT INTO achievement_media (achievement_id, filename, filepath, media_type) VALUES (?, ?, ?, ?)',
+                        [achievementId, filename, filepath, mediaType], function(err) {
+                            if (err) reject(err);
+                            else resolve();
+                        });
+                });
+            });
+
+            Promise.all(mediaPromises)
+                .then(() => res.status(201).json({ id: achievementId }))
+                .catch(err => {
+                    console.error("Error saving media metadata:", err.message);
+                    res.status(500).send('Error saving media metadata.');
+                });
+        });
+});
+
+app.put('/api/achievements/:id', requireLogin, requireEditor, (req, res) => {
+    const { id } = req.params;
+    const { name, description, start_date, end_date } = req.body || {};
+    if (!name || !start_date) return res.status(400).send('Name and start date are required.');
+    db.run(
+        'UPDATE achievements SET name = ?, description = ?, start_date = ?, end_date = ? WHERE id = ?',
+        [name, description || null, start_date, end_date || null, id],
+        function(err) {
+            if (err) return res.status(500).send(err.message);
+            if (this.changes === 0) return res.status(404).send('Achievement not found.');
+            res.status(200).send('Achievement updated.');
+        }
+    );
+});
+
+app.delete('/api/achievements/:id', requireLogin, requireEditor, (req, res) => {
+    const achievementId = req.params.id;
+    
+    // First get all media associated with this achievement to delete files
+    db.all('SELECT filepath FROM achievement_media WHERE achievement_id = ?', [achievementId], (err, rows) => {
+        if (err) {
+            console.error("Error fetching media for deletion:", err.message);
+            return res.status(500).send("Failed to fetch media for deletion.");
+        }
+
+        const fs = require('fs');
+        rows.forEach(row => {
+            const fullPath = path.join(__dirname, 'public', row.filepath);
+            fs.unlink(fullPath, (err) => {
+                if (err && err.code !== 'ENOENT') {
+                    console.error("Error deleting file:", fullPath, err);
+                }
+            });
+        });
+
+        // Now delete from database (cascading delete if enabled, but let's be explicit if not)
+        db.serialize(() => {
+            db.run('DELETE FROM achievement_media WHERE achievement_id = ?', [achievementId]);
+            db.run('DELETE FROM achievements WHERE id = ?', [achievementId], function(err) {
+                if (err) {
+                    console.error("Error deleting achievement:", err.message);
+                    return res.status(500).send("Failed to delete achievement.");
+                }
+                res.status(200).send("Achievement deleted successfully.");
+            });
+        });
+    });
+});
+
+app.get('/enter-data-tabular.html', requireLogin, (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'enter-data-tabular.html'));
 });
 
-app.get('/help.html', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'help.html'));
-});
-
-app.get('/calendar-view.html', (req, res) => {
+app.get('/calendar-view.html', requireLogin, (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'calendar-view.html'));
 });
 
-app.get('/steps-graph.html', (req, res) => {
+app.get('/steps-graph.html', requireLogin, (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'steps-graph.html'));
 });
 
-app.get('/history.html', (req, res) => {
+app.get('/history.html', requireLogin, (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'history.html'));
 });
 
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+app.get('/help.html', requireLogin, (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'help.html'));
 });
 
 app.listen(port, () => {
-  console.log(`Fred Rehab app listening at http://localhost:${port}`);
-  console.log(`Database path: ${DB_PATH}`);
-  console.log(`Upload destination: ${UPLOAD_DESTINATION}`);
+    console.log(`Fred Rehab app listening at http://localhost:${port}`);
+    console.log(`Database path: ${DB_PATH}`);
+    console.log(`Upload destination: ${UPLOAD_DESTINATION}`);
 });

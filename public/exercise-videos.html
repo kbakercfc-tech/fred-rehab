@@ -10,32 +10,37 @@
     <header>
         <h1 data-translate="Fred's Exercise Videos">Fred's Exercise Videos</h1>
         <nav>
-            <a href="/" data-translate="Enter Data">Enter Data</a>
-            <a href="/enter-data-tabular.html" data-translate="Enter Data - Tabular">Enter Data - Tabular</a>
+            <a href="/" class="editor-only" data-translate="Enter Data">Enter Data</a>
+            <a href="/enter-data-tabular.html" class="editor-only" data-translate="Enter Data - Tabular">Enter Data - Tabular</a>
             <a href="/history.html" data-translate="View History">View History</a>
             <a href="/steps-graph.html" data-translate="View Steps Graph">View Steps Graph</a>
             <a href="/calendar-view.html" data-translate="Calendar View">Calendar View</a>
+            <a href="/achievements.html" data-translate="Achievements">Achievements</a>
             <a href="/exercise-videos.html" data-translate="Exercise Videos">Exercise Videos</a>
-            <a href="/data-management.html" data-translate="Data Management">Data Management</a>
+            <a href="/report.html" data-translate="Progress Report">Progress Report</a>
+            <a href="/data-management.html" class="editor-only" data-translate="Data Management">Data Management</a>
             <a href="/help.html" data-translate="Help">Help</a>
+            <a href="#" id="logout-btn" data-translate="Logout" onclick="logout()">Logout</a>
             <button id="lang-toggle"><img src="https://flagsapi.com/FR/flat/24.png" alt="French Flag"></button>
         </nav>
     </header>
     <main>
+        <div class="editor-only">
         <h2 data-translate="Upload New Exercise Video">Upload New Exercise Video</h2>
         <form id="upload-form" enctype="multipart/form-data">
             <div>
                 <label for="video-title" data-translate="Video Title:">Video Title:</label>
-                <input type="text" id="video-title" name="title" required title="Enter a descriptive title for the video." data-translate="Enter a descriptive title for the video.">
+                <input type="text" id="video-title" name="title" title="Enter a descriptive title for the video." data-translate="Enter a descriptive title for the video.">
             </div>
             <div>
                 <label for="video-file" data-translate="Select Video File:">Select Video File:</label>
-                <input type="file" id="video-file" name="video" accept="video/*" required title="Choose a video file from your computer to upload." data-translate="Choose a video file from your computer to upload.">
+                <input type="file" id="video-file" name="video" accept="video/*" title="Choose a video file from your computer to upload." data-translate="Choose a video file from your computer to upload.">
             </div>
             <button type="submit" title="Click to upload the video to the server." data-translate="Upload Video">Upload Video</button>
         </form>
 
         <hr>
+        </div>
 
         <h2 data-translate="Uploaded Videos">Uploaded Videos</h2>
         <div id="video-list">
@@ -43,6 +48,8 @@
         </div>
     </main>
 
+    <script src="auth.js"></script>
+    <script src="toast.js"></script>
     <script src="translations.js"></script>
     <script>
         const langToggleButton = document.getElementById('lang-toggle');
@@ -80,6 +87,16 @@
 
         document.getElementById('upload-form').addEventListener('submit', async (event) => {
             event.preventDefault();
+            const title = document.getElementById('video-title').value.trim();
+            const fileInput = document.getElementById('video-file');
+            if (!title) {
+                showToast('Please enter a video title.', 'warning');
+                return;
+            }
+            if (!fileInput.files.length) {
+                showToast('Please select a video file.', 'warning');
+                return;
+            }
             const formData = new FormData(event.target);
 
             const response = await fetch('/upload-video', {
@@ -88,11 +105,11 @@
             });
 
             if (response.ok) {
-                alert('Video uploaded successfully!');
+                showToast('Video uploaded successfully!', 'success');
                 event.target.reset();
                 loadVideos();
             } else {
-                alert('Error uploading video.');
+                showToast('Error uploading video.', 'error');
             }
         });
 
@@ -113,9 +130,11 @@
                 const videoContainer = document.createElement('div');
                 videoContainer.classList.add('video-item');
                 videoContainer.innerHTML = `
-                    <h3>${video.title}</h3>
-                    <video controls src="${video.filepath}" style="max-width: 100%;"></video>
-                    <button class="delete-video-btn" data-id="${video.id}" title="Delete this video from the server." data-translate="Delete">Delete</button>
+                    <video controls src="${video.filepath}" preload="metadata"></video>
+                    <div class="video-item-footer">
+                        <p class="video-item-title" title="${video.title}">${video.title}</p>
+                        ${window.userRole === 'editor' ? `<button class="delete-video-btn" data-id="${video.id}">Delete</button>` : ''}
+                    </div>
                 `;
                 videoList.appendChild(videoContainer);
             });
@@ -129,11 +148,10 @@
                             method: 'DELETE'
                         });
                         if (response.ok) {
-                            alert('Video deleted successfully!');
-                            loadVideos(); // Reload videos list
+                            showToast('Video deleted.', 'success');
+                            loadVideos();
                         } else {
-                            alert('Failed to delete video.');
-                            console.error('Failed to delete video:', await response.text());
+                            showToast('Failed to delete video.', 'error');
                         }
                     }
                 });
@@ -141,7 +159,32 @@
             setLanguage(currentLang);
         }
 
-        window.onload = () => {
+        // Receive files shared from WhatsApp (or any app) via Web Share Target
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.addEventListener('message', (event) => {
+                if (event.data.type !== 'share-target' || !event.data.files?.length) return;
+                const files = event.data.files;
+                const videos = files.filter(f => f.type.startsWith('video/'));
+                const photos = files.filter(f => f.type.startsWith('image/'));
+
+                if (videos.length) {
+                    // Pre-load video(s) into the file input
+                    const dt = new DataTransfer();
+                    videos.forEach(f => dt.items.add(f));
+                    document.getElementById('video-file').files = dt.files;
+                    showToast(`Video ready to upload — just add a title!`, 'success', 6000);
+                    document.getElementById('video-title').focus();
+                    document.getElementById('upload-form').scrollIntoView({ behavior: 'smooth' });
+                }
+
+                if (photos.length) {
+                    showToast(`${photos.length} photo(s) shared — to add to Achievements, go to the Achievements page.`, 'info', 7000);
+                }
+            });
+        }
+
+        window.onload = async () => {
+            await window.authReady;
             loadVideos();
             setLanguage(currentLang);
         };

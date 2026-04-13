@@ -52,9 +52,12 @@
             <a href="/history.html" data-translate="View History">View History</a>
             <a href="/steps-graph.html" data-translate="View Steps Graph">View Steps Graph</a>
             <a href="/calendar-view.html" data-translate="Calendar View">Calendar View</a>
+            <a href="/achievements.html" data-translate="Achievements">Achievements</a>
             <a href="/exercise-videos.html" data-translate="Exercise Videos">Exercise Videos</a>
+            <a href="/report.html" data-translate="Progress Report">Progress Report</a>
             <a href="/data-management.html" data-translate="Data Management">Data Management</a>
             <a href="/help.html" data-translate="Help">Help</a>
+            <a href="#" id="logout-btn" data-translate="Logout" onclick="logout()">Logout</a>
             <button id="lang-toggle"><img src="https://flagsapi.com/FR/flat/24.png" alt="French Flag"></button>
         </nav>
     </header>
@@ -78,13 +81,28 @@
             </div>
 
             <div class="management-section">
-                <h3 data-translate="Manual Backup">2. Manual Backup</h3>
+                <h3>2. Nightly Fitbit Auto-Sync</h3>
+                <p>Automatically fetch yesterday's step count from Fitbit every night at 02:00 AM GMT and save it to Fred's records. Fred can still add exercise info and comments separately.</p>
+                <div style="display: flex; gap: 15px; align-items: center; margin-top: 1em; flex-wrap: wrap;">
+                    <label for="fitbit-auto-sync" style="margin-bottom: 0;">Auto-Sync:</label>
+                    <select id="fitbit-auto-sync" style="width: auto; padding: 0.5em;">
+                        <option value="off">Off</option>
+                        <option value="on">On — nightly at 02:00 AM GMT</option>
+                    </select>
+                    <button onclick="saveFitbitAutoSync()" class="fitbit-btn">Save Setting</button>
+                    <button onclick="syncYesterdayNow()" id="sync-now-btn" class="fitbit-btn" style="background-color: #6c757d;">Sync Yesterday Now</button>
+                </div>
+                <p id="last-sync-info" style="margin-top: 0.8em; font-size: 0.85em; color: #6c757d;"></p>
+            </div>
+
+            <div class="management-section">
+                <h3 data-translate="Manual Backup">3. Manual Backup</h3>
                 <p data-translate="Download a single secure file containing all steps, exercises, comments, and uploaded videos.">Download a single secure file containing all steps, exercises, comments, and uploaded videos.</p>
                 <button onclick="downloadBackup()" class="fitbit-btn" data-translate="Create Full Backup Now">Create Full Backup Now</button>
             </div>
 
             <div class="management-section">
-                <h3 data-translate="Automatic Backups">3. Automatic Backups</h3>
+                <h3 data-translate="Automatic Backups">4. Automatic Backups</h3>
                 <p data-translate="Schedule Fred's app to automatically save data to the server disk.">Schedule Fred's app to automatically save data to the server disk.</p>
                 <div style="display: flex; gap: 15px; align-items: center; margin-top: 1em;">
                     <label for="backup-frequency" style="margin-bottom: 0;" data-translate="Backup Frequency:">Backup Frequency:</label>
@@ -106,7 +124,7 @@
             </div>
 
             <div class="management-section">
-                <h3 data-translate="Restore from Backup">4. Restore from Backup</h3>
+                <h3 data-translate="Restore from Backup">5. Restore from Backup</h3>
                 <div class="warning-box">
                     <strong data-translate="Warning:">Warning:</strong> <span data-translate="Restoring will completely replace all current data with the contents of the backup file. This cannot be undone.">Restoring will completely replace all current data with the contents of the backup file. This cannot be undone.</span>
                 </div>
@@ -119,6 +137,8 @@
         </div>
     </main>
 
+    <script src="auth.js"></script>
+    <script src="toast.js"></script>
     <script src="translations.js"></script>
     <script>
         const langToggleButton = document.getElementById('lang-toggle');
@@ -166,7 +186,7 @@
         async function restoreBackup() {
             const fileInput = document.getElementById('backup-file');
             if (fileInput.files.length === 0) {
-                alert("Please select a backup file (.zip) first.");
+                showToast('Please select a backup file (.zip) first.', 'warning');
                 return;
             }
 
@@ -187,17 +207,16 @@
                 });
 
                 if (response.ok) {
-                    const msg = await response.text();
-                    alert(msg);
-                    window.location.href = '/'; // Back to home
+                    showToast('Data restored successfully! Redirecting…', 'success', 2000);
+                    setTimeout(() => window.location.href = '/', 2000);
                 } else {
-                    alert("Failed to restore backup. Please ensure the file is a valid Fred Rehab backup.");
+                    showToast('Failed to restore backup. Ensure the file is a valid Fred Rehab backup.', 'error');
                     btn.disabled = false;
                     btn.textContent = "Restore This Backup";
                 }
             } catch (err) {
                 console.error("Restore Error:", err);
-                alert("An error occurred during restoration.");
+                showToast('An error occurred during restoration.', 'error');
                 btn.disabled = false;
                 btn.textContent = "Restore This Backup";
             }
@@ -210,7 +229,50 @@
                 if (settings.backup_frequency) {
                     document.getElementById('backup-frequency').value = settings.backup_frequency;
                 }
+                if (settings.fitbit_auto_sync) {
+                    document.getElementById('fitbit-auto-sync').value = settings.fitbit_auto_sync;
+                }
+                const lastSyncEl = document.getElementById('last-sync-info');
+                if (settings.fitbit_last_sync) {
+                    const d = new Date(settings.fitbit_last_sync);
+                    lastSyncEl.textContent = `Last auto-sync: ${d.toLocaleString()}`;
+                } else {
+                    lastSyncEl.textContent = 'No auto-sync has run yet.';
+                }
             } catch (err) { console.error("Failed to load settings."); }
+        }
+
+        async function saveFitbitAutoSync() {
+            const value = document.getElementById('fitbit-auto-sync').value;
+            try {
+                const response = await fetch('/api/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ key: 'fitbit_auto_sync', value })
+                });
+                if (response.ok) showToast(`Nightly Fitbit auto-sync ${value === 'on' ? 'enabled' : 'disabled'}.`, 'success');
+            } catch (err) { showToast('Failed to save setting.', 'error'); }
+        }
+
+        async function syncYesterdayNow() {
+            const btn = document.getElementById('sync-now-btn');
+            btn.disabled = true;
+            btn.textContent = 'Syncing...';
+            try {
+                const response = await fetch('/api/fitbit/auto-sync-now', { method: 'POST' });
+                const data = await response.json();
+                if (response.ok) {
+                    showToast(`Synced ${data.steps.toLocaleString()} steps for ${data.date}.`, 'success');
+                    loadSettings(); // refresh last-sync timestamp
+                } else {
+                    showToast(`Sync failed: ${data.error || response.statusText}`, 'error');
+                }
+            } catch (err) {
+                showToast(`Sync error: ${err.message}`, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Sync Yesterday Now';
+            }
         }
 
         async function checkFitbitStatus() {
@@ -246,10 +308,10 @@
             try {
                 const response = await fetch('/api/fitbit/disconnect', { method: 'POST' });
                 if (response.ok) {
-                    alert("Disconnected from Fitbit.");
+                    showToast('Disconnected from Fitbit.', 'success');
                     checkFitbitStatus();
                 }
-            } catch (err) { alert("Failed to disconnect."); }
+            } catch (err) { showToast('Failed to disconnect.', 'error'); }
         }
 
         async function saveSettings() {
@@ -260,8 +322,8 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ key: 'backup_frequency', value: freq })
                 });
-                if (response.ok) alert("Backup frequency updated!");
-            } catch (err) { alert("Failed to save settings."); }
+                if (response.ok) showToast('Backup frequency updated!', 'success');
+            } catch (err) { showToast('Failed to save settings.', 'error'); }
         }
 
         async function runAutoBackupNow() {
@@ -272,13 +334,13 @@
             try {
                 const response = await fetch('/api/backups/run-now', { method: 'POST' });
                 if (response.ok) {
-                    alert("Automated backup completed on server!");
+                    showToast('Automated backup completed!', 'success');
                     loadAutoBackups();
                 } else {
-                    alert("Failed to run backup.");
+                    showToast('Failed to run backup.', 'error');
                 }
             } catch (err) {
-                alert("An error occurred.");
+                showToast('An error occurred.', 'error');
             } finally {
                 btn.disabled = false;
                 btn.textContent = "Run Backup Now";

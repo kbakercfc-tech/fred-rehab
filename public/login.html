@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login — Fred's Rehab</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        body {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #1e3a5f 0%, #2c5282 50%, #1a365d 100%);
+        }
+
+        .login-card {
+            width: 100%;
+            max-width: 380px;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        .login-header {
+            background: linear-gradient(135deg, #1e3a5f, #2c5282);
+            padding: 2.5em 2em 2em;
+            text-align: center;
+            color: white;
+        }
+
+        .login-icon {
+            font-size: 3em;
+            margin-bottom: 0.3em;
+            display: block;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+        }
+
+        .login-header h1 {
+            color: white;
+            font-size: 1.4em;
+            margin: 0 0 0.2em;
+            font-weight: 700;
+            letter-spacing: -0.3px;
+        }
+
+        .login-header p {
+            color: rgba(255,255,255,0.7);
+            font-size: 0.85em;
+            margin: 0;
+        }
+
+        .login-body {
+            padding: 2em;
+        }
+
+        .login-body label {
+            display: block;
+            font-size: 0.78em;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #718096;
+            margin-bottom: 0.4em;
+        }
+
+        .login-body input[type="password"] {
+            width: 100%;
+            padding: 0.75em 1em;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 1em;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            box-sizing: border-box;
+        }
+
+        .login-body input[type="password"]:focus {
+            border-color: #3182ce;
+            box-shadow: 0 0 0 3px rgba(49,130,206,0.15);
+            outline: none;
+        }
+
+        .login-btn {
+            width: 100%;
+            padding: 0.8em;
+            margin-top: 1.2em;
+            background: linear-gradient(135deg, #3182ce, #2b6cb0);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: 700;
+            cursor: pointer;
+            transition: opacity 0.2s, transform 0.2s;
+            letter-spacing: 0.3px;
+        }
+
+        .login-btn:hover {
+            opacity: 0.92;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(49,130,206,0.4);
+            background: linear-gradient(135deg, #3182ce, #2b6cb0);
+        }
+
+        .error-message {
+            color: #c53030;
+            font-size: 0.85em;
+            margin-bottom: 1em;
+            display: none;
+            background: #fff5f5;
+            padding: 0.6em 0.8em;
+            border-radius: 6px;
+            border: 1px solid #fed7d7;
+        }
+
+        .login-footer {
+            text-align: center;
+            padding: 1em 2em 1.5em;
+            color: #a0aec0;
+            font-size: 0.78em;
+            border-top: 1px solid #f0f4f8;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-card">
+        <div class="login-header">
+            <span class="login-icon">🏃</span>
+            <h1>Fred's Rehab Tracker</h1>
+            <p>Enter your password to continue</p>
+        </div>
+        <div class="login-body">
+            <div id="error-msg" class="error-message">Incorrect password. Please try again.</div>
+            <form id="login-form">
+                <label for="password">Password</label>
+                <input type="password" id="password" required autocomplete="current-password" placeholder="Enter password">
+                <button type="submit" class="login-btn">Sign In</button>
+            </form>
+        </div>
+        <div class="login-footer">
+            Track. Progress. Recover.
+        </div>
+    </div>
+
+    <script src="translations.js"></script>
+    <script>
+        document.getElementById('login-form').onsubmit = async (e) => {
+            e.preventDefault();
+            const password = document.getElementById('password').value;
+            const errorMsg = document.getElementById('error-msg');
+            const btn = e.target.querySelector('button');
+
+            btn.textContent = 'Signing in…';
+            btn.disabled = true;
+            errorMsg.style.display = 'none';
+
+            try {
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ password })
+                });
+
+                if (response.ok) {
+                    window.location.href = '/';
+                } else {
+                    errorMsg.style.display = 'block';
+                    btn.textContent = 'Sign In';
+                    btn.disabled = false;
+                    document.getElementById('password').value = '';
+                    document.getElementById('password').focus();
+                }
+            } catch (err) {
+                console.error('Login error:', err);
+                btn.textContent = 'Sign In';
+                btn.disabled = false;
+            }
+        };
+    </script>
+</body>
+</html>

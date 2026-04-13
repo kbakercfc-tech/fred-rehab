@@ -11,14 +11,17 @@
     <header>
         <h1 data-translate="Fred's Steps Graph">Fred's Steps Graph</h1>
         <nav>
-            <a href="/" data-translate="Enter Data">Enter Data</a>
-            <a href="/enter-data-tabular.html" data-translate="Enter Data - Tabular">Enter Data - Tabular</a>
+            <a href="/" class="editor-only" data-translate="Enter Data">Enter Data</a>
+            <a href="/enter-data-tabular.html" class="editor-only" data-translate="Enter Data - Tabular">Enter Data - Tabular</a>
             <a href="/history.html" data-translate="View History">View History</a>
             <a href="/steps-graph.html" data-translate="View Steps Graph">View Steps Graph</a>
             <a href="/calendar-view.html" data-translate="Calendar View">Calendar View</a>
+            <a href="/achievements.html" data-translate="Achievements">Achievements</a>
             <a href="/exercise-videos.html" data-translate="Exercise Videos">Exercise Videos</a>
-            <a href="/data-management.html" data-translate="Data Management">Data Management</a>
+            <a href="/report.html" data-translate="Progress Report">Progress Report</a>
+            <a href="/data-management.html" class="editor-only" data-translate="Data Management">Data Management</a>
             <a href="/help.html" data-translate="Help">Help</a>
+            <a href="#" id="logout-btn" data-translate="Logout" onclick="logout()">Logout</a>
             <button id="lang-toggle"><img src="https://flagsapi.com/FR/flat/24.png" alt="French Flag"></button>
         </nav>
     </header>
@@ -86,78 +89,10 @@
                     </div>
                 </div>
             </div>
-            
-            <div class="milestones-section">
-                <h2 data-translate="Fun Milestones">Fun Milestones</h2>
-                
-                <div class="milestone-card" style="border-left-color: #3498db;">
-                    <div class="milestone-info">
-                        <span class="milestone-title">10,000 Steps Club</span>
-                        <span id="club-count-display" class="milestone-distance">0 times achieved</span>
-                    </div>
-                    <p id="club-level-status" class="milestone-status">Walk 10,000 steps to join the club!</p>
-                    <div style="font-size: 0.8em; margin-top: 10px; color: #7f8c8d;">
-                        Bronze: 5 times | Silver: 10 times | Gold: 15 times
-                    </div>
-                </div>
-
-                <div class="milestone-card">
-                    <div class="milestone-info">
-                        <span class="milestone-title" data-translate="Stoke to London Challenge">Stoke to London Challenge</span>
-                        <span class="milestone-distance">~300,000 steps (150 miles)</span>
-                    </div>
-                    <div class="progress-container">
-                        <div id="london-progress-bar" class="progress-bar">0%</div>
-                    </div>
-                    <p id="london-status" class="milestone-status">Keep walking, Fred!</p>
-                </div>
-
-                <div class="milestone-card" style="border-left-color: #9b59b6;">
-                    <div class="milestone-info">
-                        <span class="milestone-title" data-translate="Stoke to Paris Challenge">Stoke to Paris Challenge</span>
-                        <span class="milestone-distance">~800,000 steps (400 miles)</span>
-                    </div>
-                    <div class="progress-container">
-                        <div id="paris-progress-bar" class="progress-bar" style="background-color: #9b59b6;">0%</div>
-                    </div>
-                    <p id="paris-status" class="milestone-status">On your way to France!</p>
-                </div>
-
-                <div class="milestone-card" style="border-left-color: #e67e22;">
-                    <div class="milestone-info">
-                        <span class="milestone-title" data-translate="Stoke to Berlin Challenge">Stoke to Berlin Challenge</span>
-                        <span class="milestone-distance">~1,500,000 steps (750 miles)</span>
-                    </div>
-                    <div class="progress-container">
-                        <div id="berlin-progress-bar" class="progress-bar" style="background-color: #e67e22;">0%</div>
-                    </div>
-                    <p id="berlin-status" class="milestone-status">Heading towards Germany!</p>
-                </div>
-
-                <div class="milestone-card" style="border-left-color: #e74c3c;">
-                    <div class="milestone-info">
-                        <span class="milestone-title" data-translate="Stoke to Moscow Challenge">Stoke to Moscow Challenge</span>
-                        <span class="milestone-distance">~3,200,000 steps (1,600 miles)</span>
-                    </div>
-                    <div class="progress-container">
-                        <div id="moscow-progress-bar" class="progress-bar" style="background-color: #e74c3c;">0%</div>
-                    </div>
-                    <p id="moscow-status" class="milestone-status">The long road to Russia!</p>
-                </div>
-
-                <div class="milestone-card" style="border-left-color: #27ae60;">
-                    <div class="milestone-info">
-                        <span class="milestone-title" data-translate="Stoke to Johannesburg Challenge">Stoke to Johannesburg Challenge</span>
-                        <span class="milestone-distance">~12,000,000 steps (6,000 miles)</span>
-                    </div>
-                    <div class="progress-container">
-                        <div id="joburg-progress-bar" class="progress-bar" style="background-color: #27ae60;">0%</div>
-                    </div>
-                    <p id="joburg-status" class="milestone-status">The ultimate journey to South Africa!</p>
-                </div>
-            </div>
         </div>
     </main>
+    <script src="auth.js"></script>
+    <script src="toast.js"></script>
     <script src="translations.js"></script>
     <script>
         let chart;
@@ -246,7 +181,7 @@
                     // ... (histogram logic remains same)
                     const recordedSteps = chartData.datasets[0].data.filter(s => s > 0).sort((a, b) => a - b);
                     if (recordedSteps.length === 0) {
-                        alert("No step data available.");
+                        showToast('No step data available.', 'warning');
                         return;
                     }
 
@@ -329,7 +264,7 @@
                     // ... (boxplot logic remains same but inside try/catch)
                     const recordedSteps = chartData.datasets[0].data.filter(s => s > 0).sort((a, b) => a - b);
                     if (recordedSteps.length === 0) {
-                        alert("No step data available.");
+                        showToast('No step data available.', 'warning');
                         return;
                     }
                     const min = recordedSteps[0];
@@ -392,7 +327,7 @@
                 });
             } catch (err) {
                 console.error("Chart Render Error:", err);
-                alert("An error occurred while drawing the chart. Please try again.");
+                showToast('Error drawing chart. Please try again.', 'error');
             }
         }
 
@@ -438,7 +373,7 @@
                 const customStart = new Date(startDateInput.value);
                 const customEnd = new Date(endDateInput.value);
                 if (isNaN(customStart) || isNaN(customEnd) || customStart > customEnd) {
-                    alert(translations[currentLang]['Please select valid custom start and end dates.']);
+                    showToast(translations[currentLang]['Please select valid custom start and end dates.'] || 'Please select valid custom start and end dates.', 'warning');
                     return;
                 }
                 actualStartDate = customStart;
@@ -527,75 +462,13 @@
             document.getElementById('largest-steps-date').textContent = largestStepsDate !== 'N/A' ? `(${formatDateDDMMMYY(largestStepsDate)})` : '';
             document.getElementById('average-steps').textContent = averageSteps.toLocaleString();
 
-            // Fetch and Update Total Steps and Milestones
+            // Fetch total steps for the summary box
             try {
-                // Club Status
-                const clubResponse = await fetch('/api/steps/club-status');
-                const clubData = await clubResponse.json();
-                document.getElementById('club-count-display').textContent = `${clubData.count} time${clubData.count !== 1 ? 's' : ''} achieved`;
-                const clubStatus = document.getElementById('club-level-status');
-                if (clubData.level !== 'None') {
-                    const displayLevel = clubData.level === 'Member' ? 'Member' : `${clubData.level} Member`;
-                    clubStatus.innerHTML = `<strong>Current Level: ${displayLevel}</strong>`;
-                    
-                    // Set color based on level
-                    const levelColors = {
-                        'Member': '#3498db', // Blue
-                        'Bronze': '#cd7f32', // Bronze
-                        'Silver': '#95a5a6', // Silver (darker grey)
-                        'Gold': '#daa520'    // Gold
-                    };
-                    clubStatus.style.color = levelColors[clubData.level] || '#27ae60';
-                }
-
                 const totalResponse = await fetch('/api/steps/total');
                 const totalData = await totalResponse.json();
-                const totalSteps = totalData.total_steps || 0;
-                document.getElementById('total-steps').textContent = totalSteps.toLocaleString();
-
-                // Milestone Helper
-                const updateMilestone = (idPrefix, goal, completionMsg, inProgressMsg) => {
-                    const progress = Math.min((totalSteps / goal) * 100, 100).toFixed(1);
-                    const bar = document.getElementById(`${idPrefix}-progress-bar`);
-                    const status = document.getElementById(`${idPrefix}-status`);
-                    
-                    bar.style.width = progress + '%';
-                    bar.textContent = progress + '%';
-                    
-                    if (totalSteps >= goal) {
-                        bar.style.backgroundColor = '#2ecc71'; 
-                        status.textContent = completionMsg;
-                        status.style.color = '#27ae60';
-                        status.style.fontWeight = 'bold';
-                    } else {
-                        const remaining = (goal - totalSteps).toLocaleString();
-                        status.textContent = inProgressMsg.replace('{remaining}', remaining);
-                    }
-                };
-
-                // Update All Challenges
-                updateMilestone('london', 300000, 
-                    "Congratulations Fred! You've reached London! / Cheers, Fred!", 
-                    "Only {remaining} steps left until London! / Mind the gap, Fred!");
-                
-                updateMilestone('paris', 800000, 
-                    "Incroyable! Fred, you've reached Paris! / Félicitations, Fred !", 
-                    "{remaining} steps until Paris! / En route pour Paris !");
-                
-                updateMilestone('berlin', 1500000, 
-                    "Wunderbar! Fred, you've reached Berlin! / Gut gemacht, Fred!", 
-                    "{remaining} steps left until Berlin! / Auf geht's nach Berlin!");
-                
-                updateMilestone('moscow', 3200000, 
-                    "Amazing! Fred, you've reached Moscow! / Поздравляем, Фред!", 
-                    "Keep going, {remaining} steps to Moscow! / В Москву, Фред!");
-                
-                updateMilestone('joburg', 12000000, 
-                    "Legendary! Fred, you've reached Johannesburg! / Siyakuhalalisela, Fred!", 
-                    "Ultimate goal: {remaining} steps to Joburg! / Hamba kahle, Fred!");
-
+                document.getElementById('total-steps').textContent = (totalData.total_steps || 0).toLocaleString();
             } catch (err) {
-                console.error("Error updating milestones:", err);
+                console.error("Error fetching total steps:", err);
             }
 
             // Calculate running average on time-sorted data before applying display sort
@@ -703,6 +576,7 @@
             `;
             alert(shareOptions);
         }
+
     </script>
 </body>
 </html>

@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fred's Rehab — Progress Report</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .report-controls { width:100%; max-width:700px; text-align:center; }
+        .report-controls .date-row { display:flex; gap:1em; align-items:flex-end; justify-content:center; flex-wrap:wrap; margin:1.5em 0; }
+        .report-controls .date-row div { display:flex; flex-direction:column; gap:0.4em; }
+        .report-btn-row { display:flex; gap:1em; justify-content:center; flex-wrap:wrap; margin-top:1em; }
+
+        /* ── Report Document ── */
+        #report-output { width:100%; max-width:820px; }
+
+        .report-doc {
+            padding: 2.5em;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            box-shadow: 0 2px 16px rgba(0,0,0,0.08);
+            font-family: Georgia, 'Times New Roman', serif;
+            font-size: 11pt;
+            line-height: 1.6;
+            color: #222;
+        }
+
+        /* Header */
+        .rpt-header { display:flex; justify-content:space-between; align-items:flex-start; border-bottom:3px solid #1e3a5f; padding-bottom:1em; margin-bottom:1.5em; }
+        .rpt-header-left h1 { font-size:20pt; color:#1e3a5f; margin:0 0 0.15em; font-family:Arial,sans-serif; }
+        .rpt-header-left h2 { font-size:13pt; font-weight:normal; color:#444; margin:0; font-family:Arial,sans-serif; }
+        .rpt-header-right { text-align:right; font-size:9pt; color:#666; font-family:Arial,sans-serif; line-height:1.8; }
+        .rpt-header-right img { width:60px; height:60px; border-radius:50%; object-fit:cover; display:block; margin:0 0 0.5em auto; border:2px solid #1e3a5f; }
+
+        /* Stat boxes */
+        .stat-row { display:grid; grid-template-columns:repeat(4,1fr); gap:1em; margin:1.5em 0; }
+        .stat-box { background:#f0f4f8; border-radius:8px; padding:1em; text-align:center; border-top:3px solid #3182ce; }
+        .stat-box.green  { border-top-color:#27ae60; }
+        .stat-box.orange { border-top-color:#e67e22; }
+        .stat-box.red    { border-top-color:#e53e3e; }
+        .stat-value { font-size:17pt; font-weight:bold; color:#1e3a5f; font-family:Arial,sans-serif; line-height:1.2; }
+        .stat-label { font-size:7.5pt; color:#555; margin-top:0.3em; font-family:Arial,sans-serif; text-transform:uppercase; letter-spacing:0.05em; }
+
+        /* Sections */
+        .rpt-section { margin:2em 0; }
+        .rpt-section-title { font-size:11pt; font-family:Arial,sans-serif; font-weight:bold; color:#1e3a5f; text-transform:uppercase; letter-spacing:0.07em; border-bottom:1px solid #ccd9e8; padding-bottom:0.3em; margin-bottom:0.9em; }
+        .rpt-section-num { display:inline-block; background:#1e3a5f; color:white; font-size:7.5pt; padding:1px 6px; border-radius:3px; margin-right:0.5em; }
+
+        /* Narrative */
+        .narrative p { margin:0 0 0.75em; text-align:justify; }
+
+        /* Compliance */
+        .compliance-row { display:flex; align-items:center; gap:1em; margin:0.6em 0; font-family:Arial,sans-serif; font-size:10pt; }
+        .compliance-label { width:130px; color:#444; }
+        .compliance-track { flex:1; background:#e8e8e8; border-radius:4px; height:13px; }
+        .compliance-fill { height:100%; border-radius:4px; background:#27ae60; }
+        .compliance-fill.amber { background:#e67e22; }
+        .compliance-fill.red   { background:#e53e3e; }
+        .compliance-pct  { width:38px; text-align:right; font-weight:bold; color:#1e3a5f; }
+        .compliance-days { width:85px; color:#888; font-size:9pt; }
+
+        /* Milestones */
+        .milestone-row { margin:0.8em 0; }
+        .milestone-name { font-family:Arial,sans-serif; font-size:10pt; font-weight:bold; }
+        .milestone-sub  { font-size:8.5pt; color:#777; margin-bottom:0.3em; font-family:Arial,sans-serif; }
+        .mile-track { background:#e8e8e8; border-radius:4px; height:11px; }
+        .mile-fill  { height:100%; border-radius:4px; background:linear-gradient(90deg,#3182ce,#1e3a5f); }
+        .mile-fill.done { background:#27ae60; }
+
+        /* Log table */
+        .log-table { width:100%; border-collapse:collapse; font-family:Arial,sans-serif; font-size:9pt; margin-top:0.5em; }
+        .log-table th { background:#1e3a5f; color:white; padding:6px 8px; text-align:left; font-weight:600; font-size:8.5pt; }
+        .log-table td { padding:5px 8px; border-bottom:1px solid #eee; vertical-align:top; }
+        .log-table tr:nth-child(even) td { background:#f7f9fc; }
+        .tick-yes { color:#27ae60; font-weight:bold; }
+        .tick-no  { color:#ccc; }
+
+        /* Achievement items */
+        .ach-item { border-left:3px solid #3182ce; padding:0.5em 0.8em; margin:0.5em 0; background:#f7faff; font-family:Arial,sans-serif; font-size:10pt; }
+        .ach-item strong { color:#1e3a5f; }
+        .ach-dates { font-size:8.5pt; color:#777; }
+        .ach-desc  { margin-top:0.2em; color:#444; }
+
+        /* Recommendations */
+        .rec-list { list-style:none; padding:0; margin:0; }
+        .rec-list li { padding:0.4em 0 0.4em 1.5em; position:relative; font-family:Arial,sans-serif; font-size:10pt; }
+        .rec-list li::before { content:'▸'; position:absolute; left:0; color:#3182ce; }
+
+        /* Milestone forecast rings */
+        .rpt-forecast-wrap { margin-top:0.5em; }
+        .rpt-forecast-eta-box { display:flex; align-items:center; gap:0.7em; background:#f0f4f8; border-left:3px solid #1e3a5f; border-radius:4px; padding:0.35em 0.8em; margin-bottom:0.4em; font-family:Arial,sans-serif; }
+        .rpt-forecast-eta-icon { font-size:13pt; }
+        .rpt-forecast-eta-label { font-size:7.5pt; color:#777; text-transform:uppercase; letter-spacing:0.05em; }
+        .rpt-forecast-eta-date { font-size:10.5pt; font-weight:bold; color:#1e3a5f; }
+        .rpt-forecast-eta-sub { font-size:7.5pt; color:#888; }
+        .rpt-forecast-rings { display:flex; gap:0.7em; }
+        .rpt-prob-ring-wrap { display:flex; flex-direction:column; align-items:center; gap:2px; }
+        .rpt-prob-ring { width:52px; height:52px; border-radius:50%; display:grid; place-items:center; }
+        .rpt-prob-ring-inner { width:38px; height:38px; border-radius:50%; background:white; display:grid; place-items:center; font-weight:bold; font-size:8.5pt; font-family:Arial,sans-serif; }
+        .rpt-prob-ring-label { font-size:7.5pt; color:#666; font-family:Arial,sans-serif; text-align:center; }
+
+        /* Footer */
+        .rpt-footer { margin-top:2em; padding-top:0.8em; border-top:1px solid #ddd; font-size:8pt; color:#999; font-family:Arial,sans-serif; display:flex; justify-content:space-between; }
+
+        /* Share button colour */
+        #share-btn { background: #25d366; }
+        #share-btn:hover { background: #1ebe59; }
+
+        /* ── Print ── */
+        @media print {
+            header, .no-print { display:none !important; }
+            body { background:white !important; }
+            main { padding:0 !important; margin:0 !important; background:transparent !important; box-shadow:none !important; border-radius:0 !important; max-width:none !important; }
+            #report-output { max-width:none; }
+            .report-doc { border:none; border-radius:0; box-shadow:none; padding:0; }
+            @page { margin:18mm 20mm; size:A4; }
+            .page-break { page-break-before:always; }
+            .rpt-section-title { page-break-after:avoid; }
+            .log-table thead { display:table-header-group; }
+            .stat-row { grid-template-columns:repeat(4,1fr); }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1 data-translate="Fred's Rehab Tracker">Fred's Rehab Tracker</h1>
+        <nav>
+            <a href="/" class="editor-only" data-translate="Enter Data">Enter Data</a>
+            <a href="/enter-data-tabular.html" class="editor-only" data-translate="Enter Data - Tabular">Enter Data - Tabular</a>
+            <a href="/history.html" data-translate="View History">View History</a>
+            <a href="/steps-graph.html" data-translate="View Steps Graph">View Steps Graph</a>
+            <a href="/calendar-view.html" data-translate="Calendar View">Calendar View</a>
+            <a href="/achievements.html" data-translate="Achievements">Achievements</a>
+            <a href="/exercise-videos.html" data-translate="Exercise Videos">Exercise Videos</a>
+            <a href="/report.html" data-translate="Progress Report">Progress Report</a>
+            <a href="/data-management.html" class="editor-only" data-translate="Data Management">Data Management</a>
+            <a href="/help.html" data-translate="Help">Help</a>
+            <a href="#" id="logout-btn" data-translate="Logout" onclick="logout()">Logout</a>
+            <button id="lang-toggle"><img src="https://flagsapi.com/FR/flat/24.png" alt="French Flag"></button>
+        </nav>
+    </header>
+
+    <main>
+        <!-- Screen controls -->
+        <div class="report-controls no-print">
+            <h2 data-translate="Generate Progress Report">Generate Progress Report</h2>
+            <p style="color:var(--text-muted);font-size:0.92em;" data-translate="rpt_intro">Select a date range to generate a printable rehabilitation progress report.</p>
+            <div class="date-row">
+                <div><label for="rpt-start" data-translate="From">From</label><input type="date" id="rpt-start"></div>
+                <div><label for="rpt-end" data-translate="To">To</label><input type="date" id="rpt-end"></div>
+            </div>
+            <div class="report-btn-row">
+                <button onclick="generateReport()" id="gen-btn" data-translate="Generate Report">Generate Report</button>
+                <button onclick="window.print()" id="print-btn" style="display:none;background:var(--text-muted);" data-translate="Print / Save as PDF">Print / Save as PDF</button>
+                <button onclick="shareReport()" id="share-btn" style="display:none;" data-translate="Share Report">Share Report</button>
+            </div>
+        </div>
+
+        <div id="report-output" style="display:none;"></div>
+    </main>
+
+    <script src="auth.js"></script>
+    <script src="toast.js"></script>
+    <script src="translations.js"></script>
+    <script>
+        let currentLang = localStorage.getItem('preferredLanguage') || 'en';
+        let lastReportStats = null;
+
+        // ── Report-specific string translations ──
+        const rptT = {
+            en: {
+                docTitle:     'Rehabilitation Progress Report',
+                period:       'Period',
+                duration:     'Duration',
+                generated:    'Generated',
+                days:         'days',
+                totalSteps:   'Total Steps',
+                avgActive:    'Avg Steps (active days)',
+                exCompliance: 'Exercise Compliance',
+                bestDay:      'Best Single Day',
+                s1: 'Executive Summary',
+                s2: 'Step Activity',
+                s3: 'Exercise &amp; Weights Compliance',
+                s4: 'Rehabilitation Journey — Distance Challenges',
+                s5: 'Achievements This Period',
+                s6: 'Daily Activity Log',
+                s7: 'Observations &amp; Recommendations',
+                footerLeft:   "Fred's Rehab Tracker \u2014 Confidential",
+                metric: 'Metric', value: 'Value',
+                tTotalSteps:  'Total steps in period',
+                tDaysRec:     'Days with steps recorded',
+                tAvgActive:   'Average \u2014 active days',
+                tAvgAll:      'Average \u2014 all days in period',
+                tBestDay:     'Best single day',
+                t10k:         'Days reaching 10,000+ steps',
+                of:           'of',
+                sPerDay:      'steps/day',
+                steps:        'steps',
+                exRoutine:    'Exercise routine',
+                wtTraining:   'Weight training',
+                mileIntro:    'All-time totals shown. Fred has walked a cumulative',
+                mileApprox:   'approx.',
+                mileMiles:    'miles',
+                mileSince:    'since starting his programme. This period contributed',
+                completed:    '\u2713 Completed!',
+                mileRem:      'steps remaining',
+                noAch:        'No achievements were recorded during this period.',
+                dateH: 'Date', exerciseH: 'Exercise', weightsH: 'Weights', stepsH: 'Steps', commentsH: 'Comments / Notes',
+                shareTitle:   "Fred's Progress Report",
+                shareHeader:  "Fred's Rehabilitation Progress Report",
+                shareStats:   'Key Stats',
+                shareTotalSteps: 'Total steps',
+                shareDailyAvg:   'Daily average',
+                shareExPct:      'Exercise compliance',
+                shareBestDay:    'Best day',
+                shareAch:        'Achievements',
+            },
+            fr: {
+                docTitle:     'Rapport de Progression en Rééducation',
+                period:       'Période',
+                duration:     'Durée',
+                generated:    'Généré le',
+                days:         'jours',
+                totalSteps:   'Total des Pas',
+                avgActive:    'Moy. Pas (jours actifs)',
+                exCompliance: 'Assiduité Exercices',
+                bestDay:      'Meilleur Jour',
+                s1: 'Résumé Exécutif',
+                s2: 'Activité en Pas',
+                s3: 'Assiduité Exercices &amp; Musculation',
+                s4: 'Parcours de Rééducation — Défis Distance',
+                s5: 'Réalisations de la Période',
+                s6: "Journal d'Activité Quotidien",
+                s7: 'Observations &amp; Recommandations',
+                footerLeft:   'Suivi de Rééducation de Fred \u2014 Confidentiel',
+                metric: 'Mesure', value: 'Valeur',
+                tTotalSteps:  'Total des pas sur la période',
+                tDaysRec:     'Jours avec pas enregistrés',
+                tAvgActive:   'Moyenne \u2014 jours actifs',
+                tAvgAll:      'Moyenne \u2014 tous les jours de la période',
+                tBestDay:     'Meilleur jour',
+                t10k:         'Jours atteignant 10 000+ pas',
+                of:           'sur',
+                sPerDay:      'pas/jour',
+                steps:        'pas',
+                exRoutine:    "Programme d'exercices",
+                wtTraining:   'Musculation',
+                mileIntro:    'Totaux cumulés. Fred a marché au total',
+                mileApprox:   'env.',
+                mileMiles:    'miles',
+                mileSince:    "depuis le début de son programme. Cette période a contribué",
+                completed:    '\u2713 Accompli !',
+                mileRem:      'pas restants',
+                noAch:        'Aucune réalisation enregistrée pendant cette période.',
+                dateH: 'Date', exerciseH: 'Exercice', weightsH: 'Musculation', stepsH: 'Pas', commentsH: 'Commentaires / Notes',
+                shareTitle:   'Rapport de Progression de Fred',
+                shareHeader:  'Rapport de Rééducation de Fred',
+                shareStats:   'Chiffres clés',
+                shareTotalSteps: 'Total des pas',
+                shareDailyAvg:   'Moyenne quotidienne',
+                shareExPct:      "Assiduité exercices",
+                shareBestDay:    'Meilleur jour',
+                shareAch:        'Réalisations',
+            }
+        };
+
+        // Default: last 30 days
+        const today = new Date();
+        const ago30 = new Date(); ago30.setDate(today.getDate() - 29);
+        document.getElementById('rpt-start').value = ago30.toISOString().slice(0, 10);
+        document.getElementById('rpt-end').value   = today.toISOString().slice(0, 10);
+
+        function fmtLong(str)  { return str ? new Date(str + 'T00:00:00').toLocaleDateString('en-GB', { day:'numeric', month:'long', year:'numeric' }) : ''; }
+        function fmtShort(str) { return str ? new Date(str + 'T00:00:00').toLocaleDateString('en-GB', { day:'2-digit', month:'short' }) : ''; }
+        function fmtMed(str)   { return str ? new Date(str + 'T00:00:00').toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'2-digit' }).toUpperCase() : ''; }
+
+        function dateRange(start, end) {
+            const dates = [], cur = new Date(start + 'T00:00:00'), last = new Date(end + 'T00:00:00');
+            while (cur <= last) { dates.push(cur.toISOString().slice(0,10)); cur.setDate(cur.getDate()+1); }
+            return dates;
+        }
+
+        // ── SVG bar chart ──
+        function buildChart(allDates, stepsMap, exMap, avgSteps) {
+            const W=700, H=140, pad={t:10,r:22,b:28,l:44};
+            const iW=W-pad.l-pad.r, iH=H-pad.t-pad.b;
+            const vals = allDates.map(d => stepsMap[d] || 0);
+            const maxV = Math.max(...vals, 1);
+            const n = allDates.length;
+            const bGap = iW / n;
+            const bW = Math.max(1.5, bGap - 1);
+            const cx = i => pad.l + i*bGap + bGap/2 - bW/2;
+            const cy = v => pad.t + iH - (v/maxV)*iH;
+            const ch = v => (v/maxV)*iH;
+
+            const barColor = d => {
+                const ex = exMap[d];
+                if (!ex) return stepsMap[d] ? '#94a3b8' : '#e2e8f0';
+                if (ex.done==='Yes' && ex.weights_done==='Yes') return '#2d6a4f';
+                if (ex.weights_done==='Yes') return '#93c5fd';
+                if (ex.done==='Yes') return '#52b788';
+                return '#94a3b8';
+            };
+
+            const T = rptT[currentLang];
+            const bars = allDates.map((d,i) => {
+                const v = stepsMap[d]||0;
+                return `<rect x="${cx(i).toFixed(1)}" y="${cy(v).toFixed(1)}" width="${bW.toFixed(1)}" height="${Math.max(ch(v),0.5).toFixed(1)}" fill="${barColor(d)}" rx="1"/>`;
+            }).join('');
+
+            const avgY = cy(avgSteps).toFixed(1);
+            const avgLine = avgSteps > 0 ? `<line x1="${pad.l}" y1="${avgY}" x2="${W-pad.r}" y2="${avgY}" stroke="#e67e22" stroke-width="1.5" stroke-dasharray="5,3" opacity="0.85"/>
+            <text x="${W-pad.r+3}" y="${(+avgY+4).toFixed(0)}" font-size="8" fill="#e67e22" font-family="Arial">avg</text>` : '';
+
+            const interval = Math.max(1, Math.ceil(n/12));
+            const xLabels = allDates.filter((_,i) => i%interval===0).map(d => {
+                const i = allDates.indexOf(d);
+                return `<text x="${(cx(i)+bW/2).toFixed(1)}" y="${H-6}" font-size="7.5" text-anchor="middle" fill="#888" font-family="Arial">${fmtShort(d)}</text>`;
+            }).join('');
+
+            const tk = v => v>=1000 ? (v/1000).toFixed(v<5000?1:0)+'k' : v;
+            const yLabels = `
+                <text x="${pad.l-4}" y="${pad.t+4}" font-size="7.5" text-anchor="end" fill="#999" font-family="Arial">${tk(maxV)}</text>
+                <text x="${pad.l-4}" y="${(pad.t+iH/2+4).toFixed(0)}" font-size="7.5" text-anchor="end" fill="#999" font-family="Arial">${tk(Math.round(maxV/2))}</text>
+                <text x="${pad.l-4}" y="${(pad.t+iH+4).toFixed(0)}" font-size="7.5" text-anchor="end" fill="#999" font-family="Arial">0</text>`;
+
+            const axes = `<line x1="${pad.l}" y1="${pad.t}" x2="${pad.l}" y2="${pad.t+iH}" stroke="#ddd" stroke-width="1"/>
+                <line x1="${pad.l}" y1="${pad.t+iH}" x2="${W-pad.r}" y2="${pad.t+iH}" stroke="#ddd" stroke-width="1"/>`;
+
+            const exWeights = currentLang === 'fr' ? 'Exercice + Muscu' : 'Exercise + Weights';
+            const exOnly    = currentLang === 'fr' ? 'Exercice seul'    : 'Exercise only';
+            const wtOnly    = currentLang === 'fr' ? 'Muscu seule'      : 'Weights only';
+            const noEx      = currentLang === 'fr' ? 'Sans exercice'    : 'No exercise logged';
+            const avgLabel  = currentLang === 'fr' ? 'moy'              : 'avg';
+
+            const legend = `<g transform="translate(${pad.l},${H+6})" font-family="Arial" font-size="8" fill="#555">
+                <rect x="0" y="0" width="8" height="8" fill="#2d6a4f" rx="1"/><text x="11" y="7.5">${exWeights}</text>
+                <rect x="105" y="0" width="8" height="8" fill="#52b788" rx="1"/><text x="116" y="7.5">${exOnly}</text>
+                <rect x="195" y="0" width="8" height="8" fill="#93c5fd" rx="1"/><text x="206" y="7.5">${wtOnly}</text>
+                <rect x="272" y="0" width="8" height="8" fill="#94a3b8" rx="1"/><text x="283" y="7.5">${noEx}</text>
+                ${avgSteps > 0 ? `<line x1="385" y1="4" x2="398" y2="4" stroke="#e67e22" stroke-width="1.5" stroke-dasharray="4,2"/><text x="401" y="7.5" fill="#e67e22">${avgLabel}</text>` : ''}
+            </g>`;
+
+            return `<svg viewBox="0 0 ${W} ${H+20}" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block;margin-bottom:0.5em;">${axes}${bars}${avgLine}${xLabels}${yLabels}${legend}</svg>`;
+        }
+
+        // ── Narrative ──
+        function buildNarrative({ periodDays, daysLogged, totalSteps, avgAll, avgActive, exerciseDays, weightsDays, exPct, wtPct, bestDay, trend, periodStart, periodEnd, achCount }) {
+            const paras = [];
+
+            let p1 = `During the ${periodDays}-day reporting period from ${fmtLong(periodStart)} to ${fmtLong(periodEnd)}, Fred logged activity on ${daysLogged} ${daysLogged===1?'day':'days'}.`;
+            if (daysLogged < periodDays) p1 += ` No data was recorded for ${periodDays-daysLogged} ${periodDays-daysLogged===1?'day':'days'} during this period.`;
+            paras.push(p1);
+
+            if (totalSteps > 0) {
+                let p2 = `Fred accumulated a total of ${totalSteps.toLocaleString()} steps over the period, averaging ${Math.round(avgActive).toLocaleString()} steps per day on days when steps were recorded (${Math.round(avgAll).toLocaleString()} steps per day across all days in the period).`;
+                if (bestDay) p2 += ` His strongest single day was ${fmtLong(bestDay.date)}, when he walked ${bestDay.steps.toLocaleString()} steps.`;
+                if      (avgActive >= 10000) p2 += ' He is consistently achieving or exceeding the recommended 10,000 step benchmark — an excellent result.';
+                else if (avgActive >= 7000)  p2 += ' He is making solid progress towards the 10,000 steps per day target.';
+                else if (avgActive >= 4000)  p2 += ' Continuing to build daily step count towards the 10,000 step target is recommended.';
+                else if (avgActive >  0)     p2 += ' Gradually increasing daily walking activity should be a focus for the next period.';
+                paras.push(p2);
+            } else {
+                paras.push('No step data was recorded during this period.');
+            }
+
+            let p3 = `Exercise compliance over the period was ${exPct}% (${exerciseDays} out of ${periodDays} days). Weight training was completed on ${weightsDays} days (${wtPct}% compliance).`;
+            if      (exPct >= 80) p3 += ' This reflects an excellent level of commitment to the rehabilitation programme.';
+            else if (exPct >= 60) p3 += ' This represents a good level of engagement with the rehabilitation programme.';
+            else if (exPct >= 40) p3 += ' There is room to improve consistency with the prescribed exercise routine.';
+            else                  p3 += ' Improving adherence to the exercise programme should be a priority for the coming period.';
+            paras.push(p3);
+
+            if (trend !== null) {
+                if      (trend >  10) paras.push(`The data shows an encouraging upward trend: average daily steps were ${Math.abs(trend).toFixed(0)}% higher in the second half of the period, demonstrating continued improvement in Fred's activity levels.`);
+                else if (trend < -10) paras.push(`Average daily steps were somewhat lower in the latter part of the period. This may reflect temporary factors and is worth monitoring in the next reporting cycle.`);
+                else                  paras.push(`Activity levels have remained broadly consistent throughout the period, reflecting a stable and maintained rehabilitation routine.`);
+            }
+
+            if (achCount > 0) paras.push(`Fred recorded ${achCount} notable achievement${achCount>1?'s':''} during this period, providing positive evidence of tangible progress in his recovery.`);
+
+            return paras;
+        }
+
+        // ── Recommendations ──
+        function buildRecs({ exPct, wtPct, avgActive, trend, periodDays, daysLogged, weightsDays }) {
+            const recs = [];
+            if (exPct >= 80 && avgActive >= 7000) recs.push('Excellent progress — maintain the current exercise routine and step targets.');
+            else if (exPct >= 60) recs.push('Continue building on the current exercise routine. Aim for daily activity where possible.');
+            else recs.push('Focus on improving exercise consistency. Consider reviewing whether the current routine schedule is practical and achievable.');
+
+            if (avgActive > 0 && avgActive < 5000) recs.push('Gradually increase daily walking targets. Short, frequent walks throughout the day can help build step count without overexertion.');
+            else if (avgActive >= 5000 && avgActive < 10000) recs.push('Daily step count is progressing well. Continue working towards the 10,000 step daily target.');
+            else if (avgActive >= 10000) recs.push('Step count is consistently above the 10,000 daily target — continue this excellent work.');
+
+            if (weightsDays > 0 && wtPct < 40) recs.push('Weight training frequency could be increased as strength and mobility allow — discuss with your physiotherapist.');
+            if (trend !== null && trend < -15) recs.push('Review any factors that may have contributed to the reduction in activity in the latter part of the period.');
+            if (periodDays >= 30 && daysLogged < periodDays * 0.6) recs.push('Improving the regularity of data logging will provide a more complete picture of progress.');
+            if (recs.length === 1) recs.push('Continue with the current programme and review at the next appointment.');
+            return recs;
+        }
+
+        function clsCompliance(pct) { return pct >= 75 ? '' : pct >= 50 ? ' amber' : ' red'; }
+        function clsStatBox(pct)    { return pct >= 75 ? '' : pct >= 50 ? ' orange' : ' red'; }
+
+        // ── Share report ──
+        function shareReport() {
+            if (!lastReportStats) return;
+            const T = rptT[currentLang];
+            const { periodStart, periodEnd, totalSteps, avgActive, exPct, bestDay, achCount } = lastReportStats;
+            const lines = [
+                `📋 ${T.shareHeader}`,
+                `${T.period}: ${fmtLong(periodStart)} – ${fmtLong(periodEnd)}`,
+                ``,
+                `📊 ${T.shareStats}:`,
+                `• ${T.shareTotalSteps}: ${totalSteps.toLocaleString()}`,
+                `• ${T.shareDailyAvg}: ${Math.round(avgActive).toLocaleString()} ${T.steps}`,
+                `• ${T.shareExPct}: ${exPct}%`,
+                bestDay ? `• ${T.shareBestDay}: ${bestDay.steps.toLocaleString()} ${T.steps} (${fmtMed(bestDay.date)})` : '',
+                achCount > 0 ? `• ${T.shareAch}: ${achCount}` : '',
+            ].filter(Boolean).join('\n');
+
+            if (navigator.share) {
+                navigator.share({ title: T.shareTitle, text: lines, url: window.location.href })
+                    .catch(() => {});
+            } else {
+                navigator.clipboard.writeText(lines + '\n\n' + window.location.href)
+                    .then(() => showToast(currentLang === 'fr' ? 'Résumé copié dans le presse-papiers !' : 'Report summary copied to clipboard!', 'success'))
+                    .catch(() => showToast(currentLang === 'fr' ? 'Impossible de partager.' : 'Unable to share.', 'error'));
+            }
+        }
+
+        // ── Linear regression (OLS) ──
+        function linearReg(xArr, yArr) {
+            const n = xArr.length;
+            if (n < 2) return null;
+            let sx=0, sy=0, sxy=0, sx2=0;
+            for (let i=0;i<n;i++) { sx+=xArr[i]; sy+=yArr[i]; sxy+=xArr[i]*yArr[i]; sx2+=xArr[i]*xArr[i]; }
+            const denom = n*sx2 - sx*sx;
+            if (denom===0) return null;
+            return { b:(n*sxy-sx*sy)/denom, a:(sy-(((n*sxy-sx*sy)/denom)*sx))/n };
+        }
+
+        // ── Normal CDF approximation ──
+        function normCdf(z) {
+            const t = 1/(1+0.2316419*Math.abs(z));
+            const p = 1-(1/Math.sqrt(2*Math.PI))*Math.exp(-z*z/2)*t*(0.319381530+t*(-0.356563782+t*(1.781477937+t*(-1.821255978+t*1.330274429))));
+            return z>=0 ? p : 1-p;
+        }
+
+        // ── Milestone forecast HTML (compact for report) ──
+        function buildMilestoneForecastHTML(goal, allTimeTotal, steps60) {
+            const T = rptT[currentLang];
+            const isFr = currentLang === 'fr';
+            if (allTimeTotal >= goal) return '';
+            if (!steps60 || steps60.length < 2) return `<div style="color:#888;font-size:8pt;font-family:Arial,sans-serif;margin-top:0.3em;">${isFr?'Données insuffisantes':'Insufficient data for forecast'}</div>`;
+
+            const n = steps60.length;
+            const avg60 = steps60.reduce((a,b)=>a+b,0)/n;
+            let cumSum = allTimeTotal - steps60.reduce((a,b)=>a+b,0);
+            const xArr=[], yArr=[];
+            for (let i=0;i<n;i++) { cumSum+=steps60[i]; xArr.push(i); yArr.push(cumSum); }
+            const reg = linearReg(xArr, yArr);
+
+            let etaText='—', etaSub='', daysFromNow=null;
+            if (reg && reg.b > 0) {
+                const raw = (goal - reg.a)/reg.b - (n-1);
+                daysFromNow = Math.ceil(raw);
+                if (daysFromNow <= 0) { etaText = isFr?'Très bientôt':'Very soon'; daysFromNow=1; }
+                else {
+                    const d = new Date(); d.setDate(d.getDate()+daysFromNow);
+                    etaText = d.toLocaleDateString(isFr?'fr-FR':'en-GB',{day:'numeric',month:'short',year:'numeric'});
+                    etaSub  = `(${daysFromNow} ${isFr?'jours':'days'})`;
+                }
+            } else { etaText='N/A'; etaSub=isFr?'Aucun progrès récent':'No recent progress'; }
+
+            const sigma = avg60 > 0 ? Math.sqrt(avg60) * Math.sqrt(n) : 1;
+            const rings = [30,90,180,365].map(h => {
+                let pct=0;
+                if (reg && reg.b > 0) {
+                    const z = (reg.b*h - (goal-allTimeTotal)) / sigma;
+                    pct = Math.min(99, Math.max(1, Math.round(normCdf(z)*100)));
+                }
+                const clr = pct>=75?'#27ae60':pct>=40?'#e67e22':'#e74c3c';
+                const lbl = h>=365?(isFr?'1 an':'1 yr'):h>=90?`${Math.round(h/30)}${isFr?' mo':' mo'}`:`${h}${isFr?' j':' d'}`;
+                return `<div class="rpt-prob-ring-wrap">
+                    <div class="rpt-prob-ring" style="background:conic-gradient(${clr} ${pct}%,#e8e8e8 0)">
+                        <div class="rpt-prob-ring-inner" style="color:${clr}">${pct}%</div>
+                    </div>
+                    <div class="rpt-prob-ring-label">${lbl}</div>
+                </div>`;
+            }).join('');
+
+            return `<div class="rpt-forecast-wrap">
+                <div class="rpt-forecast-eta-box">
+                    <span class="rpt-forecast-eta-icon">📅</span>
+                    <div>
+                        <div class="rpt-forecast-eta-label">${isFr?'Estimation':'Est. completion'}</div>
+                        <div class="rpt-forecast-eta-date">${etaText}</div>
+                        ${etaSub?`<div class="rpt-forecast-eta-sub">${etaSub}</div>`:''}
+                    </div>
+                </div>
+                <div class="rpt-forecast-rings">${rings}</div>
+            </div>`;
+        }
+
+        // ── Main generate ──
+        async function generateReport() {
+            const startDate = document.getElementById('rpt-start').value;
+            const endDate   = document.getElementById('rpt-end').value;
+            if (!startDate || !endDate) { showToast('Please select a date range.', 'warning'); return; }
+            if (startDate > endDate)    { showToast('Start date must be before end date.', 'warning'); return; }
+
+            const btn = document.getElementById('gen-btn');
+            const T   = rptT[currentLang];
+            btn.disabled = true; btn.textContent = currentLang === 'fr' ? 'Génération…' : 'Generating…';
+
+            const todayStr = new Date().toISOString().slice(0,10);
+            const ago60 = new Date(); ago60.setDate(ago60.getDate()-59);
+            const ago60Str = ago60.toISOString().slice(0,10);
+
+            try {
+                const [stepsRes, exRes, achRes, totalRes, eta60Res] = await Promise.all([
+                    fetch(`/api/steps?startDate=${startDate}&endDate=${endDate}`),
+                    fetch(`/api/exercises?startDate=${startDate}&endDate=${endDate}`),
+                    fetch('/api/achievements'),
+                    fetch('/api/steps/total'),
+                    fetch(`/api/steps?startDate=${ago60Str}&endDate=${todayStr}`)
+                ]);
+                const [stepsData, exData, achAll, totalData, eta60Data] = await Promise.all([
+                    stepsRes.json(), exRes.json(), achRes.json(), totalRes.json(), eta60Res.json()
+                ]);
+
+                const allDates   = dateRange(startDate, endDate);
+                const periodDays = allDates.length;
+
+                const stepsMap   = {}, commentsMap = {}, exMap = {};
+                stepsData.forEach(s => { stepsMap[s.date] = s.quantity; if (s.comments) commentsMap[s.date] = s.comments; });
+                exData.forEach(e => { exMap[e.date] = e; });
+
+                const stepsVals    = stepsData.map(s => s.quantity);
+                const totalSteps   = stepsVals.reduce((a,b) => a+b, 0);
+                const daysLogged   = new Set([...Object.keys(stepsMap), ...Object.keys(exMap)]).size;
+                const avgAll       = periodDays > 0 ? totalSteps / periodDays : 0;
+                const avgActive    = stepsVals.length > 0 ? totalSteps / stepsVals.length : 0;
+                const exerciseDays = exData.filter(e => e.done === 'Yes').length;
+                const weightsDays  = exData.filter(e => e.weights_done === 'Yes').length;
+                const exPct        = Math.round((exerciseDays / periodDays) * 100);
+                const wtPct        = Math.round((weightsDays  / periodDays) * 100);
+                const bestEntry    = stepsVals.length > 0 ? stepsData.reduce((a,b) => b.quantity > a.quantity ? b : a) : null;
+                const bestDay      = bestEntry ? { date: bestEntry.date, steps: bestEntry.quantity } : null;
+                const allTimeTotal = totalData.total_steps || 0;
+
+                // Trend
+                let trend = null;
+                if (allDates.length >= 14) {
+                    const mid = Math.floor(allDates.length / 2);
+                    const h1 = allDates.slice(0, mid).filter(d => stepsMap[d]);
+                    const h2 = allDates.slice(mid).filter(d => stepsMap[d]);
+                    const a1 = h1.length ? h1.reduce((s,d) => s+stepsMap[d], 0) / h1.length : 0;
+                    const a2 = h2.length ? h2.reduce((s,d) => s+stepsMap[d], 0) / h2.length : 0;
+                    trend = a1 > 0 ? ((a2 - a1) / a1) * 100 : null;
+                }
+
+                // Build ordered 60-day daily step array
+                const steps60Map = {};
+                eta60Data.forEach(s => { steps60Map[s.date] = s.quantity; });
+                const allTimeSteps60 = [];
+                for (let i=59; i>=0; i--) {
+                    const d = new Date(); d.setDate(d.getDate()-i);
+                    allTimeSteps60.push(steps60Map[d.toISOString().slice(0,10)] || 0);
+                }
+
+                const periodAch = achAll.filter(a => a.start_date >= startDate && a.start_date <= endDate);
+                const stats = { periodDays, daysLogged, totalSteps, avgAll, avgActive, exerciseDays, weightsDays, exPct, wtPct, bestDay, trend, periodStart: startDate, periodEnd: endDate, achCount: periodAch.length };
+                lastReportStats = stats;
+
+                const narrative = buildNarrative(stats);
+                const recs      = buildRecs(stats);
+                const chart     = buildChart(allDates, stepsMap, exMap, avgActive);
+
+                const milestones = [
+                    { name:'Stoke to London',       dist:'150 miles',   goal:300000,   color:'#3182ce' },
+                    { name:'Stoke to Paris',         dist:'400 miles',   goal:800000,   color:'#9b59b6' },
+                    { name:'Stoke to Berlin',        dist:'750 miles',   goal:1500000,  color:'#e67e22' },
+                    { name:'Stoke to Moscow',        dist:'1,600 miles', goal:3200000,  color:'#e74c3c' },
+                    { name:'Stoke to Johannesburg',  dist:'6,000 miles', goal:12000000, color:'#27ae60' }
+                ];
+
+                document.getElementById('report-output').innerHTML = `
+<div class="report-doc">
+
+    <!-- ── Header ── -->
+    <div class="rpt-header">
+        <div class="rpt-header-left">
+            <h1>${T.docTitle}</h1>
+            <h2>Fred</h2>
+        </div>
+        <div class="rpt-header-right">
+            <img src="/images/fred.jpg" alt="Fred" onerror="this.style.display='none'">
+            <div><strong>${T.period}:</strong> ${fmtLong(startDate)} – ${fmtLong(endDate)}</div>
+            <div><strong>${T.duration}:</strong> ${periodDays} ${T.days}</div>
+            <div><strong>${T.generated}:</strong> ${fmtLong(new Date().toISOString().slice(0,10))}</div>
+        </div>
+    </div>
+
+    <!-- ── At a Glance ── -->
+    <div class="stat-row">
+        <div class="stat-box">
+            <div class="stat-value">${totalSteps.toLocaleString()}</div>
+            <div class="stat-label">${T.totalSteps}</div>
+        </div>
+        <div class="stat-box green">
+            <div class="stat-value">${Math.round(avgActive).toLocaleString()}</div>
+            <div class="stat-label">${T.avgActive}</div>
+        </div>
+        <div class="stat-box${clsStatBox(exPct)}">
+            <div class="stat-value">${exPct}%</div>
+            <div class="stat-label">${T.exCompliance}</div>
+        </div>
+        <div class="stat-box orange">
+            <div class="stat-value">${bestDay ? bestDay.steps.toLocaleString() : '—'}</div>
+            <div class="stat-label">${T.bestDay}</div>
+        </div>
+    </div>
+
+    <!-- ── 1. Summary ── -->
+    <div class="rpt-section">
+        <div class="rpt-section-title"><span class="rpt-section-num">1</span>${T.s1}</div>
+        <div class="narrative">${narrative.map(p => `<p>${p}</p>`).join('')}</div>
+    </div>
+
+    <!-- ── 2. Steps ── -->
+    <div class="rpt-section">
+        <div class="rpt-section-title"><span class="rpt-section-num">2</span>${T.s2}</div>
+        ${chart}
+        <table class="log-table" style="width:auto;min-width:340px;margin-top:0.8em;">
+            <tr><th>${T.metric}</th><th>${T.value}</th></tr>
+            <tr><td>${T.tTotalSteps}</td><td><strong>${totalSteps.toLocaleString()}</strong></td></tr>
+            <tr><td>${T.tDaysRec}</td><td>${stepsVals.length} ${T.of} ${periodDays}</td></tr>
+            <tr><td>${T.tAvgActive}</td><td>${Math.round(avgActive).toLocaleString()} ${T.sPerDay}</td></tr>
+            <tr><td>${T.tAvgAll}</td><td>${Math.round(avgAll).toLocaleString()} ${T.sPerDay}</td></tr>
+            <tr><td>${T.tBestDay}</td><td>${bestDay ? `${bestDay.steps.toLocaleString()} ${T.steps} (${fmtMed(bestDay.date)})` : '—'}</td></tr>
+            <tr><td>${T.t10k}</td><td>${stepsData.filter(s => s.quantity >= 10000).length}</td></tr>
+        </table>
+    </div>
+
+    <!-- ── 3. Exercise & Weights ── -->
+    <div class="rpt-section">
+        <div class="rpt-section-title"><span class="rpt-section-num">3</span>${T.s3}</div>
+        <div class="compliance-row">
+            <span class="compliance-label">${T.exRoutine}</span>
+            <div class="compliance-track"><div class="compliance-fill${clsCompliance(exPct)}" style="width:${exPct}%"></div></div>
+            <span class="compliance-pct">${exPct}%</span>
+            <span class="compliance-days">${exerciseDays} / ${periodDays} ${T.days}</span>
+        </div>
+        <div class="compliance-row">
+            <span class="compliance-label">${T.wtTraining}</span>
+            <div class="compliance-track"><div class="compliance-fill${clsCompliance(wtPct)}" style="width:${wtPct}%"></div></div>
+            <span class="compliance-pct">${wtPct}%</span>
+            <span class="compliance-days">${weightsDays} / ${periodDays} ${T.days}</span>
+        </div>
+    </div>
+
+    <!-- ── 4. Milestones ── -->
+    <div class="rpt-section">
+        <div class="rpt-section-title"><span class="rpt-section-num">4</span>${T.s4}</div>
+        <p style="font-size:9pt;color:#777;margin:0 0 1em;font-family:Arial,sans-serif;">
+            ${T.mileIntro} <strong>${allTimeTotal.toLocaleString()}</strong> ${T.steps}
+            (${T.mileApprox} ${Math.round(allTimeTotal/2000).toLocaleString()} ${T.mileMiles}) ${T.mileSince}
+            <strong>${totalSteps.toLocaleString()}</strong> ${T.steps}.
+        </p>
+        ${milestones.map(m => {
+            const pct  = Math.min(100, (allTimeTotal / m.goal) * 100);
+            const done = allTimeTotal >= m.goal;
+            const rem  = Math.max(0, m.goal - allTimeTotal);
+            return `<div class="milestone-row">
+                <div class="milestone-name" style="color:${m.color}">${m.name}
+                    <span style="font-weight:normal;color:#888;font-family:Arial,sans-serif;font-size:9pt">&nbsp;(${m.dist} / ${m.goal.toLocaleString()} ${T.steps})</span>
+                </div>
+                <div class="milestone-sub">${done ? T.completed : `${rem.toLocaleString()} ${T.mileRem} — ${pct.toFixed(1)}%`}</div>
+                <div class="mile-track"><div class="mile-fill${done?' done':''}" style="width:${pct.toFixed(1)}%;${done?'':'background:'+m.color}"></div></div>
+                ${buildMilestoneForecastHTML(m.goal, allTimeTotal, allTimeSteps60)}
+            </div>`;
+        }).join('')}
+    </div>
+
+    <!-- ── 5. Achievements ── -->
+    <div class="rpt-section">
+        <div class="rpt-section-title"><span class="rpt-section-num">5</span>${T.s5}</div>
+        ${periodAch.length === 0
+            ? `<p style="color:#888;font-family:Arial,sans-serif;font-size:10pt;">${T.noAch}</p>`
+            : periodAch.map(a => `<div class="ach-item">
+                <strong>${a.name}</strong>
+                <div class="ach-dates">${fmtMed(a.start_date)}${a.end_date ? ' — ' + fmtMed(a.end_date) : ''}</div>
+                ${a.description ? `<div class="ach-desc">${a.description}</div>` : ''}
+              </div>`).join('')}
+    </div>
+
+    <!-- ── 6. Daily Log ── -->
+    <div class="rpt-section page-break">
+        <div class="rpt-section-title"><span class="rpt-section-num">6</span>${T.s6}</div>
+        <table class="log-table">
+            <thead><tr><th>${T.dateH}</th><th>${T.exerciseH}</th><th>${T.weightsH}</th><th>${T.stepsH}</th><th>${T.commentsH}</th></tr></thead>
+            <tbody>
+                ${allDates.map(d => {
+                    const ex   = exMap[d];
+                    const steps = stepsMap[d];
+                    const note  = commentsMap[d] || '';
+                    const exY   = ex && ex.done === 'Yes';
+                    const wtY   = ex && ex.weights_done === 'Yes';
+                    return `<tr>
+                        <td style="white-space:nowrap;font-family:Arial,sans-serif">${fmtMed(d)}</td>
+                        <td class="${exY?'tick-yes':'tick-no'}">${exY?'✓':'—'}</td>
+                        <td class="${wtY?'tick-yes':'tick-no'}">${wtY?'✓':'—'}</td>
+                        <td style="font-family:Arial,sans-serif">${steps ? steps.toLocaleString() : '—'}</td>
+                        <td style="font-size:8.5pt;color:#555;font-family:Arial,sans-serif">${note}</td>
+                    </tr>`;
+                }).join('')}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- ── 7. Recommendations ── -->
+    <div class="rpt-section">
+        <div class="rpt-section-title"><span class="rpt-section-num">7</span>${T.s7}</div>
+        <ul class="rec-list">${recs.map(r => `<li>${r}</li>`).join('')}</ul>
+    </div>
+
+    <!-- ── Footer ── -->
+    <div class="rpt-footer">
+        <span>${T.footerLeft}</span>
+        <span>Report generated ${new Date().toLocaleString('en-GB')}</span>
+    </div>
+
+</div>`;
+
+                document.getElementById('report-output').style.display = 'block';
+                document.getElementById('print-btn').style.display = 'inline-block';
+                document.getElementById('share-btn').style.display = 'inline-block';
+                document.getElementById('report-output').scrollIntoView({ behavior:'smooth' });
+
+            } catch (err) {
+                console.error('Report error:', err);
+                showToast('Failed to generate report: ' + err.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = translations[currentLang]['Generate Report'] || 'Generate Report';
+            }
+        }
+
+        // ── Language toggle ──
+        function setLanguage(lang) {
+            currentLang = lang;
+            localStorage.setItem('preferredLanguage', lang);
+            document.querySelectorAll('[data-translate]').forEach(el => {
+                const key = el.getAttribute('data-translate');
+                if (translations[lang] && translations[lang][key]) {
+                    if (el.tagName === 'BUTTON' && el.id !== 'lang-toggle') {
+                        el.textContent = translations[lang][key];
+                    } else if (el.tagName === 'INPUT') {
+                        el.placeholder = translations[lang][key];
+                    } else if (el.tagName !== 'BUTTON') {
+                        el.textContent = translations[lang][key];
+                    }
+                }
+            });
+            const flagImg = document.querySelector('#lang-toggle img');
+            if (flagImg) {
+                flagImg.src = lang === 'en' ? 'https://flagsapi.com/FR/flat/24.png' : 'https://flagsapi.com/GB/flat/24.png';
+                flagImg.alt = lang === 'en' ? 'French Flag' : 'English Flag';
+            }
+        }
+
+        document.getElementById('lang-toggle').addEventListener('click', () => {
+            const newLang = currentLang === 'en' ? 'fr' : 'en';
+            setLanguage(newLang);
+        });
+
+        window.onload = async () => {
+            await window.authReady;
+            setLanguage(currentLang);
+        };
+    </script>
+</body>
+</html>

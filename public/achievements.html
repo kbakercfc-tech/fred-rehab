@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title data-translate="Fred's Achievements">Fred's Achievements</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .page-tabs {
+            display: flex;
+            border-bottom: 2px solid #ddd;
+            width: 100%;
+            max-width: 1100px;
+            margin-bottom: 1.5em;
+        }
+        .tab-btn {
+            padding: 0.75em 1.8em;
+            background: none;
+            border: none;
+            border-bottom: 3px solid transparent;
+            margin-bottom: -2px;
+            cursor: pointer;
+            font-size: 1em;
+            color: #888;
+            font-weight: 500;
+            transition: color 0.2s, border-color 0.2s;
+        }
+        .tab-btn:hover { color: var(--primary, #1e3a5f); background: none; box-shadow: none; }
+        .tab-btn.active {
+            color: var(--primary, #1e3a5f);
+            border-bottom-color: var(--primary, #1e3a5f);
+            font-weight: bold;
+        }
+        .tab-panel { display: none; width: 100%; max-width: 1100px; }
+        .tab-panel.active { display: block; }
+
+        /* ── Milestone forecast ── */
+        .milestone-forecast { margin-top: 0.9em; }
+
+        .forecast-eta-box {
+            display: flex;
+            align-items: center;
+            gap: 0.7em;
+            background: #f0f4f8;
+            border-left: 3px solid #1e3a5f;
+            border-radius: 6px;
+            padding: 0.5em 1em;
+            margin-bottom: 0.9em;
+            flex-wrap: wrap;
+        }
+        .forecast-eta-icon  { font-size: 1.1em; }
+        .forecast-eta-label { font-size: 0.7em; color: #888; text-transform: uppercase; letter-spacing: 0.05em; white-space: nowrap; }
+        .forecast-eta-date  { font-size: 1.05em; font-weight: bold; color: #1e3a5f; }
+        .forecast-eta-sub   { font-size: 0.7em; color: #bbb; margin-left: auto; font-style: italic; white-space: nowrap; }
+
+        .forecast-rings { display: flex; gap: 0.7em; flex-wrap: wrap; }
+        .prob-ring-wrap { display: flex; flex-direction: column; align-items: center; gap: 0.35em; flex: 1; min-width: 60px; }
+        .prob-ring {
+            width: 64px; height: 64px; border-radius: 50%;
+            display: grid; place-items: center;
+            transition: transform 0.2s;
+        }
+        .prob-ring:hover { transform: scale(1.08); }
+        .prob-ring-inner {
+            width: 46px; height: 46px; border-radius: 50%; background: white;
+            display: grid; place-items: center; font-weight: bold; font-size: 0.82em; line-height: 1;
+        }
+        .prob-ring-label { font-size: 0.7em; color: #666; text-align: center; white-space: nowrap; }
+
+        .forecast-achieved {
+            margin-top: 0.7em; padding: 0.65em 1em; background: #d4edda;
+            border-radius: 6px; color: #155724; font-weight: bold; text-align: center; font-size: 1em;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1 data-translate="Fred's Rehab Tracker">Fred's Rehab Tracker</h1>
+        <nav>
+            <a href="/" class="editor-only" data-translate="Enter Data">Enter Data</a>
+            <a href="/enter-data-tabular.html" class="editor-only" data-translate="Enter Data - Tabular">Enter Data - Tabular</a>
+            <a href="/history.html" data-translate="View History">View History</a>
+            <a href="/steps-graph.html" data-translate="View Steps Graph">View Steps Graph</a>
+            <a href="/calendar-view.html" data-translate="Calendar View">Calendar View</a>
+            <a href="/achievements.html" data-translate="Achievements">Achievements</a>
+            <a href="/exercise-videos.html" data-translate="Exercise Videos">Exercise Videos</a>
+            <a href="/report.html" data-translate="Progress Report">Progress Report</a>
+            <a href="/data-management.html" class="editor-only" data-translate="Data Management">Data Management</a>
+            <a href="/help.html" data-translate="Help">Help</a>
+            <a href="#" id="logout-btn" data-translate="Logout" onclick="logout()">Logout</a>
+            <button id="lang-toggle"><img src="https://flagsapi.com/FR/flat/24.png" alt="French Flag"></button>
+        </nav>
+    </header>
+
+    <main>
+        <!-- ── Tabs ── -->
+        <div class="page-tabs">
+            <button class="tab-btn active" id="tab-btn-personal" data-translate="Fred's Achievements">Fred's Achievements</button>
+            <button class="tab-btn" id="tab-btn-fun" data-translate="Fun Milestones">Fun Milestones</button>
+        </div>
+
+        <!-- ══ Panel 1: Fred's Personal Achievements ══ -->
+        <div id="panel-personal" class="tab-panel active">
+
+            <section class="editor-only">
+                <h2 id="form-heading" data-translate="Log a New Achievement">Log a New Achievement</h2>
+                <form id="achievement-form" enctype="multipart/form-data">
+                    <input type="hidden" id="edit-id">
+                    <div>
+                        <label for="name" data-translate="Achievement Name:">Achievement Name:</label>
+                        <input type="text" id="name" name="name">
+                    </div>
+                    <div>
+                        <label for="description" data-translate="Achievement Description (optional):">Achievement Description (optional):</label>
+                        <textarea id="description" name="description" rows="3"></textarea>
+                    </div>
+                    <div style="display: flex; gap: 20px;">
+                        <div style="flex: 1;">
+                            <label for="start_date" data-translate="Achievement Start Date:">Achievement Start Date:</label>
+                            <input type="date" id="start_date" name="start_date">
+                        </div>
+                        <div style="flex: 1;">
+                            <label for="end_date" data-translate="Achievement End Date (optional):">Achievement End Date (optional):</label>
+                            <input type="date" id="end_date" name="end_date">
+                        </div>
+                    </div>
+                    <div id="media-field">
+                        <label for="media" data-translate="Media (Photos/Videos):">Media (Photos/Videos):</label>
+                        <input type="file" id="media" name="media" accept="image/*,video/*" multiple>
+                    </div>
+                    <div style="display:flex; gap:10px; align-items:center;">
+                        <button type="submit" id="submit-btn" data-translate="Add Achievement">Add Achievement</button>
+                        <button type="button" id="cancel-edit-btn" onclick="cancelEdit()" style="display:none; background:var(--text-muted);">Cancel</button>
+                    </div>
+                </form>
+            </section>
+
+            <hr style="width: 100%; max-width: 800px;">
+
+            <section style="width: 100%;">
+                <h2 data-translate="Fred's Achievements">Fred's Achievements</h2>
+                <div id="achievements-container" style="overflow-x: auto;">
+                    <table id="achievement-table" class="achievement-table">
+                        <thead>
+                            <tr>
+                                <th data-translate="Name">Name</th>
+                                <th data-translate="Start Date">Start Date</th>
+                                <th data-translate="End Date">End Date</th>
+                                <th data-translate="Description">Description</th>
+                                <th data-translate="Media">Media</th>
+                                <th data-translate="Action">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="achievements-body"></tbody>
+                    </table>
+                    <p id="no-achievements" style="display:none;" data-translate="No achievements recorded yet.">No achievements recorded yet.</p>
+                </div>
+            </section>
+        </div>
+
+        <!-- ══ Panel 2: Fun Milestones ══ -->
+        <div id="panel-fun" class="tab-panel">
+            <div class="milestones-section">
+                <h2 data-translate="Fun Milestones">Fun Milestones</h2>
+
+                <div class="milestone-card" style="border-left-color: #3498db;">
+                    <div class="milestone-info">
+                        <span class="milestone-title">10,000 Steps Club</span>
+                        <span id="club-count-display" class="milestone-distance">0 times achieved</span>
+                    </div>
+                    <p id="club-level-status" class="milestone-status">Walk 10,000 steps to join the club!</p>
+                    <div style="font-size: 0.8em; margin-top: 10px; color: #7f8c8d;">
+                        Bronze: 5 times | Silver: 10 times | Gold: 15 times
+                    </div>
+                </div>
+
+                <div class="milestone-card">
+                    <div class="milestone-info">
+                        <span class="milestone-title" data-translate="Stoke to London Challenge">Stoke to London Challenge</span>
+                        <span class="milestone-distance">~300,000 steps (150 miles)</span>
+                    </div>
+                    <div class="progress-container">
+                        <div id="london-progress-bar" class="progress-bar">0%</div>
+                    </div>
+                    <p id="london-status" class="milestone-status">Keep walking, Fred!</p>
+                    <div id="london-forecast" class="milestone-forecast"></div>
+                </div>
+
+                <div class="milestone-card" style="border-left-color: #9b59b6;">
+                    <div class="milestone-info">
+                        <span class="milestone-title" data-translate="Stoke to Paris Challenge">Stoke to Paris Challenge</span>
+                        <span class="milestone-distance">~800,000 steps (400 miles)</span>
+                    </div>
+                    <div class="progress-container">
+                        <div id="paris-progress-bar" class="progress-bar" style="background-color: #9b59b6;">0%</div>
+                    </div>
+                    <p id="paris-status" class="milestone-status">On your way to France!</p>
+                    <div id="paris-forecast" class="milestone-forecast"></div>
+                </div>
+
+                <div class="milestone-card" style="border-left-color: #e67e22;">
+                    <div class="milestone-info">
+                        <span class="milestone-title" data-translate="Stoke to Berlin Challenge">Stoke to Berlin Challenge</span>
+                        <span class="milestone-distance">~1,500,000 steps (750 miles)</span>
+                    </div>
+                    <div class="progress-container">
+                        <div id="berlin-progress-bar" class="progress-bar" style="background-color: #e67e22;">0%</div>
+                    </div>
+                    <p id="berlin-status" class="milestone-status">Heading towards Germany!</p>
+                    <div id="berlin-forecast" class="milestone-forecast"></div>
+                </div>
+
+                <div class="milestone-card" style="border-left-color: #e74c3c;">
+                    <div class="milestone-info">
+                        <span class="milestone-title" data-translate="Stoke to Moscow Challenge">Stoke to Moscow Challenge</span>
+                        <span class="milestone-distance">~3,200,000 steps (1,600 miles)</span>
+                    </div>
+                    <div class="progress-container">
+                        <div id="moscow-progress-bar" class="progress-bar" style="background-color: #e74c3c;">0%</div>
+                    </div>
+                    <p id="moscow-status" class="milestone-status">The long road to Russia!</p>
+                    <div id="moscow-forecast" class="milestone-forecast"></div>
+                </div>
+
+                <div class="milestone-card" style="border-left-color: #27ae60;">
+                    <div class="milestone-info">
+                        <span class="milestone-title" data-translate="Stoke to Johannesburg Challenge">Stoke to Johannesburg Challenge</span>
+                        <span class="milestone-distance">~12,000,000 steps (6,000 miles)</span>
+                    </div>
+                    <div class="progress-container">
+                        <div id="joburg-progress-bar" class="progress-bar" style="background-color: #27ae60;">0%</div>
+                    </div>
+                    <p id="joburg-status" class="milestone-status">The ultimate journey to South Africa!</p>
+                    <div id="joburg-forecast" class="milestone-forecast"></div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Confirm dialog -->
+    <div id="confirm-dialog" style="display:none;" class="confirm-overlay">
+        <div class="confirm-box">
+            <p id="confirm-message"></p>
+            <div class="confirm-actions">
+                <button id="confirm-yes" class="delete-achievement" style="position:static;margin-top:0;">Yes, Delete</button>
+                <button id="confirm-no">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for viewing media -->
+    <div id="media-modal" class="achievement-modal" onclick="closeModal(event)">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <span class="close-modal" onclick="document.getElementById('media-modal').style.display='none'; document.getElementById('modal-body').innerHTML=''">&times;</span>
+            <div id="modal-body"></div>
+        </div>
+    </div>
+
+    <script src="auth.js"></script>
+    <script src="toast.js"></script>
+    <script src="translations.js"></script>
+    <script>
+        let currentLang = localStorage.getItem('preferredLanguage') || 'en';
+
+        // ── Tab switching ──
+        const tabButtons = document.querySelectorAll('.tab-btn');
+        const tabPanels  = document.querySelectorAll('.tab-panel');
+        let milestonesLoaded = false;
+
+        function switchTab(tabId) {
+            tabButtons.forEach(b => b.classList.toggle('active', b.id === 'tab-btn-' + tabId));
+            tabPanels.forEach(p => p.classList.toggle('active', p.id === 'panel-' + tabId));
+            localStorage.setItem('achievementsTab', tabId);
+            if (tabId === 'fun' && !milestonesLoaded) {
+                loadFunMilestones();
+            }
+        }
+
+        document.getElementById('tab-btn-personal').addEventListener('click', () => switchTab('personal'));
+        document.getElementById('tab-btn-fun').addEventListener('click',      () => switchTab('fun'));
+
+        // ── Personal Achievements ──
+        const form           = document.getElementById('achievement-form');
+        const body           = document.getElementById('achievements-body');
+        const table          = document.getElementById('achievement-table');
+        const noAchievements = document.getElementById('no-achievements');
+
+        async function loadAchievements() {
+            try {
+                const response = await fetch('/api/achievements');
+                const achievements = await response.json();
+
+                body.innerHTML = '';
+                if (achievements.length === 0) {
+                    table.style.display = 'none';
+                    noAchievements.style.display = 'block';
+                    return;
+                }
+
+                table.style.display = 'table';
+                noAchievements.style.display = 'none';
+
+                achievements.forEach(achievement => {
+                    const row = document.createElement('tr');
+
+                    let mediaHtml = '';
+                    if (achievement.media && achievement.media.length > 0) {
+                        mediaHtml = '<div class="achievement-media-preview">';
+                        achievement.media.forEach(m => {
+                            if (m.media_type === 'photo') {
+                                mediaHtml += `<img src="${m.filepath}" alt="Achievement photo" class="achievement-thumb" onclick='openModal("photo","${m.filepath}")'>`;
+                            } else {
+                                mediaHtml += `
+                                    <div class="achievement-video-wrapper">
+                                        <video controls preload="metadata" src="${m.filepath}" class="achievement-thumb-video" playsinline></video>
+                                        <button class="achievement-video-expand" onclick="expandVideo(this)" title="Full screen">&#x26F6;</button>
+                                    </div>`;
+                            }
+                        });
+                        mediaHtml += '</div>';
+                    }
+
+                    const startDate = formatDateDDMMMYY(achievement.start_date);
+                    const endDate   = achievement.end_date ? formatDateDDMMMYY(achievement.end_date) : '-';
+
+                    row.innerHTML = `
+                        <td><strong>${achievement.name}</strong></td>
+                        <td style="white-space: nowrap;">${startDate}</td>
+                        <td style="white-space: nowrap;">${endDate}</td>
+                        <td class="achievement-desc-cell">${achievement.description || ''}</td>
+                        <td>${mediaHtml}</td>
+                        <td class="delete-btn-cell">
+                            ${window.userRole === 'editor' ? `
+                                <button class="edit-achievement">Edit</button>
+                                <button class="delete-achievement" style="position: static; margin-top: 0;">Delete</button>
+                            ` : ''}
+                        </td>
+                    `;
+                    body.appendChild(row);
+
+                    if (window.userRole === 'editor') {
+                        row.querySelector('.edit-achievement').addEventListener('click', () => {
+                            editAchievement(achievement.id, achievement.name, achievement.description || '', achievement.start_date, achievement.end_date || '');
+                        });
+                        row.querySelector('.delete-achievement').addEventListener('click', () => {
+                            deleteAchievement(achievement.id);
+                        });
+                    }
+                });
+            } catch (err) {
+                console.error("Error loading achievements:", err);
+            }
+        }
+
+        function expandVideo(btn) {
+            const video = btn.previousElementSibling;
+            if (video.requestFullscreen)        video.requestFullscreen();
+            else if (video.webkitEnterFullscreen) video.webkitEnterFullscreen();
+        }
+
+        function openModal(type, filepath) {
+            const modal     = document.getElementById('media-modal');
+            const modalBody = document.getElementById('modal-body');
+            modalBody.innerHTML = type === 'photo'
+                ? `<img src="${filepath}" alt="Achievement Photo">`
+                : `<video controls autoplay style="width:100%;height:auto;max-height:85vh;" src="${filepath}"></video>`;
+            modal.style.display = 'flex';
+        }
+
+        function closeModal(event) {
+            const modal = document.getElementById('media-modal');
+            if (event.target === modal) {
+                modal.style.display = 'none';
+                document.getElementById('modal-body').innerHTML = '';
+            }
+        }
+
+        let editingId = null;
+
+        function editAchievement(id, name, description, startDate, endDate) {
+            editingId = id;
+            document.getElementById('edit-id').value       = id;
+            document.getElementById('name').value          = name;
+            document.getElementById('description').value   = description;
+            document.getElementById('start_date').value    = startDate;
+            document.getElementById('end_date').value      = endDate;
+            document.getElementById('form-heading').textContent      = 'Edit Achievement';
+            document.getElementById('submit-btn').textContent        = 'Save Changes';
+            document.getElementById('cancel-edit-btn').style.display = 'inline-block';
+            document.getElementById('media-field').style.display     = 'none';
+            document.querySelector('section.editor-only').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function cancelEdit() {
+            editingId = null;
+            form.reset();
+            document.getElementById('edit-id').value                 = '';
+            document.getElementById('form-heading').textContent      = 'Log a New Achievement';
+            document.getElementById('submit-btn').textContent        = 'Add Achievement';
+            document.getElementById('cancel-edit-btn').style.display = 'none';
+            document.getElementById('media-field').style.display     = 'block';
+            document.getElementById('start_date').value = new Date().toISOString().slice(0, 10);
+        }
+
+        form.onsubmit = async (e) => {
+            e.preventDefault();
+            const nameVal     = document.getElementById('name').value.trim();
+            const startDateVal = document.getElementById('start_date').value;
+            if (!nameVal)      { showToast('Please enter an achievement name.', 'warning'); return; }
+            if (!startDateVal) { showToast('Please select a start date.', 'warning'); return; }
+
+            try {
+                let response;
+                if (editingId) {
+                    response = await fetch(`/api/achievements/${editingId}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            name: nameVal,
+                            description: document.getElementById('description').value.trim(),
+                            start_date: startDateVal,
+                            end_date: document.getElementById('end_date').value || null
+                        })
+                    });
+                } else {
+                    response = await fetch('/api/achievements', { method: 'POST', body: new FormData(form) });
+                }
+
+                if (response.ok) {
+                    showToast(editingId ? 'Achievement updated!' : 'Achievement saved!', 'success');
+                    cancelEdit();
+                    loadAchievements();
+                } else {
+                    showToast('Failed to save achievement.', 'error');
+                }
+            } catch (err) {
+                console.error("Error saving achievement:", err);
+                showToast('Error saving achievement.', 'error');
+            }
+        };
+
+        function showConfirm(message, onConfirm) {
+            document.getElementById('confirm-message').textContent = message;
+            document.getElementById('confirm-dialog').style.display = 'flex';
+            document.getElementById('confirm-yes').onclick = () => {
+                document.getElementById('confirm-dialog').style.display = 'none';
+                onConfirm();
+            };
+            document.getElementById('confirm-no').onclick = () => {
+                document.getElementById('confirm-dialog').style.display = 'none';
+            };
+        }
+
+        async function deleteAchievement(id) {
+            showConfirm('Delete this achievement? This cannot be undone.', async () => {
+                try {
+                    const response = await fetch(`/api/achievements/${id}`, { method: 'DELETE' });
+                    if (response.ok) {
+                        showToast('Achievement deleted.', 'success');
+                        loadAchievements();
+                    } else {
+                        showToast('Failed to delete achievement.', 'error');
+                    }
+                } catch (err) {
+                    console.error("Error deleting achievement:", err);
+                }
+            });
+        }
+
+        // ── Linear regression helper ──
+        // Returns { a, b } for y = a + b*x (ordinary least squares)
+        function linearRegression(xArr, yArr) {
+            const n = xArr.length;
+            if (n < 2) return null;
+            let sx = 0, sy = 0, sxy = 0, sx2 = 0;
+            for (let i = 0; i < n; i++) {
+                sx  += xArr[i];
+                sy  += yArr[i];
+                sxy += xArr[i] * yArr[i];
+                sx2 += xArr[i] * xArr[i];
+            }
+            const denom = n * sx2 - sx * sx;
+            if (denom === 0) return null;
+            const b = (n * sxy - sx * sy) / denom;
+            const a = (sy - b * sx) / n;
+            return { a, b };
+        }
+
+        // ── Forecast card builder ──
+        function buildForecastHTML(etaText, etaSub, probs) {
+            const rings = probs.map(({ pct, label }) => {
+                const clr = pct >= 75 ? '#27ae60' : pct >= 40 ? '#e67e22' : '#e74c3c';
+                // Inline background so conic-gradient value is baked in (no CSS var calc needed)
+                const bg  = `conic-gradient(${clr} ${pct}%, #e8e8e8 0)`;
+                return `<div class="prob-ring-wrap">
+                    <div class="prob-ring" style="background:${bg}">
+                        <div class="prob-ring-inner" style="color:${clr}">${pct}%</div>
+                    </div>
+                    <div class="prob-ring-label">${label}</div>
+                </div>`;
+            }).join('');
+
+            return `<div class="forecast-eta-box">
+                <span class="forecast-eta-icon">📅</span>
+                <span class="forecast-eta-label">Est. completion</span>
+                <span class="forecast-eta-date">${etaText}</span>
+                <span class="forecast-eta-sub">${etaSub}</span>
+            </div>
+            <div class="forecast-rings">${rings}</div>`;
+        }
+
+        // ── Fun Milestones ──
+        async function loadFunMilestones() {
+            milestonesLoaded = true;
+            try {
+                // 10,000 Steps Club
+                const clubRes  = await fetch('/api/steps/club-status');
+                const clubData = await clubRes.json();
+                document.getElementById('club-count-display').textContent =
+                    `${clubData.count} time${clubData.count !== 1 ? 's' : ''} achieved`;
+                const clubStatus = document.getElementById('club-level-status');
+                if (clubData.level !== 'None') {
+                    const displayLevel = clubData.level === 'Member' ? 'Member' : `${clubData.level} Member`;
+                    clubStatus.innerHTML = `<strong>Current Level: ${displayLevel}</strong>`;
+                    const levelColors = { Member:'#3498db', Bronze:'#cd7f32', Silver:'#95a5a6', Gold:'#daa520' };
+                    clubStatus.style.color = levelColors[clubData.level] || '#27ae60';
+                }
+
+                // Total all-time steps
+                const totalRes   = await fetch('/api/steps/total');
+                const totalData  = await totalRes.json();
+                const totalSteps = totalData.total_steps || 0;
+
+                // ── 60-day window for regression + probability ──
+                const windowStart = new Date();
+                windowStart.setDate(windowStart.getDate() - 59);  // day 0 = 59 days ago
+                const etaStart = windowStart.toISOString().slice(0, 10);
+                const etaEnd   = new Date().toISOString().slice(0, 10);
+                const etaRes   = await fetch(`/api/steps?startDate=${etaStart}&endDate=${etaEnd}`);
+                const etaData  = await etaRes.json();
+
+                // Build daily array: index 0 = 59 days ago, index 59 = today
+                const stepsMap60 = new Map(etaData.map(d => [d.date, d.quantity]));
+                const dailyVals  = [];
+                for (let i = 0; i < 60; i++) {
+                    const d = new Date(windowStart);
+                    d.setDate(d.getDate() + i);
+                    dailyVals.push(stepsMap60.get(d.toISOString().slice(0, 10)) || 0);
+                }
+
+                // Mean & sigma over 60 days (for probability calculation)
+                const avg60  = dailyVals.reduce((a, b) => a + b, 0) / 60;
+                const sigma  = Math.sqrt(dailyVals.reduce((s, v) => s + Math.pow(v - avg60, 2), 0) / 60);
+
+                // ── Linear regression on all-time cumulative total vs day index ──
+                // y[i] = all-time total at end of day i in the 60-day window
+                // x[i] = day index (0 … 59)
+                // slope b ≈ daily step rate accounting for trend over the window
+                const sum60        = dailyVals.reduce((a, b) => a + b, 0);
+                const totalBefore  = totalSteps - sum60;  // all-time total at start of window
+                const xArr = [], yArr = [];
+                let cumFromWindow  = 0;
+                for (let i = 0; i < 60; i++) {
+                    cumFromWindow += dailyVals[i];
+                    xArr.push(i);
+                    yArr.push(totalBefore + cumFromWindow);
+                }
+                const reg = linearRegression(xArr, yArr);
+                // reg.b = trend-adjusted daily rate (steps/day)
+                // ETA for goal: solve  goal = reg.a + reg.b * x  →  x = (goal - reg.a) / reg.b
+                // days from today = x - 59  (since today is index 59)
+
+                // Normal CDF helper (Abramowitz & Stegun erf approximation)
+                const erf = x => {
+                    const s = x >= 0 ? 1 : -1, a = Math.abs(x);
+                    const t = 1 / (1 + 0.3275911 * a);
+                    const p = t * (0.254829592 + t * (-0.284496736 + t * (1.421413741 + t * (-1.453152027 + t * 1.061405429))));
+                    return s * (1 - p * Math.exp(-a * a));
+                };
+                const achievementProb = (target, N) => {
+                    if (target <= 0) return 100;
+                    if (avg60 <= 0)  return 0;
+                    const mu  = N * avg60;
+                    const sig = Math.sqrt(N) * sigma;
+                    if (sig === 0) return mu >= target ? 100 : 0;
+                    const z = (target - mu) / (sig * Math.SQRT2);
+                    return Math.round((0.5 * (1 - erf(z))) * 100);
+                };
+
+                const updateMilestone = (prefix, goal, doneMsg, progressMsg) => {
+                    const pct        = Math.min((totalSteps / goal) * 100, 100).toFixed(1);
+                    const bar        = document.getElementById(`${prefix}-progress-bar`);
+                    const status     = document.getElementById(`${prefix}-status`);
+                    const forecastEl = document.getElementById(`${prefix}-forecast`);
+
+                    bar.style.width = pct + '%';
+                    bar.textContent = pct + '%';
+
+                    if (totalSteps >= goal) {
+                        bar.style.backgroundColor = '#2ecc71';
+                        status.textContent      = doneMsg;
+                        status.style.color      = '#27ae60';
+                        status.style.fontWeight = 'bold';
+                        if (forecastEl) forecastEl.innerHTML =
+                            `<div class="forecast-achieved">🎉 ${doneMsg}</div>`;
+                    } else {
+                        const rem = goal - totalSteps;
+                        status.textContent = progressMsg.replace('{remaining}', rem.toLocaleString());
+
+                        if (forecastEl) {
+                            // ETA via regression
+                            let etaText = 'N/A', etaSub = 'based on 60-day trend';
+                            if (reg && reg.b > 0) {
+                                const daysFromNow = Math.ceil((goal - reg.a) / reg.b - 59);
+                                if (daysFromNow > 0) {
+                                    const d = new Date();
+                                    d.setDate(d.getDate() + daysFromNow);
+                                    etaText = d.toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' });
+                                } else {
+                                    etaText = 'Very soon';
+                                }
+                            } else {
+                                etaSub = 'insufficient data';
+                            }
+
+                            // Probability rings
+                            const horizons = [
+                                { N: 30,  label: '1 month'  },
+                                { N: 90,  label: '3 months' },
+                                { N: 180, label: '6 months' },
+                                { N: 365, label: '1 year'   },
+                            ];
+                            const probs = horizons.map(h => ({
+                                pct:   avg60 > 0 ? achievementProb(rem, h.N) : 0,
+                                label: h.label
+                            }));
+
+                            forecastEl.innerHTML = buildForecastHTML(etaText, etaSub, probs);
+                        }
+                    }
+                };
+
+                updateMilestone('london', 300000,   "Congratulations Fred! You've reached London! / Cheers, Fred!",           "Only {remaining} steps left until London! / Mind the gap, Fred!");
+                updateMilestone('paris',  800000,   "Incroyable! Fred, you've reached Paris! / Félicitations, Fred !",         "{remaining} steps until Paris! / En route pour Paris !");
+                updateMilestone('berlin', 1500000,  "Wunderbar! Fred, you've reached Berlin! / Gut gemacht, Fred!",            "{remaining} steps left until Berlin! / Auf geht's nach Berlin!");
+                updateMilestone('moscow', 3200000,  "Amazing! Fred, you've reached Moscow! / Поздравляем, Фред!",              "Keep going, {remaining} steps to Moscow! / В Москву, Фред!");
+                updateMilestone('joburg', 12000000, "Legendary! Fred, you've reached Johannesburg! / Siyakuhalalisela, Fred!", "Ultimate goal: {remaining} steps to Joburg! / Hamba kahle, Fred!");
+
+            } catch (err) {
+                console.error("Error loading fun milestones:", err);
+            }
+        }
+
+        // ── Shared helpers ──
+        function formatDateDDMMMYY(dateString) {
+            if (!dateString) return '';
+            return new Date(dateString).toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'2-digit' }).replace(/ /g, '-').toUpperCase();
+        }
+
+        // ── Language toggle ──
+        const langToggle = document.getElementById('lang-toggle');
+        langToggle.onclick = () => {
+            currentLang = currentLang === 'en' ? 'fr' : 'en';
+            localStorage.setItem('preferredLanguage', currentLang);
+            setLanguage(currentLang);
+            loadAchievements();
+        };
+
+        function setLanguage(lang) {
+            document.querySelectorAll('[data-translate]').forEach(el => {
+                const key = el.getAttribute('data-translate');
+                if (translations[lang] && translations[lang][key]) {
+                    if (el.tagName === 'INPUT' && el.type === 'date') return;
+                    if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
+                        el.placeholder = translations[lang][key];
+                    } else {
+                        el.textContent = translations[lang][key];
+                    }
+                }
+            });
+            const flagImg = langToggle.querySelector('img');
+            flagImg.src = lang === 'en' ? 'https://flagsapi.com/FR/flat/24.png' : 'https://flagsapi.com/GB/flat/24.png';
+            flagImg.alt = lang === 'en' ? 'French Flag' : 'English Flag';
+        }
+
+        window.onload = async () => {
+            await window.authReady;
+            setLanguage(currentLang);
+            loadAchievements();
+            document.getElementById('start_date').value = new Date().toISOString().slice(0, 10);
+
+            // Restore last active tab; also pre-load fun milestones if that tab was last active
+            const savedTab = localStorage.getItem('achievementsTab') || 'personal';
+            if (savedTab === 'fun') {
+                switchTab('fun');
+            }
+        };
+    </script>
+</body>
+</html>

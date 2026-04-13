@@ -10,14 +10,17 @@
     <header>
         <h1 data-translate="Fred's Rehab History">Fred's Rehab History</h1>
         <nav>
-            <a href="/" data-translate="Enter Data">Enter Data</a>
-            <a href="/enter-data-tabular.html" data-translate="Enter Data - Tabular">Enter Data - Tabular</a>
+            <a href="/" class="editor-only" data-translate="Enter Data">Enter Data</a>
+            <a href="/enter-data-tabular.html" class="editor-only" data-translate="Enter Data - Tabular">Enter Data - Tabular</a>
             <a href="/history.html" data-translate="View History">View History</a>
             <a href="/steps-graph.html" data-translate="View Steps Graph">View Steps Graph</a>
             <a href="/calendar-view.html" data-translate="Calendar View">Calendar View</a>
+            <a href="/achievements.html" data-translate="Achievements">Achievements</a>
             <a href="/exercise-videos.html" data-translate="Exercise Videos">Exercise Videos</a>
-            <a href="/data-management.html" data-translate="Data Management">Data Management</a>
+            <a href="/report.html" data-translate="Progress Report">Progress Report</a>
+            <a href="/data-management.html" class="editor-only" data-translate="Data Management">Data Management</a>
             <a href="/help.html" data-translate="Help">Help</a>
+            <a href="#" id="logout-btn" data-translate="Logout" onclick="logout()">Logout</a>
             <button id="lang-toggle"><img src="https://flagsapi.com/FR/flat/24.png" alt="French Flag"></button>
         </nav>
     </header>
@@ -37,10 +40,12 @@
         </table>
         <div style="display: flex; justify-content: space-between; margin-top: 1.5em; gap: 1em;">
             <button onclick="shareHistory()" data-translate="Share History">Share History</button>
-            <button onclick="clearHistory()" style="background-color: #dc3545;" data-translate="Clear All History">Clear All History</button>
+            <button onclick="clearHistory()" class="editor-only" style="background-color: #dc3545;" data-translate="Clear All History">Clear All History</button>
         </div>
     </main>
 
+    <script src="auth.js"></script>
+    <script src="toast.js"></script>
     <script src="translations.js"></script>
     <script>
         const langToggleButton = document.getElementById('lang-toggle');
@@ -173,10 +178,10 @@
                     method: 'DELETE'
                 });
                 if (response.ok) {
-                    alert("All history data cleared successfully!");
-                    loadData(); // Reload data to update the table
+                    showToast('All history cleared.', 'success');
+                    loadData();
                 } else {
-                    alert("Failed to clear history data.");
+                    showToast('Failed to clear history data.', 'error');
                 }
             }
         }
@@ -219,7 +224,8 @@
             alert(shareOptions);
         }
 
-        window.onload = () => {
+        window.onload = async () => {
+            await window.authReady;
             loadData();
             setLanguage(currentLang);
         };

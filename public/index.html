@@ -11,13 +11,16 @@
         <h1 data-translate="Fred's Rehab Tracker">Fred's Rehab Tracker</h1>
         <nav>
             <a href="/" data-translate="Enter Data">Enter Data</a>
-            <a href="/enter-data-tabular.html" data-translate="Enter Data - Tabular">Enter Data - Tabular</a>
+            <a href="/enter-data-tabular.html" class="editor-only" data-translate="Enter Data - Tabular">Enter Data - Tabular</a>
             <a href="/history.html" data-translate="View History">View History</a>
             <a href="/steps-graph.html" data-translate="View Steps Graph">View Steps Graph</a>
             <a href="/calendar-view.html" data-translate="Calendar View">Calendar View</a>
+            <a href="/achievements.html" data-translate="Achievements">Achievements</a>
             <a href="/exercise-videos.html" data-translate="Exercise Videos">Exercise Videos</a>
-            <a href="/data-management.html" data-translate="Data Management">Data Management</a>
+            <a href="/report.html" data-translate="Progress Report">Progress Report</a>
+            <a href="/data-management.html" class="editor-only" data-translate="Data Management">Data Management</a>
             <a href="/help.html" data-translate="Help">Help</a>
+            <a href="#" id="logout-btn" data-translate="Logout" onclick="logout()">Logout</a>
             <button id="lang-toggle"><img src="https://flagsapi.com/FR/flat/24.png" alt="French Flag"></button>
         </nav>
     </header>
@@ -47,28 +50,30 @@
                     <option value="No" data-translate="No">No</option>
                 </select>
             </div>
-            <button type="button" onclick="addExercise()" data-translate="Save Exercise">Save Exercise</button>
+            <button type="button" class="editor-only" onclick="addExercise()" data-translate="Save Exercise">Save Exercise</button>
             <hr>
             <div>
                 <div id="fitbit-status-bar">
                     <span id="fitbit-status-text" class="status-disconnected" style="font-size: 0.85em; font-weight: bold;">Checking connection...</span>
-                    <a href="/auth/fitbit" id="fitbit-connect" class="fitbit-btn" data-translate="Connect Fitbit" style="display:none;">Connect Fitbit</a>
-                    <button type="button" id="fitbit-disconnect" class="fitbit-btn disconnect" onclick="disconnectFitbit()" style="display:none;" data-translate="Disconnect">Disconnect</button>
+                    <a href="/auth/fitbit" id="fitbit-connect" class="fitbit-btn editor-only" data-translate="Connect Fitbit" style="display:none;">Connect Fitbit</a>
+                    <button type="button" id="fitbit-disconnect" class="fitbit-btn disconnect editor-only" onclick="disconnectFitbit()" style="display:none;" data-translate="Disconnect">Disconnect</button>
                 </div>
                 <label for="steps-quantity" data-translate="Steps Walked:">Steps Walked:</label>
                 <div class="input-group">
                     <input type="number" id="steps-quantity" name="steps-quantity" title="Enter the total number of steps Fred walked for this day." data-translate="Enter the total number of steps Fred walked for this day.">
-                    <button type="button" id="fitbit-sync" onclick="syncFitbit()" data-translate="Sync from Fitbit">Sync from Fitbit</button>
+                    <button type="button" id="fitbit-sync" class="editor-only" onclick="syncFitbit()" data-translate="Sync from Fitbit">Sync from Fitbit</button>
                 </div>
             </div>
             <div>
                 <label for="comments" data-translate="Comments:">Comments:</label>
                 <textarea id="comments" name="comments" rows="3" title="Add any relevant comments or observations about Fred's activity." data-translate="Add any relevant comments or observations about Fred's activity."></textarea>
             </div>
-            <button type="button" onclick="addSteps()" data-translate="Save Steps">Save Steps</button>
+            <button type="button" class="editor-only" onclick="addSteps()" data-translate="Save Steps">Save Steps</button>
         </form>
     </main>
 
+    <script src="auth.js"></script>
+    <script src="toast.js"></script>
     <script src="translations.js"></script>
     <script>
         const dateInput = document.getElementById('date');
@@ -163,11 +168,11 @@ const postResponse = await fetch('/api/exercises', {
     body: `done=${done}&weights_done=${weights_done}&date=${date}`
 });
             if (postResponse.ok) {
+                showToast('Exercise saved!', 'success');
                 checkDataForDate();
-                updateClubBadge(); // Refresh badge
+                updateClubBadge();
             } else {
-                alert("Failed to save exercise. See console for details.");
-                console.error("Failed to save exercise.");
+                showToast('Failed to save exercise.', 'error');
             }
         }
 
@@ -186,7 +191,7 @@ const postResponse = await fetch('/api/exercises', {
             const comments = document.getElementById('comments').value;
 
             if (!quantity) {
-                alert('Please fill in the number of steps.');
+                showToast('Please fill in the number of steps.', 'warning');
                 return;
             }
 
@@ -223,13 +228,13 @@ const postResponse = await fetch('/api/exercises', {
                 if (parseInt(quantity, 10) > currentMaxSteps) {
                     speak("Congratulations, that is more steps than you have ever done before.");
                 }
+                showToast('Steps saved!', 'success');
                 checkDataForDate();
                 document.getElementById('steps-quantity').value = '';
                 document.getElementById('comments').value = '';
-                updateClubBadge(); // Refresh badge in case level changed
+                updateClubBadge();
             } else {
-                alert("Failed to save steps. See console for details.");
-                console.error("Failed to save steps and comments.");
+                showToast('Failed to save steps.', 'error');
             }
         }
 
@@ -246,15 +251,19 @@ const postResponse = await fetch('/api/exercises', {
                 if (connected) {
                     statusText.textContent = "Fitbit is Connected";
                     statusText.className = "status-connected";
-                    fitbitBtn.style.display = 'none';
-                    disconnectBtn.style.display = 'inline-block';
-                    syncBtn.style.display = 'inline-block';
+                    if (window.userRole === 'editor') {
+                        fitbitBtn.style.display = 'none';
+                        disconnectBtn.style.display = 'inline-block';
+                        syncBtn.style.display = 'inline-block';
+                    }
                 } else {
                     statusText.textContent = "Fitbit not connected";
                     statusText.className = "status-disconnected";
-                    fitbitBtn.style.display = 'inline-block';
-                    disconnectBtn.style.display = 'none';
-                    syncBtn.style.display = 'none';
+                    if (window.userRole === 'editor') {
+                        fitbitBtn.style.display = 'inline-block';
+                        disconnectBtn.style.display = 'none';
+                        syncBtn.style.display = 'none';
+                    }
                 }
             } catch (err) {
                 console.error("Error checking Fitbit status:", err);
@@ -267,14 +276,14 @@ const postResponse = await fetch('/api/exercises', {
             try {
                 const response = await fetch('/api/fitbit/disconnect', { method: 'POST' });
                 if (response.ok) {
-                    alert("Disconnected from Fitbit.");
+                    showToast('Disconnected from Fitbit.', 'success');
                     checkFitbitStatus();
                 } else {
-                    alert("Failed to disconnect.");
+                    showToast('Failed to disconnect.', 'error');
                 }
             } catch (err) {
                 console.error("Disconnect Error:", err);
-                alert("An error occurred during disconnection.");
+                showToast('An error occurred during disconnection.', 'error');
             }
         }
 
@@ -312,17 +321,16 @@ const postResponse = await fetch('/api/exercises', {
                         stepsInput.style.backgroundColor = ''; // Back to normal
                     }, 1000);
 
-                    // Optional: A more subtle notification instead of alert
-                    console.log("Steps synced:", data.steps);
+                    showToast(`Synced ${data.steps.toLocaleString()} steps from Fitbit.`, 'success');
                 } else if (response.status === 401) {
-                    alert("Fitbit session expired. Please reconnect.");
+                    showToast('Fitbit session expired. Please reconnect.', 'warning');
                     checkFitbitStatus();
                 } else {
-                    alert("Failed to sync from Fitbit. Make sure Fred has synced his watch to his phone recently.");
+                    showToast("Failed to sync from Fitbit. Make sure the watch is synced to the phone.", 'error');
                 }
             } catch (err) {
                 console.error("Sync Error:", err);
-                alert("An error occurred during sync.");
+                showToast('An error occurred during sync.', 'error');
             } finally {
                 syncBtn.disabled = false;
                 syncBtn.textContent = "Sync from Fitbit";
@@ -352,6 +360,8 @@ const postResponse = await fetch('/api/exercises', {
         }
 
         window.onload = async () => {
+            await window.authReady;
+
             // Priority 1: Fitbit status
             try {
                 await checkFitbitStatus();
@@ -365,6 +375,7 @@ const postResponse = await fetch('/api/exercises', {
             setLanguage(currentLang);
             updateClubBadge();
         };
+
         </script>
         </body>
         </html>

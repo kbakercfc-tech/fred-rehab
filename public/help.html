@@ -10,14 +10,17 @@
     <header>
         <h1 data-translate="Fred's Rehab - Help">Fred's Rehab - Help</h1>
         <nav>
-            <a href="/" data-translate="Enter Data">Enter Data</a>
-            <a href="/enter-data-tabular.html" data-translate="Enter Data - Tabular">Enter Data - Tabular</a>
+            <a href="/" class="editor-only" data-translate="Enter Data">Enter Data</a>
+            <a href="/enter-data-tabular.html" class="editor-only" data-translate="Enter Data - Tabular">Enter Data - Tabular</a>
             <a href="/history.html" data-translate="View History">View History</a>
             <a href="/steps-graph.html" data-translate="View Steps Graph">View Steps Graph</a>
             <a href="/calendar-view.html" data-translate="Calendar View">Calendar View</a>
+            <a href="/achievements.html" data-translate="Achievements">Achievements</a>
             <a href="/exercise-videos.html" data-translate="Exercise Videos">Exercise Videos</a>
-            <a href="/data-management.html" data-translate="Data Management">Data Management</a>
+            <a href="/report.html" data-translate="Progress Report">Progress Report</a>
+            <a href="/data-management.html" class="editor-only" data-translate="Data Management">Data Management</a>
             <a href="/help.html" data-translate="Help">Help</a>
+            <a href="#" id="logout-btn" data-translate="Logout" onclick="logout()">Logout</a>
             <button id="lang-toggle"><img src="https://flagsapi.com/FR/flat/24.png" alt="French Flag"></button>
         </nav>
     </header>
@@ -102,6 +105,8 @@
 
     </main>
 
+    <script src="auth.js"></script>
+    <script src="toast.js"></script>
     <script src="translations.js"></script>
     <script>
         const langToggleButton = document.getElementById('lang-toggle');
@@ -140,7 +145,7 @@
         async function restoreBackup() {
             const fileInput = document.getElementById('backup-file');
             if (fileInput.files.length === 0) {
-                alert("Please select a backup file (.zip) first.");
+                showToast('Please select a backup file (.zip) first.', 'warning');
                 return;
             }
 
@@ -157,15 +162,14 @@
                 });
 
                 if (response.ok) {
-                    const msg = await response.text();
-                    alert(msg);
-                    window.location.reload();
+                    showToast('Data restored successfully! Reloading…', 'success', 2000);
+                    setTimeout(() => window.location.reload(), 2000);
                 } else {
-                    alert("Failed to restore backup. Check console for errors.");
+                    showToast('Failed to restore backup.', 'error');
                 }
             } catch (err) {
                 console.error("Restore Error:", err);
-                alert("An error occurred during restoration.");
+                showToast('An error occurred during restoration.', 'error');
             }
         }
 

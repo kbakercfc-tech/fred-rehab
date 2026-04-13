@@ -104,18 +104,25 @@
     <header>
         <h1 data-translate="Fred's Rehab - Tabular Data Entry">Fred's Rehab - Tabular Data Entry</h1>
         <nav>
-            <a href="/" data-translate="Enter Data">Enter Data</a>
+            <a href="/" class="editor-only" data-translate="Enter Data">Enter Data</a>
             <a href="/enter-data-tabular.html" data-translate="Enter Data - Tabular">Enter Data - Tabular</a>
             <a href="/history.html" data-translate="View History">View History</a>
             <a href="/steps-graph.html" data-translate="View Steps Graph">View Steps Graph</a>
             <a href="/calendar-view.html" data-translate="Calendar View">Calendar View</a>
+            <a href="/achievements.html" data-translate="Achievements">Achievements</a>
             <a href="/exercise-videos.html" data-translate="Exercise Videos">Exercise Videos</a>
-            <a href="/data-management.html" data-translate="Data Management">Data Management</a>
+            <a href="/report.html" data-translate="Progress Report">Progress Report</a>
+            <a href="/data-management.html" class="editor-only" data-translate="Data Management">Data Management</a>
             <a href="/help.html" data-translate="Help">Help</a>
+            <a href="#" id="logout-btn" data-translate="Logout" onclick="logout()">Logout</a>
             <button id="lang-toggle"><img src="https://flagsapi.com/FR/flat/24.png" alt="French Flag"></button>
         </nav>
     </header>
     <main>
+        <div class="fred-photo-wrapper fred-photo-wrapper--tabular">
+            <img src="images/fred.jpg" alt="Fred's Photo" class="fred-photo">
+            <div id="club-badge" class="club-badge"></div>
+        </div>
         <div class="tabular-title-container">
             <h2 data-translate="Tabular Activity Entry">Tabular Activity Entry</h2>
         </div>
@@ -137,7 +144,7 @@
                 <!-- Dynamic table will be generated here -->
             </div>
             
-            <div id="fitbit-tabular-section" style="background-color: #f8f9fa; padding: 1em; border-radius: 8px; border: 1px solid #dee2e6; width: 200px; margin-top: 52px; flex-shrink: 0;">
+            <div id="fitbit-tabular-section" class="editor-only" style="background-color: #f8f9fa; padding: 1em; border-radius: 8px; border: 1px solid #dee2e6; width: 200px; margin-top: 52px; flex-shrink: 0;">
                 <div style="text-align: center; margin-bottom: 0.8em;">
                     <span id="fitbit-status-text" class="status-disconnected" style="display: block;">Checking connection...</span>
                     <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 10px;">
@@ -155,6 +162,8 @@
 
     </main>
 
+    <script src="auth.js"></script>
+    <script src="toast.js"></script>
     <script src="translations.js"></script>
     <script>
         const startDateInput = document.getElementById('start-date');
@@ -216,7 +225,7 @@
             const endDate = new Date(endDateInput.value);
 
             if (isNaN(startDate) || isNaN(endDate) || startDate > endDate) {
-                alert('Please select valid start and end dates.');
+                showToast('Please select valid start and end dates.', 'warning');
                 return;
             }
 
@@ -224,7 +233,7 @@
             const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
 
             if (diffDays > 30) {
-                alert('Date range cannot exceed 30 days.');
+                showToast('Date range cannot exceed 30 days.', 'warning');
                 return;
             }
 
@@ -304,7 +313,9 @@
 
             table.appendChild(tbody);
             dataEntryTableContainer.appendChild(table);
-            saveAllBtn.style.display = 'block';
+            if (window.userRole === 'editor') {
+                saveAllBtn.style.display = 'block';
+            }
             setLanguage(currentLang);
         }
 
@@ -373,16 +384,17 @@
                 if (newMaxStepsInBatch > currentMaxSteps) {
                     speak(`Congratulations you did more steps on date ${newMaxStepsDate} than ever before`);
                 }
-                alert('All data saved successfully!');
-                generateTable(); // Refresh the table to show updated data
+                showToast('All data saved!', 'success');
+                generateTable();
             } else {
-                alert('Failed to save all data. Check console for errors.');
+                showToast('Failed to save all data.', 'error');
                 console.error("Batch save failed:", await response.text());
             }
         }
 
         // Initial table generation on load
-        window.onload = async () => { 
+        window.onload = async () => {
+            await window.authReady;
             // Priority 1: Fitbit
             try { await checkFitbitStatus(); } catch(e) { console.error(e); }
 
@@ -422,10 +434,10 @@
             try {
                 const response = await fetch('/api/fitbit/disconnect', { method: 'POST' });
                 if (response.ok) {
-                    alert("Disconnected from Fitbit.");
+                    showToast('Disconnected from Fitbit.', 'success');
                     checkFitbitStatus();
                 }
-            } catch (err) { alert("Failed to disconnect."); }
+            } catch (err) { showToast('Failed to disconnect.', 'error'); }
         }
 
         async function syncAllFitbit() {
@@ -433,7 +445,7 @@
             const rows = document.querySelectorAll('#data-entry-table tbody tr');
 
             if (rows.length === 0) {
-                alert("Please generate a table first.");
+                showToast('Please generate a table first.', 'warning');
                 return;
             }
 
@@ -473,7 +485,7 @@
 
             syncBtn.disabled = false;
             syncBtn.textContent = "Sync All from Fitbit";
-            alert(`Synced steps for ${successCount} out of ${rows.length} days.`);
+            showToast(`Synced ${successCount} of ${rows.length} days.`, 'success');
         }
         </script>
         </body>
