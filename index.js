@@ -9,6 +9,7 @@ const AdmZip = require("adm-zip");
 const fs = require("fs");
 const cron = require("node-cron");
 const session = require('express-session');
+const Anthropic = require('@anthropic-ai/sdk');
 
 const app = express();
 const port = process.env.PORT || 3000; // Use process.env.PORT for Render
@@ -161,12 +162,91 @@ db.serialize(() => {
         media_type TEXT NOT NULL,
         FOREIGN KEY (achievement_id) REFERENCES achievements(id) ON DELETE CASCADE
     )`);
+    db.run(`CREATE TABLE IF NOT EXISTS achievement_updates (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        achievement_id INTEGER NOT NULL,
+        update_date TEXT NOT NULL,
+        comments TEXT,
+        FOREIGN KEY (achievement_id) REFERENCES achievements(id) ON DELETE CASCADE
+    )`);
+    db.run(`CREATE TABLE IF NOT EXISTS achievement_update_media (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        update_id INTEGER NOT NULL,
+        filename TEXT NOT NULL,
+        filepath TEXT NOT NULL,
+        media_type TEXT NOT NULL,
+        FOREIGN KEY (update_id) REFERENCES achievement_updates(id) ON DELETE CASCADE
+    )`, () => {
+        // Migration: for each achievement with a start_date and no existing achievement_updates,
+        // create an achievement_update record using the start_date.
+        db.all(
+            `SELECT a.id, a.start_date FROM achievements a
+             WHERE a.start_date IS NOT NULL
+               AND NOT EXISTS (SELECT 1 FROM achievement_updates u WHERE u.achievement_id = a.id)`,
+            [],
+            (err, achievements) => {
+                if (err) {
+                    console.error("Migration error (achievement_updates check):", err.message);
+                    return;
+                }
+                achievements.forEach(achievement => {
+                    db.run(
+                        `INSERT INTO achievement_updates (achievement_id, update_date, comments) VALUES (?, ?, ?)`,
+                        [achievement.id, achievement.start_date, ''],
+                        function(err) {
+                            if (err) {
+                                console.error("Migration error (insert achievement_update):", err.message);
+                                return;
+                            }
+                            const updateId = this.lastID;
+                            // For each achievement_media record that doesn't yet have a matching
+                            // achievement_update_media record (matched by filepath), create one.
+                            db.all(
+                                `SELECT am.id, am.filename, am.filepath, am.media_type
+                                 FROM achievement_media am
+                                 WHERE am.achievement_id = ?
+                                   AND NOT EXISTS (
+                                       SELECT 1 FROM achievement_update_media aum WHERE aum.filepath = am.filepath
+                                   )`,
+                                [achievement.id],
+                                (err, mediaRows) => {
+                                    if (err) {
+                                        console.error("Migration error (achievement_media fetch):", err.message);
+                                        return;
+                                    }
+                                    mediaRows.forEach(media => {
+                                        db.run(
+                                            `INSERT INTO achievement_update_media (update_id, filename, filepath, media_type) VALUES (?, ?, ?, ?)`,
+                                            [updateId, media.filename, media.filepath, media.media_type],
+                                            (err) => {
+                                                if (err) {
+                                                    console.error("Migration error (insert achievement_update_media):", err.message);
+                                                }
+                                            }
+                                        );
+                                    });
+                                }
+                            );
+                        }
+                    );
+                });
+            }
+        );
+    });
     db.run(`CREATE TABLE IF NOT EXISTS settings (
         key TEXT PRIMARY KEY,
         value TEXT
     )`, () => {
         db.run("INSERT OR IGNORE INTO settings (key, value) VALUES ('backup_frequency', 'off')");
     });
+    db.run(`CREATE TABLE IF NOT EXISTS story_sections (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT NOT NULL,
+        content TEXT NOT NULL,
+        phase TEXT,
+        sort_date TEXT,
+        display_order INTEGER DEFAULT 0
+    )`);
 });
 
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -860,52 +940,27 @@ app.get('/api/achievements', requireLogin, (req, res) => {
     });
 });
 
-app.post('/api/achievements', requireLogin, requireEditor, upload.array('media'), (req, res) => {
-    const { name, description, start_date, end_date } = req.body;
-    const files = req.files || [];
-
-    db.run('INSERT INTO achievements (name, description, start_date, end_date) VALUES (?, ?, ?, ?)',
-        [name, description, start_date, end_date || null], function(err) {
+app.post('/api/achievements', requireLogin, requireEditor, (req, res) => {
+    const { name, description } = req.body || {};
+    if (!name) return res.status(400).send('Achievement name is required.');
+    const today = new Date().toISOString().slice(0, 10);
+    db.run('INSERT INTO achievements (name, description, start_date) VALUES (?, ?, ?)',
+        [name, description || null, today], function(err) {
             if (err) {
                 console.error("Error inserting achievement:", err.message);
                 return res.status(500).send('Error saving achievement.');
             }
-            const achievementId = this.lastID;
-
-            if (files.length === 0) {
-                return res.status(201).json({ id: achievementId });
-            }
-
-            const mediaPromises = files.map(file => {
-                const filename = file.filename;
-                const filepath = '/uploads/' + filename;
-                const mediaType = file.mimetype.startsWith('video/') ? 'video' : 'photo';
-                
-                return new Promise((resolve, reject) => {
-                    db.run('INSERT INTO achievement_media (achievement_id, filename, filepath, media_type) VALUES (?, ?, ?, ?)',
-                        [achievementId, filename, filepath, mediaType], function(err) {
-                            if (err) reject(err);
-                            else resolve();
-                        });
-                });
-            });
-
-            Promise.all(mediaPromises)
-                .then(() => res.status(201).json({ id: achievementId }))
-                .catch(err => {
-                    console.error("Error saving media metadata:", err.message);
-                    res.status(500).send('Error saving media metadata.');
-                });
+            res.status(201).json({ id: this.lastID });
         });
 });
 
 app.put('/api/achievements/:id', requireLogin, requireEditor, (req, res) => {
     const { id } = req.params;
-    const { name, description, start_date, end_date } = req.body || {};
-    if (!name || !start_date) return res.status(400).send('Name and start date are required.');
+    const { name, description } = req.body || {};
+    if (!name) return res.status(400).send('Achievement name is required.');
     db.run(
-        'UPDATE achievements SET name = ?, description = ?, start_date = ?, end_date = ? WHERE id = ?',
-        [name, description || null, start_date, end_date || null, id],
+        'UPDATE achievements SET name = ?, description = ? WHERE id = ?',
+        [name, description || null, id],
         function(err) {
             if (err) return res.status(500).send(err.message);
             if (this.changes === 0) return res.status(404).send('Achievement not found.');
@@ -946,6 +1001,423 @@ app.delete('/api/achievements/:id', requireLogin, requireEditor, (req, res) => {
             });
         });
     });
+});
+
+// Achievement Updates Endpoints
+
+app.get('/api/achievement-updates/:achievementId', requireLogin, (req, res) => {
+    const { achievementId } = req.params;
+    const sql = `
+        SELECT u.*,
+               (SELECT json_group_array(json_object('id', m.id, 'filepath', m.filepath, 'media_type', m.media_type))
+                FROM achievement_update_media m
+                WHERE m.update_id = u.id) as media
+        FROM achievement_updates u
+        WHERE u.achievement_id = ?
+        ORDER BY u.update_date DESC
+    `;
+    db.all(sql, [achievementId], (err, rows) => {
+        if (err) {
+            return res.status(500).send(err.message);
+        }
+        const updates = rows.map(row => ({
+            ...row,
+            media: JSON.parse(row.media)
+        }));
+        res.json(updates);
+    });
+});
+
+app.post('/api/achievement-updates', requireLogin, requireEditor, upload.array('media'), (req, res) => {
+    const { achievement_id, update_date, comments } = req.body;
+    const files = req.files || [];
+
+    db.run(
+        'INSERT INTO achievement_updates (achievement_id, update_date, comments) VALUES (?, ?, ?)',
+        [achievement_id, update_date, comments || ''],
+        function(err) {
+            if (err) {
+                console.error("Error inserting achievement update:", err.message);
+                return res.status(500).send('Error saving achievement update.');
+            }
+            const updateId = this.lastID;
+
+            if (files.length === 0) {
+                return res.status(201).json({ id: updateId });
+            }
+
+            const mediaPromises = files.map(file => {
+                const filename = file.filename;
+                const filepath = '/uploads/' + filename;
+                const mediaType = file.mimetype.startsWith('video/') ? 'video' : 'photo';
+
+                return new Promise((resolve, reject) => {
+                    db.run(
+                        'INSERT INTO achievement_update_media (update_id, filename, filepath, media_type) VALUES (?, ?, ?, ?)',
+                        [updateId, filename, filepath, mediaType],
+                        function(err) {
+                            if (err) reject(err);
+                            else resolve();
+                        }
+                    );
+                });
+            });
+
+            Promise.all(mediaPromises)
+                .then(() => res.status(201).json({ id: updateId }))
+                .catch(err => {
+                    console.error("Error saving update media metadata:", err.message);
+                    res.status(500).send('Error saving update media metadata.');
+                });
+        }
+    );
+});
+
+app.put('/api/achievement-updates/:id', requireLogin, requireEditor, (req, res) => {
+    const { id } = req.params;
+    const { update_date, comments } = req.body || {};
+    if (!update_date) return res.status(400).send('update_date is required.');
+    db.run(
+        'UPDATE achievement_updates SET update_date = ?, comments = ? WHERE id = ?',
+        [update_date, comments || '', id],
+        function(err) {
+            if (err) return res.status(500).send(err.message);
+            if (this.changes === 0) return res.status(404).send('Achievement update not found.');
+            res.status(200).send('Achievement update updated.');
+        }
+    );
+});
+
+app.delete('/api/achievement-updates/:id', requireLogin, requireEditor, (req, res) => {
+    const updateId = req.params.id;
+
+    db.all('SELECT filepath FROM achievement_update_media WHERE update_id = ?', [updateId], (err, rows) => {
+        if (err) {
+            console.error("Error fetching update media for deletion:", err.message);
+            return res.status(500).send("Failed to fetch update media for deletion.");
+        }
+
+        rows.forEach(row => {
+            const fullPath = path.join(__dirname, 'public', row.filepath);
+            fs.unlink(fullPath, (err) => {
+                if (err && err.code !== 'ENOENT') {
+                    console.error("Error deleting file:", fullPath, err);
+                }
+            });
+        });
+
+        db.serialize(() => {
+            db.run('DELETE FROM achievement_update_media WHERE update_id = ?', [updateId]);
+            db.run('DELETE FROM achievement_updates WHERE id = ?', [updateId], function(err) {
+                if (err) {
+                    console.error("Error deleting achievement update:", err.message);
+                    return res.status(500).send("Failed to delete achievement update.");
+                }
+                res.status(200).send("Achievement update deleted successfully.");
+            });
+        });
+    });
+});
+
+app.delete('/api/achievement-update-media/:id', requireLogin, requireEditor, (req, res) => {
+    const mediaId = req.params.id;
+
+    db.get('SELECT filepath FROM achievement_update_media WHERE id = ?', [mediaId], (err, row) => {
+        if (err) {
+            console.error("Error fetching update media record:", err.message);
+            return res.status(500).send("Failed to fetch media record.");
+        }
+        if (!row) {
+            return res.status(404).send("Media record not found.");
+        }
+
+        const fullPath = path.join(__dirname, 'public', row.filepath);
+        fs.unlink(fullPath, (err) => {
+            if (err && err.code !== 'ENOENT') {
+                console.error("Error deleting file:", fullPath, err);
+            }
+        });
+
+        db.run('DELETE FROM achievement_update_media WHERE id = ?', [mediaId], function(err) {
+            if (err) {
+                console.error("Error deleting update media record:", err.message);
+                return res.status(500).send("Failed to delete media record.");
+            }
+            res.status(200).send("Media deleted successfully.");
+        });
+    });
+});
+
+// Add media files to an existing update
+app.post('/api/achievement-update-media', requireLogin, requireEditor, upload.array('media'), (req, res) => {
+    const { update_id } = req.body;
+    const files = req.files || [];
+    if (!update_id) return res.status(400).send('update_id is required.');
+    if (files.length === 0) return res.status(400).send('No files uploaded.');
+
+    const inserts = files.map(file => new Promise((resolve, reject) => {
+        const filepath = '/uploads/' + file.filename;
+        const mediaType = file.mimetype.startsWith('video/') ? 'video' : 'photo';
+        db.run('INSERT INTO achievement_update_media (update_id, filename, filepath, media_type) VALUES (?, ?, ?, ?)',
+            [update_id, file.filename, filepath, mediaType],
+            function(err) { err ? reject(err) : resolve(); });
+    }));
+
+    Promise.all(inserts)
+        .then(() => res.status(201).send('Media added.'))
+        .catch(err => {
+            console.error('Error adding update media:', err.message);
+            res.status(500).send('Failed to add media.');
+        });
+});
+
+// ── Story Sections API ──
+app.get('/api/story-sections', requireLogin, (req, res) => {
+    db.all('SELECT * FROM story_sections ORDER BY display_order ASC, sort_date ASC, id ASC', [], (err, rows) => {
+        if (err) return res.status(500).send(err.message);
+        res.json(rows);
+    });
+});
+
+function clearStoryCache() {
+    db.run("DELETE FROM settings WHERE key IN ('story_cache', 'story_cache_stale')");
+}
+
+app.post('/api/story-sections', requireLogin, requireEditor, (req, res) => {
+    const { title, content, phase, sort_date, display_order } = req.body || {};
+    if (!content) return res.status(400).send('content is required.');
+    db.run(
+        'INSERT INTO story_sections (title, content, phase, sort_date, display_order) VALUES (?, ?, ?, ?, ?)',
+        [title || 'Note', content, phase || null, sort_date || null, display_order || 0],
+        function(err) {
+            if (err) return res.status(500).send(err.message);
+            clearStoryCache();
+            res.status(201).json({ id: this.lastID });
+        }
+    );
+});
+
+app.put('/api/story-sections/:id', requireLogin, requireEditor, (req, res) => {
+    const { id } = req.params;
+    const { title, content, phase, sort_date, display_order } = req.body || {};
+    if (!content) return res.status(400).send('content is required.');
+    db.run(
+        'UPDATE story_sections SET title = ?, content = ?, phase = ?, sort_date = ?, display_order = ? WHERE id = ?',
+        [title || 'Note', content, phase || null, sort_date || null, display_order || 0, id],
+        function(err) {
+            if (err) return res.status(500).send(err.message);
+            if (this.changes === 0) return res.status(404).send('Section not found.');
+            clearStoryCache();
+            res.status(200).send('Section updated.');
+        }
+    );
+});
+
+app.delete('/api/story-sections/:id', requireLogin, requireEditor, (req, res) => {
+    db.run('DELETE FROM story_sections WHERE id = ?', [req.params.id], function(err) {
+        if (err) return res.status(500).send(err.message);
+        if (this.changes === 0) return res.status(404).send('Section not found.');
+        clearStoryCache();
+        res.status(200).send('Section deleted.');
+    });
+});
+
+// ── AI Story generation ──
+
+app.get('/api/story/cache', requireLogin, (req, res) => {
+    const style = ['factual', 'prose', 'children'].includes(req.query.style) ? req.query.style : 'factual';
+    const cacheKey = `story_cache_${style}`;
+    db.get("SELECT value FROM settings WHERE key = ?", [cacheKey], (err, row) => {
+        if (err) return res.status(500).send(err.message);
+        if (!row) return res.json(null);
+        try { res.json(JSON.parse(row.value)); }
+        catch { res.json(null); }
+    });
+});
+
+app.post('/api/story/generate', requireLogin, async (req, res) => {
+    if (!process.env.ANTHROPIC_API_KEY) {
+        return res.status(503).json({ error: 'ANTHROPIC_API_KEY is not configured on this server.' });
+    }
+
+    try {
+        // Gather all data in parallel
+        const dbAll = (sql, params) => new Promise((resolve, reject) =>
+            db.all(sql, params, (err, rows) => err ? reject(err) : resolve(rows)));
+
+        const [stepsRows, exerciseRows, achievementRows, noteRows] = await Promise.all([
+            dbAll('SELECT * FROM steps ORDER BY date', []),
+            dbAll('SELECT * FROM exercises ORDER BY date', []),
+            dbAll('SELECT * FROM achievements ORDER BY start_date', []),
+            dbAll('SELECT * FROM story_sections ORDER BY display_order ASC, id ASC', []),
+        ]);
+
+        // Fetch achievement updates with media counts
+        const achWithUpdates = await Promise.all(achievementRows.map(async ach => {
+            const updates = await dbAll(
+                `SELECT au.update_date, au.comments,
+                 (SELECT COUNT(*) FROM achievement_update_media m WHERE m.update_id = au.id AND m.media_type = 'photo') as photos,
+                 (SELECT COUNT(*) FROM achievement_update_media m WHERE m.update_id = au.id AND m.media_type = 'video') as videos
+                 FROM achievement_updates au WHERE au.achievement_id = ? ORDER BY au.update_date`,
+                [ach.id]);
+            return { ...ach, updates };
+        }));
+
+        // Step stats
+        const totalSteps   = stepsRows.reduce((s, r) => s + r.quantity, 0);
+        const activeDays   = stepsRows.filter(r => r.quantity > 0);
+        const avgSteps     = activeDays.length > 0 ? Math.round(totalSteps / activeDays.length) : 0;
+        const bestDay      = stepsRows.reduce((b, r) => r.quantity > (b ? b.quantity : 0) ? r : b, null);
+        const tenKDays     = stepsRows.filter(r => r.quantity >= 10000).length;
+        const sortedDates  = stepsRows.map(s => s.date).sort();
+        const firstDate    = sortedDates[0] || null;
+        const lastDate     = sortedDates[sortedDates.length - 1] || null;
+        const totalDays    = firstDate && lastDate
+            ? Math.round((new Date(lastDate) - new Date(firstDate)) / 86400000) + 1 : 0;
+
+        // Exercise stats
+        const exDone   = exerciseRows.filter(e => e.done === 'yes').length;
+        const exWeight = exerciseRows.filter(e => e.weights_done === 'yes').length;
+        const exPct    = exerciseRows.length > 0 ? Math.round((exDone / exerciseRows.length) * 100) : 0;
+
+        // Fun milestones progress
+        const funMilestones = [
+            { name: 'Stoke to London',       steps: 300000,    miles: 150  },
+            { name: 'Stoke to Paris',         steps: 800000,    miles: 400  },
+            { name: 'Stoke to Berlin',        steps: 1500000,   miles: 750  },
+            { name: 'Stoke to Moscow',        steps: 3200000,   miles: 1600 },
+            { name: 'Stoke to Johannesburg',  steps: 12000000,  miles: 6000 },
+        ];
+        const milestoneSummary = funMilestones.map(m => {
+            const pct = Math.min(100, Math.round((totalSteps / m.steps) * 100));
+            const status = pct >= 100
+                ? 'COMPLETED'
+                : `${pct}% complete (${totalSteps.toLocaleString()} of ${m.steps.toLocaleString()} steps)`;
+            return `- ${m.name} (${m.miles} miles / ${m.steps.toLocaleString()} steps): ${status}`;
+        }).join('\n');
+
+        // Build the data summary for the prompt
+        const stepsSummary = totalSteps > 0
+            ? `Journey started: ${firstDate}\nTotal days in programme: ${totalDays}\nTotal steps recorded: ${totalSteps.toLocaleString()}\nAverage steps (active days): ${avgSteps.toLocaleString()}\nBest single day: ${bestDay ? bestDay.quantity.toLocaleString() + ' steps on ' + bestDay.date + (bestDay.comments ? ' (Fred noted: "' + bestDay.comments + '")' : '') : 'N/A'}\nDays with 10,000+ steps: ${tenKDays}`
+            : 'No step data recorded yet.';
+
+        const exerciseSummary = exerciseRows.length > 0
+            ? `Exercise sessions completed: ${exDone} of ${exerciseRows.length} tracked days (${exPct}% compliance)\nStrength/weights sessions: ${exWeight}`
+            : 'No exercise data recorded yet.';
+
+        const achievementsSummary = achWithUpdates.length > 0
+            ? achWithUpdates.map(a => {
+                let s = `- ${a.name}${a.description ? ': ' + a.description : ''}`;
+                a.updates.forEach(u => {
+                    const media = [];
+                    if (u.photos > 0) media.push(`${u.photos} photo${u.photos > 1 ? 's' : ''}`);
+                    if (u.videos > 0) media.push(`${u.videos} video${u.videos > 1 ? 's' : ''}`);
+                    s += `\n    [${u.update_date}]${u.comments ? ' ' + u.comments : ''}${media.length ? ' (' + media.join(', ') + ' attached)' : ''}`;
+                });
+                return s;
+              }).join('\n')
+            : 'No achievements recorded yet.';
+
+        const notesSummary = noteRows.length > 0
+            ? noteRows.map((n, i) =>
+                `Note ${i + 1}${n.title && !/^Note\s*\d*$/i.test(n.title.trim()) ? ' — "' + n.title + '"' : ''}:\n${n.content}`
+              ).join('\n\n---\n\n')
+            : 'No personal notes recorded yet.';
+
+        const style = ['factual', 'prose', 'children'].includes(req.body && req.body.style) ? req.body.style : 'factual';
+
+        const dataBlock = `REHABILITATION DATA:
+
+Steps & Walking:
+${stepsSummary}
+
+Exercise & Strength:
+${exerciseSummary}
+
+Personal Achievements (some updates have photos/videos attached — mention these where relevant, e.g. "a photo from this occasion is included below"):
+${achievementsSummary}
+
+Fun Step Challenges (distance milestones based on total steps):
+${milestoneSummary}
+
+FRED'S OWN NOTES (written by Fred during his recovery):
+${notesSummary}`;
+
+        const jsonSchema = `Return ONLY a valid JSON object (no markdown, no preamble) in this exact structure:
+{
+  "chapters": [
+    { "num": "Chapter One",   "icon": "📖", "title": "...", "paragraphs": ["...", "..."] },
+    { "num": "Chapter Two",   "icon": "👟", "title": "...", "paragraphs": ["...", "..."] },
+    { "num": "Chapter Three", "icon": "💪", "title": "...", "paragraphs": ["...", "..."] },
+    { "num": "Chapter Four",  "icon": "🏅", "title": "...", "paragraphs": ["...", "..."] }
+  ]
+}
+Each chapter: 2 to 4 paragraphs. Return only the JSON object.`;
+
+        const stylePrompts = {
+            factual: `You are writing a factual, readable account of a rehabilitation patient named Fred's recovery progress. Write in third person ("Fred...", "He..."). The tone should be clear and informative — like a well-written case summary or progress account — not a memoir or motivational piece. Avoid emotional language, flowery phrases, and superlatives.
+
+${dataBlock}
+
+INSTRUCTIONS:
+Write exactly 4 chapters. Lead with the numbers — mention specific step counts, dates, compliance percentages, achievement names, and fun challenge progress. Weave Fred's notes into the narrative naturally without quoting them directly and without mentioning "notes" or "he wrote". Incorporate the events and details from his notes as plain factual statements. Keep the writing grounded and factual throughout.
+
+Chapter Four must cover both personal achievements AND the fun distance challenges (Stoke to London etc.) — state clearly which challenges have been completed and the percentage progress on those that have not. Where achievement updates mention photos or videos, include a brief factual mention such as "a photo from this occasion is included in the story".
+
+${jsonSchema}`,
+
+            prose: `You are a skilled narrative writer telling the story of Fred's rehabilitation journey. Write in rich, literary third-person prose — warm, descriptive, and human. Think of it as a personal memoir written about Fred, not for a medical record. Let the numbers and facts emerge naturally within flowing paragraphs. Capture the atmosphere of recovery: the early struggles, the small victories, the growing confidence. Use vivid but tasteful language. Avoid clichés and melodrama.
+
+${dataBlock}
+
+INSTRUCTIONS:
+Write exactly 4 chapters with evocative titles you choose yourself. Weave statistics and achievements into the narrative naturally — don't list them, bring them to life. Include Fred's notes as part of the story without quoting them directly or referencing "notes". Chapter Four should bring the story to a meaningful close covering achievements and the distance challenges. Where achievement updates mention photos or videos, weave in a brief mention such as "captured in a photo from that day".
+
+${jsonSchema}`,
+
+            children: `You are writing a fun, uplifting story for a young child (age 6–8) about a man named Fred who is getting better after being poorly. Use very simple words and short sentences. Make Fred sound like a brave hero going on a big adventure. Use fun comparisons children will love — like comparing his steps to how far away London is, or comparing his exercises to training to be a superhero. Be encouraging, cheerful, and positive. Never use medical jargon or complicated statistics — turn numbers into exciting facts ("That's like walking to the moon and back!"). Keep each paragraph short.
+
+${dataBlock}
+
+INSTRUCTIONS:
+Write exactly 4 chapters with simple, fun titles you choose yourself. Turn the data into child-friendly storytelling — for example, total steps become an exciting journey on a map, exercise days become training sessions. Weave Fred's notes into the story naturally as things that happened to Fred. Chapter Four should celebrate his achievements and the distance challenges as exciting quests completed or underway. Keep the tone playful and celebratory throughout.
+
+${jsonSchema}`
+        };
+
+        const prompt = stylePrompts[style];
+
+        const client = new Anthropic();
+        const message = await client.messages.create({
+            model: 'claude-haiku-4-5-20251001',
+            max_tokens: 2048,
+            messages: [{ role: 'user', content: prompt }],
+        });
+
+        const rawText = message.content[0].text.trim();
+        // Strip any accidental markdown code fences
+        const jsonText = rawText.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
+        const parsed = JSON.parse(jsonText);
+
+        // Cache in settings table (per style)
+        const cacheKey = `story_cache_${style}`;
+        db.serialize(() => {
+            db.run("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)", [cacheKey, JSON.stringify(parsed)]);
+        });
+
+        res.json({ ...parsed, _style: style });
+    } catch (err) {
+        console.error('Story generation error:', err);
+        res.status(500).json({ error: err.message || 'Failed to generate story.' });
+    }
+});
+
+app.get('/story.html', requireLogin, (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'story.html'));
+});
+
+app.get('/milestones.html', requireLogin, (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'milestones.html'));
 });
 
 app.get('/enter-data-tabular.html', requireLogin, (req, res) => {

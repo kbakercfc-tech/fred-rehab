@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title data-translate="Fred's Fun Milestones">Fred's Fun Milestones</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        /* Forecast rings (shared with achievements page) */
+        .milestone-forecast { margin-top: 0.9em; }
+
+        .forecast-eta-box {
+            display: flex;
+            align-items: center;
+            gap: 0.7em;
+            background: #f0f4f8;
+            border-left: 3px solid #1e3a5f;
+            border-radius: 6px;
+            padding: 0.5em 1em;
+            margin-bottom: 0.9em;
+            flex-wrap: wrap;
+        }
+        .forecast-eta-icon  { font-size: 1.1em; }
+        .forecast-eta-label { font-size: 0.7em; color: #888; text-transform: uppercase; letter-spacing: 0.05em; white-space: nowrap; }
+        .forecast-eta-date  { font-size: 1.05em; font-weight: bold; color: #1e3a5f; }
+        .forecast-eta-sub   { font-size: 0.7em; color: #bbb; margin-left: auto; font-style: italic; white-space: nowrap; }
+
+        .forecast-rings { display: flex; gap: 0.7em; flex-wrap: wrap; }
+        .prob-ring-wrap { display: flex; flex-direction: column; align-items: center; gap: 0.35em; flex: 1; min-width: 60px; }
+        .prob-ring {
+            width: 64px; height: 64px; border-radius: 50%;
+            display: grid; place-items: center;
+            transition: transform 0.2s;
+        }
+        .prob-ring:hover { transform: scale(1.08); }
+        .prob-ring-inner {
+            width: 46px; height: 46px; border-radius: 50%; background: white;
+            display: grid; place-items: center; font-weight: bold; font-size: 0.82em; line-height: 1;
+        }
+        .prob-ring-label { font-size: 0.7em; color: #666; text-align: center; white-space: nowrap; }
+
+        .forecast-achieved {
+            margin-top: 0.7em; padding: 0.65em 1em; background: #d4edda;
+            border-radius: 6px; color: #155724; font-weight: bold; text-align: center; font-size: 1em;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1 data-translate="Fred's Fun Milestones">Fred's Fun Milestones</h1>
+        <nav id="main-nav"></nav>
+            <script src="/nav.js"></script>
+    </header>
+
+    <main>
+        <div class="milestones-section">
+
+            <div class="milestone-card" style="border-left-color: #3498db;">
+                <div class="milestone-info">
+                    <span class="milestone-title">10,000 Steps Club</span>
+                    <span id="club-count-display" class="milestone-distance">0 times achieved</span>
+                </div>
+                <p id="club-level-status" class="milestone-status">Walk 10,000 steps to join the club!</p>
+                <div style="font-size: 0.8em; margin-top: 10px; color: #7f8c8d;">
+                    Bronze: 5 times | Silver: 10 times | Gold: 15 times
+                </div>
+            </div>
+
+            <div class="milestone-card">
+                <div class="milestone-info">
+                    <span class="milestone-title" data-translate="Stoke to London Challenge">Stoke to London Challenge</span>
+                    <span class="milestone-distance">~300,000 steps (150 miles)</span>
+                </div>
+                <div class="progress-container">
+                    <div id="london-progress-bar" class="progress-bar">0%</div>
+                </div>
+                <p id="london-status" class="milestone-status">Keep walking, Fred!</p>
+                <div id="london-forecast" class="milestone-forecast"></div>
+            </div>
+
+            <div class="milestone-card" style="border-left-color: #9b59b6;">
+                <div class="milestone-info">
+                    <span class="milestone-title" data-translate="Stoke to Paris Challenge">Stoke to Paris Challenge</span>
+                    <span class="milestone-distance">~800,000 steps (400 miles)</span>
+                </div>
+                <div class="progress-container">
+                    <div id="paris-progress-bar" class="progress-bar" style="background-color: #9b59b6;">0%</div>
+                </div>
+                <p id="paris-status" class="milestone-status">On your way to France!</p>
+                <div id="paris-forecast" class="milestone-forecast"></div>
+            </div>
+
+            <div class="milestone-card" style="border-left-color: #e67e22;">
+                <div class="milestone-info">
+                    <span class="milestone-title" data-translate="Stoke to Berlin Challenge">Stoke to Berlin Challenge</span>
+                    <span class="milestone-distance">~1,500,000 steps (750 miles)</span>
+                </div>
+                <div class="progress-container">
+                    <div id="berlin-progress-bar" class="progress-bar" style="background-color: #e67e22;">0%</div>
+                </div>
+                <p id="berlin-status" class="milestone-status">Heading towards Germany!</p>
+                <div id="berlin-forecast" class="milestone-forecast"></div>
+            </div>
+
+            <div class="milestone-card" style="border-left-color: #e74c3c;">
+                <div class="milestone-info">
+                    <span class="milestone-title" data-translate="Stoke to Moscow Challenge">Stoke to Moscow Challenge</span>
+                    <span class="milestone-distance">~3,200,000 steps (1,600 miles)</span>
+                </div>
+                <div class="progress-container">
+                    <div id="moscow-progress-bar" class="progress-bar" style="background-color: #e74c3c;">0%</div>
+                </div>
+                <p id="moscow-status" class="milestone-status">The long road to Russia!</p>
+                <div id="moscow-forecast" class="milestone-forecast"></div>
+            </div>
+
+            <div class="milestone-card" style="border-left-color: #27ae60;">
+                <div class="milestone-info">
+                    <span class="milestone-title" data-translate="Stoke to Johannesburg Challenge">Stoke to Johannesburg Challenge</span>
+                    <span class="milestone-distance">~12,000,000 steps (6,000 miles)</span>
+                </div>
+                <div class="progress-container">
+                    <div id="joburg-progress-bar" class="progress-bar" style="background-color: #27ae60;">0%</div>
+                </div>
+                <p id="joburg-status" class="milestone-status">The ultimate journey to South Africa!</p>
+                <div id="joburg-forecast" class="milestone-forecast"></div>
+            </div>
+
+        </div>
+    </main>
+
+    <script src="auth.js"></script>
+    <script src="toast.js"></script>
+    <script src="translations.js"></script>
+    <script>
+        let currentLang = localStorage.getItem('preferredLanguage') || 'en';
+
+        // ── Linear regression helper ──
+        function linearRegression(xArr, yArr) {
+            const n = xArr.length;
+            if (n < 2) return null;
+            let sx = 0, sy = 0, sxy = 0, sx2 = 0;
+            for (let i = 0; i < n; i++) {
+                sx  += xArr[i];
+                sy  += yArr[i];
+                sxy += xArr[i] * yArr[i];
+                sx2 += xArr[i] * xArr[i];
+            }
+            const denom = n * sx2 - sx * sx;
+            if (denom === 0) return null;
+            const b = (n * sxy - sx * sy) / denom;
+            const a = (sy - b * sx) / n;
+            return { a, b };
+        }
+
+        // ── Forecast card builder ──
+        function buildForecastHTML(etaText, etaSub, probs) {
+            const rings = probs.map(({ pct, label }) => {
+                const clr = pct >= 75 ? '#27ae60' : pct >= 40 ? '#e67e22' : '#e74c3c';
+                const bg  = `conic-gradient(${clr} ${pct}%, #e8e8e8 0)`;
+                return `<div class="prob-ring-wrap">
+                    <div class="prob-ring" style="background:${bg}">
+                        <div class="prob-ring-inner" style="color:${clr}">${pct}%</div>
+                    </div>
+                    <div class="prob-ring-label">${label}</div>
+                </div>`;
+            }).join('');
+
+            return `<div class="forecast-eta-box">
+                <span class="forecast-eta-icon">📅</span>
+                <span class="forecast-eta-label">Est. completion</span>
+                <span class="forecast-eta-date">${etaText}</span>
+                <span class="forecast-eta-sub">${etaSub}</span>
+            </div>
+            <div class="forecast-rings">${rings}</div>`;
+        }
+
+        // ── Load all milestones ──
+        async function loadMilestones() {
+            try {
+                // 10,000 Steps Club
+                const clubRes  = await fetch('/api/steps/club-status');
+                const clubData = await clubRes.json();
+                document.getElementById('club-count-display').textContent =
+                    `${clubData.count} time${clubData.count !== 1 ? 's' : ''} achieved`;
+                const clubStatus = document.getElementById('club-level-status');
+                if (clubData.level !== 'None') {
+                    const displayLevel = clubData.level === 'Member' ? 'Member' : `${clubData.level} Member`;
+                    clubStatus.innerHTML = `<strong>Current Level: ${displayLevel}</strong>`;
+                    const levelColors = { Member:'#3498db', Bronze:'#cd7f32', Silver:'#95a5a6', Gold:'#daa520' };
+                    clubStatus.style.color = levelColors[clubData.level] || '#27ae60';
+                }
+
+                // Total all-time steps
+                const totalRes   = await fetch('/api/steps/total');
+                const totalData  = await totalRes.json();
+                const totalSteps = totalData.total_steps || 0;
+
+                // 60-day window for regression + probability
+                const windowStart = new Date();
+                windowStart.setDate(windowStart.getDate() - 59);
+                const etaStart = windowStart.toISOString().slice(0, 10);
+                const etaEnd   = new Date().toISOString().slice(0, 10);
+                const etaRes   = await fetch(`/api/steps?startDate=${etaStart}&endDate=${etaEnd}`);
+                const etaData  = await etaRes.json();
+
+                const stepsMap60 = new Map(etaData.map(d => [d.date, d.quantity]));
+                const dailyVals  = [];
+                for (let i = 0; i < 60; i++) {
+                    const d = new Date(windowStart);
+                    d.setDate(d.getDate() + i);
+                    dailyVals.push(stepsMap60.get(d.toISOString().slice(0, 10)) || 0);
+                }
+
+                const avg60  = dailyVals.reduce((a, b) => a + b, 0) / 60;
+                const sigma  = Math.sqrt(dailyVals.reduce((s, v) => s + Math.pow(v - avg60, 2), 0) / 60);
+
+                const sum60       = dailyVals.reduce((a, b) => a + b, 0);
+                const totalBefore = totalSteps - sum60;
+                const xArr = [], yArr = [];
+                let cumFromWindow = 0;
+                for (let i = 0; i < 60; i++) {
+                    cumFromWindow += dailyVals[i];
+                    xArr.push(i);
+                    yArr.push(totalBefore + cumFromWindow);
+                }
+                const reg = linearRegression(xArr, yArr);
+
+                const erf = x => {
+                    const s = x >= 0 ? 1 : -1, a = Math.abs(x);
+                    const t = 1 / (1 + 0.3275911 * a);
+                    const p = t * (0.254829592 + t * (-0.284496736 + t * (1.421413741 + t * (-1.453152027 + t * 1.061405429))));
+                    return s * (1 - p * Math.exp(-a * a));
+                };
+                const achievementProb = (target, N) => {
+                    if (target <= 0) return 100;
+                    if (avg60 <= 0)  return 0;
+                    const mu  = N * avg60;
+                    const sig = Math.sqrt(N) * sigma;
+                    if (sig === 0) return mu >= target ? 100 : 0;
+                    const z = (target - mu) / (sig * Math.SQRT2);
+                    return Math.round((0.5 * (1 - erf(z))) * 100);
+                };
+
+                const updateMilestone = (prefix, goal, doneMsg, progressMsg) => {
+                    const pct        = Math.min((totalSteps / goal) * 100, 100).toFixed(1);
+                    const bar        = document.getElementById(`${prefix}-progress-bar`);
+                    const status     = document.getElementById(`${prefix}-status`);
+                    const forecastEl = document.getElementById(`${prefix}-forecast`);
+
+                    bar.style.width = pct + '%';
+                    bar.textContent = pct + '%';
+
+                    if (totalSteps >= goal) {
+                        bar.style.backgroundColor = '#2ecc71';
+                        status.textContent      = doneMsg;
+                        status.style.color      = '#27ae60';
+                        status.style.fontWeight = 'bold';
+                        if (forecastEl) forecastEl.innerHTML =
+                            `<div class="forecast-achieved">🎉 ${doneMsg}</div>`;
+                    } else {
+                        const rem = goal - totalSteps;
+                        status.textContent = progressMsg.replace('{remaining}', rem.toLocaleString());
+
+                        if (forecastEl) {
+                            let etaText = 'N/A', etaSub = 'based on 60-day trend';
+                            if (reg && reg.b > 0) {
+                                const daysFromNow = Math.ceil((goal - reg.a) / reg.b - 59);
+                                if (daysFromNow > 0) {
+                                    const d = new Date();
+                                    d.setDate(d.getDate() + daysFromNow);
+                                    etaText = d.toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' });
+                                } else {
+                                    etaText = 'Very soon';
+                                }
+                            } else {
+                                etaSub = 'insufficient data';
+                            }
+
+                            const horizons = [
+                                { N: 30,  label: '1 month'  },
+                                { N: 90,  label: '3 months' },
+                                { N: 180, label: '6 months' },
+                                { N: 365, label: '1 year'   },
+                            ];
+                            const probs = horizons.map(h => ({
+                                pct:   avg60 > 0 ? achievementProb(rem, h.N) : 0,
+                                label: h.label
+                            }));
+
+                            forecastEl.innerHTML = buildForecastHTML(etaText, etaSub, probs);
+                        }
+                    }
+                };
+
+                updateMilestone('london', 300000,   "Congratulations Fred! You've reached London! / Cheers, Fred!",           "Only {remaining} steps left until London! / Mind the gap, Fred!");
+                updateMilestone('paris',  800000,   "Incroyable! Fred, you've reached Paris! / Félicitations, Fred !",         "{remaining} steps until Paris! / En route pour Paris !");
+                updateMilestone('berlin', 1500000,  "Wunderbar! Fred, you've reached Berlin! / Gut gemacht, Fred!",            "{remaining} steps left until Berlin! / Auf geht's nach Berlin!");
+                updateMilestone('moscow', 3200000,  "Amazing! Fred, you've reached Moscow! / Поздравляем, Фред!",              "Keep going, {remaining} steps to Moscow! / В Москву, Фред!");
+                updateMilestone('joburg', 12000000, "Legendary! Fred, you've reached Johannesburg! / Siyakuhalalisela, Fred!", "Ultimate goal: {remaining} steps to Joburg! / Hamba kahle, Fred!");
+
+            } catch (err) {
+                console.error('Error loading milestones:', err);
+            }
+        }
+
+        // ── Language toggle ──
+        const langToggle = document.getElementById('lang-toggle');
+        langToggle.onclick = () => {
+            currentLang = currentLang === 'en' ? 'fr' : 'en';
+            localStorage.setItem('preferredLanguage', currentLang);
+            setLanguage(currentLang);
+        };
+
+        function setLanguage(lang) {
+            document.querySelectorAll('[data-translate]').forEach(el => {
+                const key = el.getAttribute('data-translate');
+                if (translations[lang] && translations[lang][key]) {
+                    el.textContent = translations[lang][key];
+                }
+            });
+            const flagImg = langToggle.querySelector('img');
+            flagImg.src = lang === 'en' ? 'https://flagsapi.com/FR/flat/24.png' : 'https://flagsapi.com/GB/flat/24.png';
+            flagImg.alt = lang === 'en' ? 'French Flag' : 'English Flag';
+        }
+
+        window.onload = async () => {
+            await window.authReady;
+            setLanguage(currentLang);
+            loadMilestones();
+        };
+    </script>
+</body>
+</html>

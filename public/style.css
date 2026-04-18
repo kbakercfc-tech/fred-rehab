@@ -41,15 +41,18 @@ header {
     padding: 0 2em;
     display: flex;
     justify-content: space-between;
-    align-items: center;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.20);
-    min-height: 60px;
+    align-items: stretch;
+    height: 84px;        /* fixed — lets children use height:100% reliably */
     position: sticky;
     top: 0;
     z-index: 200;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.20);
 }
 
 header h1 {
+    display: flex;
+    align-items: center;
+    height: 100%;
     margin: 0;
     color: white;
     font-size: 1.7em;
@@ -62,41 +65,128 @@ header h1 {
 header nav {
     display: flex;
     align-items: center;
-    flex-wrap: wrap;
     gap: 2px;
 }
 
-header nav a {
-    color: rgba(255,255,255,0.88);
-    text-decoration: none;
-    font-size: 0.95em;
+/* Every clickable item: same hardcoded height — no % chain to break */
+header nav > a,
+.nav-footer > a,
+.nav-group,
+.nav-group-btn {
+    height: 84px;
+    display: flex;
+    align-items: center;
+    font-size: 21px;
     font-weight: 500;
-    padding: 0.5em 0.9em;
-    border-radius: var(--radius-sm);
-    transition: background var(--transition), color var(--transition);
+    padding: 0 18px;
     white-space: nowrap;
+    box-sizing: border-box;
+    transition: background var(--transition), color var(--transition);
 }
 
-header nav a:hover {
+header nav > a,
+.nav-footer > a {
+    color: rgba(255,255,255,0.88);
+    text-decoration: none;
+    border-radius: var(--radius-sm);
+}
+
+header nav > a:hover,
+.nav-footer > a:hover,
+.nav-group-btn:hover,
+.nav-group.open .nav-group-btn {
     background: var(--nav-hover-bg);
     color: white;
 }
 
-header nav a.active-page {
+header nav > a.active-page,
+.nav-footer > a.active-page {
     background: rgba(255,255,255,0.18);
     color: white;
     font-weight: 600;
 }
 
+/* ─── Dropdown nav groups ─────────────────────────────── */
+.nav-group {
+    position: relative;  /* dropdown anchor */
+    padding: 0;          /* padding lives on the button, not the wrapper */
+}
+
+.nav-group-btn {
+    color: rgba(255,255,255,0.88);
+    text-decoration: none;
+    cursor: pointer;
+    gap: 0.3em;
+    flex: 1;
+    border-radius: var(--radius-sm);
+}
+
+.nav-group.has-active .nav-group-btn {
+    background: rgba(255,255,255,0.18);
+    color: white;
+    font-weight: 600;
+}
+
+.nav-chevron {
+    font-size: 0.7em;
+    opacity: 0.7;
+    transition: transform var(--transition);
+}
+.nav-group.open .nav-chevron { transform: rotate(180deg); }
+
+.nav-dropdown {
+    display: none;
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    background: #162e4d;
+    border-radius: var(--radius-md);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+    min-width: 200px;
+    z-index: 500;
+    padding: 0.4em 0;
+    border: 1px solid rgba(255,255,255,0.08);
+}
+
+.nav-group.open .nav-dropdown {
+    display: block;
+}
+
+.nav-dropdown a {
+    display: block;
+    color: rgba(255,255,255,0.85) !important;
+    text-decoration: none;
+    padding: 0.75em 1.4em;
+    font-size: 1.05em;
+    font-weight: 400;
+    white-space: nowrap;
+    border-radius: 0 !important;
+    transition: background var(--transition);
+}
+
+.nav-dropdown a:hover {
+    background: rgba(255,255,255,0.1);
+    color: white !important;
+}
+
+.nav-dropdown a.active-page {
+    background: rgba(255,255,255,0.15);
+    color: white !important;
+    font-weight: 600;
+}
+
 /* Role badge */
 #role-badge {
-    font-size: 0.7em;
+    font-size: 0.78em;
     font-weight: 700;
-    padding: 0.2em 0.6em;
+    padding: 0.3em 0.8em;
     border-radius: 20px;
     letter-spacing: 0.5px;
     text-transform: uppercase;
-    margin-left: 8px;
+    margin-right: 1.4em;
+    align-self: center;
+    line-height: 1;
+    white-space: nowrap;
 }
 
 #role-badge.badge-editor {
@@ -111,17 +201,39 @@ header nav a.active-page {
     border: 1px solid rgba(49,130,206,0.4);
 }
 
+/* Spacer — big gap between Data Management and Help */
+.nav-spacer {
+    flex: 1;
+    min-width: 120px;
+}
+
+/* Nav divider — vertical separator before Logout */
+.nav-divider {
+    width: 1px;
+    height: 1.4em;
+    background: rgba(255,255,255,0.3);
+    align-self: center;
+    margin: 0 0.6em;
+}
+
+/* Nav footer row (Logout + lang toggle) — stretches with the nav */
+.nav-footer {
+    display: flex;
+    align-items: stretch;
+    gap: 2px;
+}
+
 /* Lang toggle button */
 #lang-toggle {
     background: transparent;
     border: 1px solid rgba(255,255,255,0.25);
     border-radius: var(--radius-sm);
-    padding: 0.3em 0.5em;
-    margin-top: 0;
+    padding: 0.35em 0.5em;
     cursor: pointer;
     transition: background var(--transition);
     display: flex;
     align-items: center;
+    flex-shrink: 0;
 }
 
 #lang-toggle:hover {
@@ -540,6 +652,7 @@ tr:hover { background-color: #ebf8ff; }
 
 /* ─── Milestones ─────────────────────────────────────────── */
 .milestones-section {
+    width: 100%;
     margin-top: 2em;
     padding: 1.5em;
     background-color: var(--surface);

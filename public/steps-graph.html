@@ -10,20 +10,8 @@
 <body>
     <header>
         <h1 data-translate="Fred's Steps Graph">Fred's Steps Graph</h1>
-        <nav>
-            <a href="/" class="editor-only" data-translate="Enter Data">Enter Data</a>
-            <a href="/enter-data-tabular.html" class="editor-only" data-translate="Enter Data - Tabular">Enter Data - Tabular</a>
-            <a href="/history.html" data-translate="View History">View History</a>
-            <a href="/steps-graph.html" data-translate="View Steps Graph">View Steps Graph</a>
-            <a href="/calendar-view.html" data-translate="Calendar View">Calendar View</a>
-            <a href="/achievements.html" data-translate="Achievements">Achievements</a>
-            <a href="/exercise-videos.html" data-translate="Exercise Videos">Exercise Videos</a>
-            <a href="/report.html" data-translate="Progress Report">Progress Report</a>
-            <a href="/data-management.html" class="editor-only" data-translate="Data Management">Data Management</a>
-            <a href="/help.html" data-translate="Help">Help</a>
-            <a href="#" id="logout-btn" data-translate="Logout" onclick="logout()">Logout</a>
-            <button id="lang-toggle"><img src="https://flagsapi.com/FR/flat/24.png" alt="French Flag"></button>
-        </nav>
+        <nav id="main-nav"></nav>
+            <script src="/nav.js"></script>
     </header>
     <main>
         <div class="graph-and-summary-wrapper">

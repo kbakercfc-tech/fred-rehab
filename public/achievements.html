@@ -6,235 +6,463 @@
     <title data-translate="Fred's Achievements">Fred's Achievements</title>
     <link rel="stylesheet" href="style.css">
     <style>
-        .page-tabs {
-            display: flex;
-            border-bottom: 2px solid #ddd;
-            width: 100%;
-            max-width: 1100px;
-            margin-bottom: 1.5em;
-        }
-        .tab-btn {
-            padding: 0.75em 1.8em;
+        #panel-personal { width: 100%; }
+
+        /* ── Add Achievement collapsible ── */
+        .add-ach-toggle {
             background: none;
-            border: none;
-            border-bottom: 3px solid transparent;
-            margin-bottom: -2px;
-            cursor: pointer;
-            font-size: 1em;
-            color: #888;
-            font-weight: 500;
-            transition: color 0.2s, border-color 0.2s;
-        }
-        .tab-btn:hover { color: var(--primary, #1e3a5f); background: none; box-shadow: none; }
-        .tab-btn.active {
+            border: 1px dashed #aac;
             color: var(--primary, #1e3a5f);
-            border-bottom-color: var(--primary, #1e3a5f);
-            font-weight: bold;
+            border-radius: 7px;
+            padding: 0.45em 1.1em;
+            font-size: 0.9em;
+            font-weight: 600;
+            cursor: pointer;
+            margin-bottom: 1em;
+            transition: background 0.15s;
         }
-        .tab-panel { display: none; width: 100%; max-width: 1100px; }
-        .tab-panel.active { display: block; }
+        .add-ach-toggle:hover { background: #eef2f7; box-shadow: none; transform: none; }
 
-        /* ── Milestone forecast ── */
-        .milestone-forecast { margin-top: 0.9em; }
+        .add-achievement-section {
+            display: none;
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 10px;
+            padding: 1.1em 1.3em;
+            margin-bottom: 1.2em;
+            max-width: 520px;
+        }
+        .add-achievement-section.open { display: block; }
+        .add-achievement-section .form-row {
+            display: flex;
+            flex-direction: column;
+            gap: 0.55em;
+        }
+        .add-achievement-section label {
+            font-size: 0.83em;
+            font-weight: 500;
+            color: #444;
+        }
+        .add-achievement-section input[type="text"],
+        .add-achievement-section textarea {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 0.45em 0.65em;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-size: 0.93em;
+        }
+        .add-achievement-section textarea { resize: vertical; }
+        .add-achievement-section .btn-row { margin-top: 0.6em; }
 
-        .forecast-eta-box {
+        /* ── Achievement Cards ── */
+        .achievements-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 1em;
+            width: 100%;
+        }
+
+        .ach-card {
+            border: 1px solid #dde3ea;
+            border-left: 4px solid var(--accent, #3182ce);
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+            background: #fff;
+        }
+        .ach-card-header {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.8em;
+            padding: 0.9em 1.1em 0.85em;
+            background: #f7f9fd;
+            border-bottom: 2px solid #dde3ea;
+        }
+        .ach-card-header-text { flex: 1; min-width: 0; }
+        .ach-card-title {
+            font-size: 1.15em;
+            font-weight: 700;
+            color: var(--primary, #1e3a5f);
+            margin: 0 0 0.2em 0;
+        }
+        .ach-card-desc {
+            font-size: 0.875em;
+            color: #555;
+            margin: 0;
+            font-style: italic;
+        }
+        .ach-card-header-actions {
+            display: flex;
+            gap: 0.3em;
+            flex-shrink: 0;
+            align-items: center;
+        }
+
+        /* Buttons */
+        .btn-sm {
+            padding: 0.28em 0.65em;
+            font-size: 0.8em;
+            border-radius: 5px;
+            border: none;
+            cursor: pointer;
+            font-weight: 500;
+            transition: opacity 0.15s;
+        }
+        .btn-sm:hover { opacity: 0.8; box-shadow: none; transform: none; }
+        .btn-icon {
+            width: 26px;
+            height: 26px;
+            padding: 0;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.95em;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.15s;
+            line-height: 1;
+        }
+        .btn-icon:hover { opacity: 0.8; box-shadow: none; transform: none; }
+        .btn-edit    { background: var(--primary, #1e3a5f); color: #fff; }
+        .btn-danger  { background: #dc3545; color: #fff; }
+        .btn-success { background: #28a745; color: #fff; }
+        .btn-muted   { background: #6c757d; color: #fff; }
+        .btn-outline { background: #fff; color: var(--primary, #1e3a5f); border: 1px solid var(--primary, #1e3a5f); }
+
+        .ach-card-body { padding: 0; }
+
+        .ach-updates-list { display: block; }
+
+        /* ── Update table ── */
+        .ach-updates-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .ach-updates-table thead tr {
+            background: #f3f6fa;
+            border-bottom: 2px solid #d0dcea;
+        }
+        .ach-updates-table thead th {
+            padding: 0.42em 0.9em;
+            text-align: left;
+            font-size: 0.74em;
+            font-weight: 700;
+            color: #6a7a8a;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            white-space: nowrap;
+        }
+        .ach-updates-table th.col-date    { width: 115px; }
+        .ach-updates-table th.col-media   { width: 170px; }
+        .ach-updates-table th.col-actions { width: 68px; text-align: right; }
+        .ach-updates-table tbody td {
+            padding: 0.65em 0.9em;
+            vertical-align: top;
+            border-bottom: 1px solid #f0f2f5;
+        }
+        .ach-updates-table tbody:last-child tr.ach-update-entry td { border-bottom: none; }
+        .ach-updates-table tbody.row-even tr.ach-update-entry { background: #fafbfc; }
+        .ach-updates-table td.col-date {
+            font-size: 0.85em;
+            font-weight: 600;
+            color: var(--primary, #1e3a5f);
+            white-space: nowrap;
+        }
+        .ach-updates-table td.col-notes {
+            font-size: 0.88em;
+            color: #333;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+        .ach-updates-table td.col-actions { text-align: right; }
+        .ach-update-edit-row { display: none; }
+        .ach-update-edit-row.open { display: table-row; }
+        .ach-update-edit-row.open .edit-update-form { display: block; }
+        .ach-update-edit-row td {
+            padding: 0.5em 0.9em 0.9em;
+            background: #f8fafc;
+            border-bottom: 1px solid #e4eaf2;
+        }
+        .no-notes-label, .no-media-label { color: #ccc; font-size: 0.9em; }
+
+        /* Media thumbnails */
+        .ach-update-media-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+        .ach-media-thumb-wrap {
+            position: relative;
+            display: inline-block;
+        }
+        .ach-media-thumb {
+            width: 72px;
+            height: 72px;
+            object-fit: cover;
+            border-radius: 5px;
+            cursor: pointer;
+            border: 2px solid #dee2e6;
+            display: block;
+        }
+        .ach-media-thumb-video {
+            width: 72px;
+            height: 72px;
+            object-fit: cover;
+            border-radius: 5px;
+            border: 2px solid #dee2e6;
+            cursor: pointer;
+            display: block;
+        }
+        .ach-media-delete-btn {
+            position: absolute;
+            top: -6px;
+            right: -6px;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #dc3545;
+            color: #fff;
+            border: none;
+            font-size: 0.7em;
+            line-height: 18px;
+            text-align: center;
+            cursor: pointer;
+            padding: 0;
             display: flex;
             align-items: center;
-            gap: 0.7em;
-            background: #f0f4f8;
-            border-left: 3px solid #1e3a5f;
+            justify-content: center;
+            font-weight: bold;
+        }
+        .ach-media-delete-btn:hover { background: #a71d2a; }
+
+        .no-updates-msg {
+            color: #aaa;
+            font-size: 0.85em;
+            font-style: italic;
+            padding: 0.7em 1.1em;
+        }
+
+        /* Card footer — minimal, no background */
+        .ach-card-footer {
+            padding: 0.6em 1.1em;
+            border-top: 1px solid #f0f2f5;
+        }
+
+        /* Inline "Add Update" form */
+        .add-update-form {
+            display: none;
+            background: #f8fafc;
+            border: 1px solid #d0dcec;
+            border-radius: 7px;
+            padding: 0.85em 1em;
+            margin-top: 0.6em;
+        }
+        .add-update-form.open { display: block; }
+        .add-update-form .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.6em 1em;
+        }
+        .add-update-form .form-grid .full-width {
+            grid-column: 1 / -1;
+        }
+        .add-update-form label {
+            font-size: 0.82em;
+            font-weight: 500;
+            color: #444;
+            display: block;
+            margin-bottom: 0.2em;
+        }
+        .add-update-form input[type="date"],
+        .add-update-form textarea,
+        .add-update-form input[type="file"] {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 0.45em 0.6em;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 0.9em;
+        }
+        .add-update-form textarea { resize: vertical; }
+        .add-update-form .form-btn-row {
+            display: flex;
+            gap: 0.5em;
+            margin-top: 0.75em;
+        }
+
+        /* Inline edit-update form */
+        .edit-update-form {
+            display: none;
+            background: #fff;
+            border: 1px solid #c8d6e5;
+            border-radius: 7px;
+            padding: 0.8em 0.9em;
+            margin-top: 0.6em;
+        }
+        .edit-update-form.open { display: block; }
+        .edit-update-form .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.5em 0.9em;
+        }
+        .edit-update-form .full-width { grid-column: 1 / -1; }
+        .edit-update-form label {
+            font-size: 0.82em;
+            font-weight: 500;
+            color: #444;
+            display: block;
+            margin-bottom: 0.15em;
+        }
+        .edit-update-form input[type="date"],
+        .edit-update-form textarea {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 0.42em 0.6em;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 0.88em;
+        }
+        .edit-update-form textarea { resize: vertical; }
+        .edit-update-form .form-btn-row {
+            display: flex;
+            gap: 0.45em;
+            margin-top: 0.6em;
+        }
+
+        /* Edit achievement modal */
+        .edit-ach-modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.45);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+        }
+        .edit-ach-modal-overlay.open { display: flex; }
+        .edit-ach-modal {
+            background: #fff;
+            border-radius: 10px;
+            padding: 1.5em 1.8em;
+            width: 100%;
+            max-width: 480px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+            position: relative;
+        }
+        .edit-ach-modal h3 {
+            margin: 0 0 1em 0;
+            color: var(--primary, #1e3a5f);
+        }
+        .edit-ach-modal label {
+            font-size: 0.85em;
+            font-weight: 500;
+            color: #444;
+            display: block;
+            margin-bottom: 0.15em;
+        }
+        .edit-ach-modal input[type="text"],
+        .edit-ach-modal textarea {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 0.5em 0.7em;
+            border: 1px solid #ccc;
             border-radius: 6px;
-            padding: 0.5em 1em;
-            margin-bottom: 0.9em;
-            flex-wrap: wrap;
+            font-size: 0.95em;
+            margin-bottom: 0.7em;
         }
-        .forecast-eta-icon  { font-size: 1.1em; }
-        .forecast-eta-label { font-size: 0.7em; color: #888; text-transform: uppercase; letter-spacing: 0.05em; white-space: nowrap; }
-        .forecast-eta-date  { font-size: 1.05em; font-weight: bold; color: #1e3a5f; }
-        .forecast-eta-sub   { font-size: 0.7em; color: #bbb; margin-left: auto; font-style: italic; white-space: nowrap; }
+        .edit-ach-modal textarea { resize: vertical; }
+        .edit-ach-modal .form-btn-row {
+            display: flex;
+            gap: 0.5em;
+            margin-top: 0.5em;
+        }
+        .edit-ach-modal-close {
+            position: absolute;
+            top: 0.7em;
+            right: 0.9em;
+            background: none;
+            border: none;
+            font-size: 1.4em;
+            cursor: pointer;
+            color: #888;
+            line-height: 1;
+        }
+        .edit-ach-modal-close:hover { color: #333; }
 
-        .forecast-rings { display: flex; gap: 0.7em; flex-wrap: wrap; }
-        .prob-ring-wrap { display: flex; flex-direction: column; align-items: center; gap: 0.35em; flex: 1; min-width: 60px; }
-        .prob-ring {
-            width: 64px; height: 64px; border-radius: 50%;
-            display: grid; place-items: center;
-            transition: transform 0.2s;
+        .ach-loading {
+            color: #aaa;
+            font-size: 0.85em;
+            font-style: italic;
+            padding: 0.3em 0;
         }
-        .prob-ring:hover { transform: scale(1.08); }
-        .prob-ring-inner {
-            width: 46px; height: 46px; border-radius: 50%; background: white;
-            display: grid; place-items: center; font-weight: bold; font-size: 0.82em; line-height: 1;
-        }
-        .prob-ring-label { font-size: 0.7em; color: #666; text-align: center; white-space: nowrap; }
 
-        .forecast-achieved {
-            margin-top: 0.7em; padding: 0.65em 1em; background: #d4edda;
-            border-radius: 6px; color: #155724; font-weight: bold; text-align: center; font-size: 1em;
+        .panel-personal-header {
+            display: flex;
+            align-items: center;
+            gap: 1em;
+            margin-bottom: 1em;
+        }
+        .panel-personal-header h2 {
+            margin: 0;
+            flex: 1;
+        }
+
+        @media (max-width: 600px) {
+            .add-update-form .form-grid,
+            .edit-update-form .form-grid {
+                grid-template-columns: 1fr;
+            }
+            .add-update-form .full-width,
+            .edit-update-form .full-width {
+                grid-column: 1;
+            }
+            .ach-card-header { flex-direction: column; gap: 0.6em; }
+            .ach-card-header-actions { margin-left: 0; }
         }
     </style>
 </head>
 <body>
     <header>
-        <h1 data-translate="Fred's Rehab Tracker">Fred's Rehab Tracker</h1>
-        <nav>
-            <a href="/" class="editor-only" data-translate="Enter Data">Enter Data</a>
-            <a href="/enter-data-tabular.html" class="editor-only" data-translate="Enter Data - Tabular">Enter Data - Tabular</a>
-            <a href="/history.html" data-translate="View History">View History</a>
-            <a href="/steps-graph.html" data-translate="View Steps Graph">View Steps Graph</a>
-            <a href="/calendar-view.html" data-translate="Calendar View">Calendar View</a>
-            <a href="/achievements.html" data-translate="Achievements">Achievements</a>
-            <a href="/exercise-videos.html" data-translate="Exercise Videos">Exercise Videos</a>
-            <a href="/report.html" data-translate="Progress Report">Progress Report</a>
-            <a href="/data-management.html" class="editor-only" data-translate="Data Management">Data Management</a>
-            <a href="/help.html" data-translate="Help">Help</a>
-            <a href="#" id="logout-btn" data-translate="Logout" onclick="logout()">Logout</a>
-            <button id="lang-toggle"><img src="https://flagsapi.com/FR/flat/24.png" alt="French Flag"></button>
-        </nav>
+        <h1 data-translate="Fred's Achievements">Fred's Achievements</h1>
+        <nav id="main-nav"></nav>
+            <script src="/nav.js"></script>
     </header>
 
     <main>
-        <!-- ── Tabs ── -->
-        <div class="page-tabs">
-            <button class="tab-btn active" id="tab-btn-personal" data-translate="Fred's Achievements">Fred's Achievements</button>
-            <button class="tab-btn" id="tab-btn-fun" data-translate="Fun Milestones">Fun Milestones</button>
-        </div>
+        <!-- ══ Fred's Personal Achievements ══ -->
+        <div id="panel-personal">
 
-        <!-- ══ Panel 1: Fred's Personal Achievements ══ -->
-        <div id="panel-personal" class="tab-panel active">
+            <!-- Add Achievement toggle + form (editor only) -->
+            <button class="editor-only add-ach-toggle" id="add-ach-toggle-btn" onclick="
+                const sec = document.getElementById('add-achievement-section');
+                const open = sec.classList.toggle('open');
+                this.textContent = open ? '✕ Cancel' : '+ New Achievement';
+            ">+ New Achievement</button>
 
-            <section class="editor-only">
-                <h2 id="form-heading" data-translate="Log a New Achievement">Log a New Achievement</h2>
-                <form id="achievement-form" enctype="multipart/form-data">
-                    <input type="hidden" id="edit-id">
-                    <div>
-                        <label for="name" data-translate="Achievement Name:">Achievement Name:</label>
-                        <input type="text" id="name" name="name">
-                    </div>
-                    <div>
-                        <label for="description" data-translate="Achievement Description (optional):">Achievement Description (optional):</label>
-                        <textarea id="description" name="description" rows="3"></textarea>
-                    </div>
-                    <div style="display: flex; gap: 20px;">
-                        <div style="flex: 1;">
-                            <label for="start_date" data-translate="Achievement Start Date:">Achievement Start Date:</label>
-                            <input type="date" id="start_date" name="start_date">
+            <section class="editor-only add-achievement-section" id="add-achievement-section">
+                <form id="add-achievement-form">
+                    <div class="form-row">
+                        <div>
+                            <label for="new-ach-name">Achievement Name</label>
+                            <input type="text" id="new-ach-name" name="name" placeholder="e.g. First 5,000-step day">
                         </div>
-                        <div style="flex: 1;">
-                            <label for="end_date" data-translate="Achievement End Date (optional):">Achievement End Date (optional):</label>
-                            <input type="date" id="end_date" name="end_date">
+                        <div>
+                            <label for="new-ach-desc">Description (optional)</label>
+                            <textarea id="new-ach-desc" name="description" rows="2" placeholder="A short description..."></textarea>
                         </div>
-                    </div>
-                    <div id="media-field">
-                        <label for="media" data-translate="Media (Photos/Videos):">Media (Photos/Videos):</label>
-                        <input type="file" id="media" name="media" accept="image/*,video/*" multiple>
-                    </div>
-                    <div style="display:flex; gap:10px; align-items:center;">
-                        <button type="submit" id="submit-btn" data-translate="Add Achievement">Add Achievement</button>
-                        <button type="button" id="cancel-edit-btn" onclick="cancelEdit()" style="display:none; background:var(--text-muted);">Cancel</button>
+                        <div class="btn-row">
+                            <button type="submit" class="btn-sm btn-edit" style="font-size:0.9em; padding:0.45em 1.1em;">Add Achievement</button>
+                        </div>
                     </div>
                 </form>
             </section>
 
-            <hr style="width: 100%; max-width: 800px;">
-
-            <section style="width: 100%;">
-                <h2 data-translate="Fred's Achievements">Fred's Achievements</h2>
-                <div id="achievements-container" style="overflow-x: auto;">
-                    <table id="achievement-table" class="achievement-table">
-                        <thead>
-                            <tr>
-                                <th data-translate="Name">Name</th>
-                                <th data-translate="Start Date">Start Date</th>
-                                <th data-translate="End Date">End Date</th>
-                                <th data-translate="Description">Description</th>
-                                <th data-translate="Media">Media</th>
-                                <th data-translate="Action">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody id="achievements-body"></tbody>
-                    </table>
-                    <p id="no-achievements" style="display:none;" data-translate="No achievements recorded yet.">No achievements recorded yet.</p>
-                </div>
-            </section>
+            <div id="achievements-grid" class="achievements-grid"></div>
+            <p id="no-achievements" style="display:none; color:#888; font-style:italic;" data-translate="No achievements recorded yet.">No achievements recorded yet.</p>
         </div>
 
-        <!-- ══ Panel 2: Fun Milestones ══ -->
-        <div id="panel-fun" class="tab-panel">
-            <div class="milestones-section">
-                <h2 data-translate="Fun Milestones">Fun Milestones</h2>
-
-                <div class="milestone-card" style="border-left-color: #3498db;">
-                    <div class="milestone-info">
-                        <span class="milestone-title">10,000 Steps Club</span>
-                        <span id="club-count-display" class="milestone-distance">0 times achieved</span>
-                    </div>
-                    <p id="club-level-status" class="milestone-status">Walk 10,000 steps to join the club!</p>
-                    <div style="font-size: 0.8em; margin-top: 10px; color: #7f8c8d;">
-                        Bronze: 5 times | Silver: 10 times | Gold: 15 times
-                    </div>
-                </div>
-
-                <div class="milestone-card">
-                    <div class="milestone-info">
-                        <span class="milestone-title" data-translate="Stoke to London Challenge">Stoke to London Challenge</span>
-                        <span class="milestone-distance">~300,000 steps (150 miles)</span>
-                    </div>
-                    <div class="progress-container">
-                        <div id="london-progress-bar" class="progress-bar">0%</div>
-                    </div>
-                    <p id="london-status" class="milestone-status">Keep walking, Fred!</p>
-                    <div id="london-forecast" class="milestone-forecast"></div>
-                </div>
-
-                <div class="milestone-card" style="border-left-color: #9b59b6;">
-                    <div class="milestone-info">
-                        <span class="milestone-title" data-translate="Stoke to Paris Challenge">Stoke to Paris Challenge</span>
-                        <span class="milestone-distance">~800,000 steps (400 miles)</span>
-                    </div>
-                    <div class="progress-container">
-                        <div id="paris-progress-bar" class="progress-bar" style="background-color: #9b59b6;">0%</div>
-                    </div>
-                    <p id="paris-status" class="milestone-status">On your way to France!</p>
-                    <div id="paris-forecast" class="milestone-forecast"></div>
-                </div>
-
-                <div class="milestone-card" style="border-left-color: #e67e22;">
-                    <div class="milestone-info">
-                        <span class="milestone-title" data-translate="Stoke to Berlin Challenge">Stoke to Berlin Challenge</span>
-                        <span class="milestone-distance">~1,500,000 steps (750 miles)</span>
-                    </div>
-                    <div class="progress-container">
-                        <div id="berlin-progress-bar" class="progress-bar" style="background-color: #e67e22;">0%</div>
-                    </div>
-                    <p id="berlin-status" class="milestone-status">Heading towards Germany!</p>
-                    <div id="berlin-forecast" class="milestone-forecast"></div>
-                </div>
-
-                <div class="milestone-card" style="border-left-color: #e74c3c;">
-                    <div class="milestone-info">
-                        <span class="milestone-title" data-translate="Stoke to Moscow Challenge">Stoke to Moscow Challenge</span>
-                        <span class="milestone-distance">~3,200,000 steps (1,600 miles)</span>
-                    </div>
-                    <div class="progress-container">
-                        <div id="moscow-progress-bar" class="progress-bar" style="background-color: #e74c3c;">0%</div>
-                    </div>
-                    <p id="moscow-status" class="milestone-status">The long road to Russia!</p>
-                    <div id="moscow-forecast" class="milestone-forecast"></div>
-                </div>
-
-                <div class="milestone-card" style="border-left-color: #27ae60;">
-                    <div class="milestone-info">
-                        <span class="milestone-title" data-translate="Stoke to Johannesburg Challenge">Stoke to Johannesburg Challenge</span>
-                        <span class="milestone-distance">~12,000,000 steps (6,000 miles)</span>
-                    </div>
-                    <div class="progress-container">
-                        <div id="joburg-progress-bar" class="progress-bar" style="background-color: #27ae60;">0%</div>
-                    </div>
-                    <p id="joburg-status" class="milestone-status">The ultimate journey to South Africa!</p>
-                    <div id="joburg-forecast" class="milestone-forecast"></div>
-                </div>
-            </div>
-        </div>
     </main>
 
     <!-- Confirm dialog -->
@@ -256,108 +484,472 @@
         </div>
     </div>
 
+    <!-- Edit Achievement modal -->
+    <div id="edit-ach-modal-overlay" class="edit-ach-modal-overlay" onclick="closeEditAchModal(event)">
+        <div class="edit-ach-modal" onclick="event.stopPropagation()">
+            <button class="edit-ach-modal-close" onclick="closeEditAchModal()">&times;</button>
+            <h3>Edit Achievement</h3>
+            <form id="edit-ach-modal-form">
+                <input type="hidden" id="edit-ach-modal-id">
+                <label for="edit-ach-modal-name">Achievement Name</label>
+                <input type="text" id="edit-ach-modal-name" name="name">
+                <label for="edit-ach-modal-desc">Description (optional)</label>
+                <textarea id="edit-ach-modal-desc" name="description" rows="3"></textarea>
+                <div class="form-btn-row">
+                    <button type="submit" class="btn-sm btn-success" style="font-size:0.9em; padding:0.45em 1.1em;">Save Changes</button>
+                    <button type="button" class="btn-sm btn-muted" style="font-size:0.9em; padding:0.45em 1.1em;" onclick="closeEditAchModal()">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script src="auth.js"></script>
     <script src="toast.js"></script>
     <script src="translations.js"></script>
     <script>
         let currentLang = localStorage.getItem('preferredLanguage') || 'en';
 
-        // ── Tab switching ──
-        const tabButtons = document.querySelectorAll('.tab-btn');
-        const tabPanels  = document.querySelectorAll('.tab-panel');
-        let milestonesLoaded = false;
+        // ══════════════════════════════════════════
+        // ── Personal Achievements – Card UI ──
+        // ══════════════════════════════════════════
 
-        function switchTab(tabId) {
-            tabButtons.forEach(b => b.classList.toggle('active', b.id === 'tab-btn-' + tabId));
-            tabPanels.forEach(p => p.classList.toggle('active', p.id === 'panel-' + tabId));
-            localStorage.setItem('achievementsTab', tabId);
-            if (tabId === 'fun' && !milestonesLoaded) {
-                loadFunMilestones();
-            }
+        const grid           = document.getElementById('achievements-grid');
+        const noAchievements = document.getElementById('no-achievements');
+        const isEditor       = () => window.userRole === 'editor';
+
+        // ── Date helpers ──
+        function formatDateDDMMMYYYY(dateString) {
+            if (!dateString) return '';
+            const d = new Date(dateString);
+            return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
         }
 
-        document.getElementById('tab-btn-personal').addEventListener('click', () => switchTab('personal'));
-        document.getElementById('tab-btn-fun').addEventListener('click',      () => switchTab('fun'));
-
-        // ── Personal Achievements ──
-        const form           = document.getElementById('achievement-form');
-        const body           = document.getElementById('achievements-body');
-        const table          = document.getElementById('achievement-table');
-        const noAchievements = document.getElementById('no-achievements');
-
+        // ── Load all achievements (cards) ──
         async function loadAchievements() {
             try {
-                const response = await fetch('/api/achievements');
-                const achievements = await response.json();
+                const res  = await fetch('/api/achievements');
+                const list = await res.json();
 
-                body.innerHTML = '';
-                if (achievements.length === 0) {
-                    table.style.display = 'none';
+                grid.innerHTML = '';
+
+                if (!list.length) {
                     noAchievements.style.display = 'block';
                     return;
                 }
-
-                table.style.display = 'table';
                 noAchievements.style.display = 'none';
 
-                achievements.forEach(achievement => {
-                    const row = document.createElement('tr');
-
-                    let mediaHtml = '';
-                    if (achievement.media && achievement.media.length > 0) {
-                        mediaHtml = '<div class="achievement-media-preview">';
-                        achievement.media.forEach(m => {
-                            if (m.media_type === 'photo') {
-                                mediaHtml += `<img src="${m.filepath}" alt="Achievement photo" class="achievement-thumb" onclick='openModal("photo","${m.filepath}")'>`;
-                            } else {
-                                mediaHtml += `
-                                    <div class="achievement-video-wrapper">
-                                        <video controls preload="metadata" src="${m.filepath}" class="achievement-thumb-video" playsinline></video>
-                                        <button class="achievement-video-expand" onclick="expandVideo(this)" title="Full screen">&#x26F6;</button>
-                                    </div>`;
-                            }
-                        });
-                        mediaHtml += '</div>';
-                    }
-
-                    const startDate = formatDateDDMMMYY(achievement.start_date);
-                    const endDate   = achievement.end_date ? formatDateDDMMMYY(achievement.end_date) : '-';
-
-                    row.innerHTML = `
-                        <td><strong>${achievement.name}</strong></td>
-                        <td style="white-space: nowrap;">${startDate}</td>
-                        <td style="white-space: nowrap;">${endDate}</td>
-                        <td class="achievement-desc-cell">${achievement.description || ''}</td>
-                        <td>${mediaHtml}</td>
-                        <td class="delete-btn-cell">
-                            ${window.userRole === 'editor' ? `
-                                <button class="edit-achievement">Edit</button>
-                                <button class="delete-achievement" style="position: static; margin-top: 0;">Delete</button>
-                            ` : ''}
-                        </td>
-                    `;
-                    body.appendChild(row);
-
-                    if (window.userRole === 'editor') {
-                        row.querySelector('.edit-achievement').addEventListener('click', () => {
-                            editAchievement(achievement.id, achievement.name, achievement.description || '', achievement.start_date, achievement.end_date || '');
-                        });
-                        row.querySelector('.delete-achievement').addEventListener('click', () => {
-                            deleteAchievement(achievement.id);
-                        });
-                    }
-                });
+                for (const ach of list) {
+                    const card = buildAchievementCard(ach);
+                    grid.appendChild(card);
+                    // Lazy-load updates into the card
+                    loadUpdatesIntoCard(ach.id, card);
+                }
             } catch (err) {
-                console.error("Error loading achievements:", err);
+                console.error('Error loading achievements:', err);
             }
         }
 
-        function expandVideo(btn) {
-            const video = btn.previousElementSibling;
-            if (video.requestFullscreen)        video.requestFullscreen();
-            else if (video.webkitEnterFullscreen) video.webkitEnterFullscreen();
+        // ── Build a card DOM element for one achievement ──
+        function buildAchievementCard(ach) {
+            const card = document.createElement('div');
+            card.className = 'ach-card';
+            card.dataset.achId = ach.id;
+
+            const editorControls = isEditor() ? `
+                <div class="ach-card-header-actions">
+                    <button class="btn-icon btn-edit btn-edit-ach" title="Edit achievement">✎</button>
+                    <button class="btn-icon btn-danger btn-delete-ach" title="Delete achievement">✕</button>
+                </div>` : '';
+
+            card.innerHTML = `
+                <div class="ach-card-header">
+                    <div class="ach-card-header-text">
+                        <p class="ach-card-title">${escHtml(ach.name)}</p>
+                        <p class="ach-card-desc">${escHtml(ach.description || '')}</p>
+                    </div>
+                    ${editorControls}
+                </div>
+                <div class="ach-card-body">
+                    <div class="ach-updates-list" id="updates-list-${ach.id}">
+                        <span class="ach-loading">Loading updates...</span>
+                    </div>
+                </div>
+                <div class="ach-card-footer">
+                    ${isEditor() ? `
+                        <button class="btn-sm btn-outline btn-add-update">+ Add Update</button>
+                        <div class="add-update-form" id="add-update-form-${ach.id}">
+                            <form>
+                                <div class="form-grid">
+                                    <div>
+                                        <label>Date</label>
+                                        <input type="date" class="aupd-date" value="${new Date().toISOString().slice(0,10)}">
+                                    </div>
+                                    <div class="full-width">
+                                        <label>Comments</label>
+                                        <textarea class="aupd-comments" rows="2" placeholder="Describe this milestone update..."></textarea>
+                                    </div>
+                                    <div class="full-width">
+                                        <label>Photos / Videos</label>
+                                        <input type="file" class="aupd-media" accept="image/*,video/*" multiple>
+                                    </div>
+                                </div>
+                                <div class="form-btn-row">
+                                    <button type="submit" class="btn-sm btn-success">Save</button>
+                                    <button type="button" class="btn-sm btn-muted btn-cancel-add-update">Cancel</button>
+                                </div>
+                            </form>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+
+            // Wire up editor buttons
+            if (isEditor()) {
+                card.querySelector('.btn-edit-ach').addEventListener('click', () => openEditAchModal(ach));
+                card.querySelector('.btn-delete-ach').addEventListener('click', () => deleteAchievement(ach.id));
+
+                const addUpdateForm = card.querySelector('.add-update-form');
+                card.querySelector('.btn-add-update').addEventListener('click', () => {
+                    addUpdateForm.classList.toggle('open');
+                });
+                card.querySelector('.btn-cancel-add-update').addEventListener('click', () => {
+                    addUpdateForm.classList.remove('open');
+                    addUpdateForm.querySelector('form').reset();
+                    addUpdateForm.querySelector('.aupd-date').value = new Date().toISOString().slice(0,10);
+                });
+                addUpdateForm.querySelector('form').addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    await submitAddUpdate(ach.id, addUpdateForm, card);
+                });
+            }
+
+            return card;
         }
 
+        // ── Lazy-load updates into a card ──
+        async function loadUpdatesIntoCard(achId, card) {
+            const listEl = card.querySelector(`#updates-list-${achId}`);
+            try {
+                const res     = await fetch(`/api/achievement-updates/${achId}`);
+                const updates = await res.json();
+                renderUpdatesList(achId, updates, listEl);
+            } catch (err) {
+                listEl.innerHTML = '<span style="color:#c00;font-size:0.85em;">Failed to load updates.</span>';
+                console.error('Error loading updates for achievement', achId, err);
+            }
+        }
+
+        // ── Render the list of update entries ──
+        function renderUpdatesList(achId, updates, listEl) {
+            listEl.innerHTML = '';
+
+            if (!updates.length) {
+                listEl.innerHTML = '<p class="no-updates-msg">No updates yet.</p>';
+                return;
+            }
+
+            // Sort chronologically (oldest first)
+            updates.sort((a, b) => a.update_date.localeCompare(b.update_date));
+
+            const table = document.createElement('table');
+            table.className = 'ach-updates-table';
+
+            const actionsHeader = isEditor() ? '<th class="col-actions"></th>' : '';
+            const thead = document.createElement('thead');
+            thead.innerHTML = `<tr>
+                <th class="col-date">Date</th>
+                <th class="col-notes">Notes</th>
+                <th class="col-media">Photos / Videos</th>
+                ${actionsHeader}
+            </tr>`;
+            table.appendChild(thead);
+
+            updates.forEach((upd, i) => {
+                const tbody = buildUpdateEntry(achId, upd);
+                if (i % 2 === 1) tbody.classList.add('row-even');
+                table.appendChild(tbody);
+            });
+
+            listEl.appendChild(table);
+        }
+
+        // ── Build one update entry element (returns a <tbody> with data row + edit row) ──
+        function buildUpdateEntry(achId, upd) {
+            const tbody = document.createElement('tbody');
+            tbody.dataset.updId = upd.id;
+
+            const colCount = isEditor() ? 4 : 3;
+
+            // Build media cell
+            const media = upd.media || [];
+            let mediaHtml = '';
+            if (media.length > 0) {
+                let thumbs = '';
+                for (const m of media) {
+                    const delBtn = isEditor()
+                        ? `<button class="ach-media-delete-btn" data-media-id="${m.id}" title="Remove">&times;</button>`
+                        : '';
+                    if (m.media_type === 'photo') {
+                        thumbs += `<div class="ach-media-thumb-wrap">
+                            <img src="${m.filepath}" alt="photo" class="ach-media-thumb"
+                                onclick='openModal("photo","${m.filepath.replace(/'/g,"\\'")}",${m.id})'>
+                            ${delBtn}
+                        </div>`;
+                    } else {
+                        thumbs += `<div class="ach-media-thumb-wrap">
+                            <video src="${m.filepath}" class="ach-media-thumb-video" preload="metadata"
+                                onclick='openModal("video","${m.filepath.replace(/'/g,"\\'")}",${m.id})'></video>
+                            ${delBtn}
+                        </div>`;
+                    }
+                }
+                mediaHtml = `<div class="ach-update-media-row">${thumbs}</div>`;
+            } else {
+                mediaHtml = '<span class="no-media-label">—</span>';
+            }
+
+            const actionsCell = isEditor() ? `
+                <td class="col-actions">
+                    <button class="btn-icon btn-edit btn-edit-upd" title="Edit">✎</button>
+                    <button class="btn-icon btn-danger btn-delete-upd" title="Delete">✕</button>
+                </td>` : '';
+
+            // Data row
+            const dataRow = document.createElement('tr');
+            dataRow.className = 'ach-update-entry';
+            dataRow.innerHTML = `
+                <td class="col-date">${formatDateDDMMMYYYY(upd.update_date)}</td>
+                <td class="col-notes">${upd.comments ? escHtml(upd.comments) : '<span class="no-notes-label">—</span>'}</td>
+                <td class="col-media">${mediaHtml}</td>
+                ${actionsCell}
+            `;
+
+            // Edit form row (hidden by default)
+            const editRow = document.createElement('tr');
+            editRow.className = 'ach-update-edit-row';
+            editRow.innerHTML = isEditor() ? `
+                <td colspan="${colCount}" class="edit-upd-cell">
+                    <div class="edit-update-form" id="edit-upd-form-${upd.id}">
+                        <div class="form-grid">
+                            <div>
+                                <label>Date</label>
+                                <input type="date" class="eupd-date" value="${upd.update_date ? upd.update_date.slice(0,10) : ''}">
+                            </div>
+                            <div class="full-width">
+                                <label>Comments</label>
+                                <textarea class="eupd-comments" rows="2">${escHtml(upd.comments || '')}</textarea>
+                            </div>
+                            <div class="full-width">
+                                <label>Add photos / videos</label>
+                                <input type="file" class="eupd-media" accept="image/*,video/*" multiple>
+                            </div>
+                        </div>
+                        <div class="form-btn-row">
+                            <button class="btn-sm btn-success btn-save-upd" style="font-size:0.8em;padding:0.3em 0.8em;">Save</button>
+                            <button class="btn-sm btn-muted btn-cancel-edit-upd" style="font-size:0.8em;padding:0.3em 0.8em;">Cancel</button>
+                        </div>
+                    </div>
+                </td>` : '';
+
+            tbody.appendChild(dataRow);
+            tbody.appendChild(editRow);
+
+            // Wire up edit/delete buttons
+            if (isEditor()) {
+                dataRow.querySelector('.btn-edit-upd').addEventListener('click', () => {
+                    editRow.classList.toggle('open');
+                });
+                editRow.querySelector('.btn-cancel-edit-upd').addEventListener('click', () => {
+                    editRow.classList.remove('open');
+                });
+                editRow.querySelector('.btn-save-upd').addEventListener('click', async () => {
+                    await saveEditUpdate(upd.id, tbody, achId);
+                });
+                dataRow.querySelector('.btn-delete-upd').addEventListener('click', () => {
+                    deleteUpdate(upd.id, achId);
+                });
+
+                // Per-media delete buttons
+                dataRow.querySelectorAll('.ach-media-delete-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const mediaId = parseInt(btn.dataset.mediaId, 10);
+                        deleteMedia(mediaId, achId);
+                    });
+                });
+            }
+
+            return tbody;
+        }
+
+        // ── Submit: add a new update ──
+        async function submitAddUpdate(achId, formWrapper, card) {
+            const dateVal     = formWrapper.querySelector('.aupd-date').value;
+            const commentsVal = formWrapper.querySelector('.aupd-comments').value.trim();
+            const filesInput  = formWrapper.querySelector('.aupd-media');
+
+            if (!dateVal) { showToast('Please pick a date.', 'warning'); return; }
+
+            const fd = new FormData();
+            fd.append('achievement_id', achId);
+            fd.append('update_date', dateVal);
+            fd.append('comments', commentsVal);
+            for (const f of filesInput.files) {
+                fd.append('media', f);
+            }
+
+            try {
+                const res = await fetch('/api/achievement-updates', { method: 'POST', body: fd });
+                if (!res.ok) { showToast('Failed to save update.', 'error'); return; }
+                showToast('Update saved!', 'success');
+                formWrapper.classList.remove('open');
+                formWrapper.querySelector('form').reset();
+                formWrapper.querySelector('.aupd-date').value = new Date().toISOString().slice(0,10);
+                await loadUpdatesIntoCard(achId, card);
+            } catch (err) {
+                console.error('Error saving update:', err);
+                showToast('Error saving update.', 'error');
+            }
+        }
+
+        // ── Save an edited update ──
+        async function saveEditUpdate(updId, entryEl, achId) {
+            const form       = entryEl.querySelector('.edit-update-form');
+            const dateVal    = form.querySelector('.eupd-date').value;
+            const commentVal = form.querySelector('.eupd-comments').value.trim();
+            const filesInput = form.querySelector('.eupd-media');
+
+            if (!dateVal) { showToast('Please pick a date.', 'warning'); return; }
+
+            try {
+                // Save date + comments
+                const res = await fetch(`/api/achievement-updates/${updId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ update_date: dateVal, comments: commentVal })
+                });
+                if (!res.ok) { showToast('Failed to save update.', 'error'); return; }
+
+                // Upload any new media files
+                if (filesInput && filesInput.files.length > 0) {
+                    const fd = new FormData();
+                    fd.append('update_id', updId);
+                    for (const f of filesInput.files) fd.append('media', f);
+                    const mediaRes = await fetch('/api/achievement-update-media', { method: 'POST', body: fd });
+                    if (!mediaRes.ok) { showToast('Update saved but some files failed to upload.', 'warning'); }
+                }
+
+                showToast('Update saved!', 'success');
+                form.classList.remove('open');
+                const card = entryEl.closest('.ach-card');
+                await loadUpdatesIntoCard(achId, card);
+            } catch (err) {
+                console.error('Error saving update:', err);
+                showToast('Error saving update.', 'error');
+            }
+        }
+
+        // ── Delete an update ──
+        function deleteUpdate(updId, achId) {
+            showConfirm('Delete this update? This cannot be undone.', async () => {
+                try {
+                    const res = await fetch(`/api/achievement-updates/${updId}`, { method: 'DELETE' });
+                    if (!res.ok) { showToast('Failed to delete update.', 'error'); return; }
+                    showToast('Update deleted.', 'success');
+                    const card = grid.querySelector(`[data-ach-id="${achId}"]`);
+                    if (card) await loadUpdatesIntoCard(achId, card);
+                } catch (err) {
+                    console.error('Error deleting update:', err);
+                }
+            });
+        }
+
+        // ── Delete a single media file ──
+        function deleteMedia(mediaId, achId) {
+            showConfirm('Remove this photo/video? This cannot be undone.', async () => {
+                try {
+                    const res = await fetch(`/api/achievement-update-media/${mediaId}`, { method: 'DELETE' });
+                    if (!res.ok) { showToast('Failed to remove media.', 'error'); return; }
+                    showToast('Media removed.', 'success');
+                    const card = grid.querySelector(`[data-ach-id="${achId}"]`);
+                    if (card) await loadUpdatesIntoCard(achId, card);
+                } catch (err) {
+                    console.error('Error deleting media:', err);
+                }
+            });
+        }
+
+        // ── Delete an entire achievement ──
+        function deleteAchievement(achId) {
+            showConfirm('Delete this achievement and all its updates? This cannot be undone.', async () => {
+                try {
+                    const res = await fetch(`/api/achievements/${achId}`, { method: 'DELETE' });
+                    if (!res.ok) { showToast('Failed to delete achievement.', 'error'); return; }
+                    showToast('Achievement deleted.', 'success');
+                    loadAchievements();
+                } catch (err) {
+                    console.error('Error deleting achievement:', err);
+                }
+            });
+        }
+
+        // ── Add Achievement form submit ──
+        document.getElementById('add-achievement-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const nameVal = document.getElementById('new-ach-name').value.trim();
+            const descVal = document.getElementById('new-ach-desc').value.trim();
+            if (!nameVal) { showToast('Please enter an achievement name.', 'warning'); return; }
+            try {
+                const res = await fetch('/api/achievements', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: nameVal, description: descVal })
+                });
+                if (!res.ok) { showToast('Failed to add achievement.', 'error'); return; }
+                showToast('Achievement added!', 'success');
+                e.target.reset();
+                loadAchievements();
+            } catch (err) {
+                console.error('Error adding achievement:', err);
+                showToast('Error adding achievement.', 'error');
+            }
+        });
+
+        // ── Edit Achievement modal ──
+        function openEditAchModal(ach) {
+            document.getElementById('edit-ach-modal-id').value   = ach.id;
+            document.getElementById('edit-ach-modal-name').value = ach.name;
+            document.getElementById('edit-ach-modal-desc').value = ach.description || '';
+            document.getElementById('edit-ach-modal-overlay').classList.add('open');
+        }
+
+        function closeEditAchModal(event) {
+            if (event && event.target !== document.getElementById('edit-ach-modal-overlay')) return;
+            document.getElementById('edit-ach-modal-overlay').classList.remove('open');
+        }
+
+        document.getElementById('edit-ach-modal-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const id      = document.getElementById('edit-ach-modal-id').value;
+            const nameVal = document.getElementById('edit-ach-modal-name').value.trim();
+            const descVal = document.getElementById('edit-ach-modal-desc').value.trim();
+            if (!nameVal) { showToast('Please enter an achievement name.', 'warning'); return; }
+            try {
+                const res = await fetch(`/api/achievements/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: nameVal, description: descVal })
+                });
+                if (!res.ok) { showToast('Failed to update achievement.', 'error'); return; }
+                showToast('Achievement updated!', 'success');
+                document.getElementById('edit-ach-modal-overlay').classList.remove('open');
+                loadAchievements();
+            } catch (err) {
+                console.error('Error updating achievement:', err);
+                showToast('Error updating achievement.', 'error');
+            }
+        });
+
+        // ── Media modal ──
         function openModal(type, filepath) {
             const modal     = document.getElementById('media-modal');
             const modalBody = document.getElementById('modal-body');
@@ -375,70 +967,7 @@
             }
         }
 
-        let editingId = null;
-
-        function editAchievement(id, name, description, startDate, endDate) {
-            editingId = id;
-            document.getElementById('edit-id').value       = id;
-            document.getElementById('name').value          = name;
-            document.getElementById('description').value   = description;
-            document.getElementById('start_date').value    = startDate;
-            document.getElementById('end_date').value      = endDate;
-            document.getElementById('form-heading').textContent      = 'Edit Achievement';
-            document.getElementById('submit-btn').textContent        = 'Save Changes';
-            document.getElementById('cancel-edit-btn').style.display = 'inline-block';
-            document.getElementById('media-field').style.display     = 'none';
-            document.querySelector('section.editor-only').scrollIntoView({ behavior: 'smooth' });
-        }
-
-        function cancelEdit() {
-            editingId = null;
-            form.reset();
-            document.getElementById('edit-id').value                 = '';
-            document.getElementById('form-heading').textContent      = 'Log a New Achievement';
-            document.getElementById('submit-btn').textContent        = 'Add Achievement';
-            document.getElementById('cancel-edit-btn').style.display = 'none';
-            document.getElementById('media-field').style.display     = 'block';
-            document.getElementById('start_date').value = new Date().toISOString().slice(0, 10);
-        }
-
-        form.onsubmit = async (e) => {
-            e.preventDefault();
-            const nameVal     = document.getElementById('name').value.trim();
-            const startDateVal = document.getElementById('start_date').value;
-            if (!nameVal)      { showToast('Please enter an achievement name.', 'warning'); return; }
-            if (!startDateVal) { showToast('Please select a start date.', 'warning'); return; }
-
-            try {
-                let response;
-                if (editingId) {
-                    response = await fetch(`/api/achievements/${editingId}`, {
-                        method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            name: nameVal,
-                            description: document.getElementById('description').value.trim(),
-                            start_date: startDateVal,
-                            end_date: document.getElementById('end_date').value || null
-                        })
-                    });
-                } else {
-                    response = await fetch('/api/achievements', { method: 'POST', body: new FormData(form) });
-                }
-
-                if (response.ok) {
-                    showToast(editingId ? 'Achievement updated!' : 'Achievement saved!', 'success');
-                    cancelEdit();
-                    loadAchievements();
-                } else {
-                    showToast('Failed to save achievement.', 'error');
-                }
-            } catch (err) {
-                console.error("Error saving achievement:", err);
-                showToast('Error saving achievement.', 'error');
-            }
-        };
-
+        // ── Confirm dialog ──
         function showConfirm(message, onConfirm) {
             document.getElementById('confirm-message').textContent = message;
             document.getElementById('confirm-dialog').style.display = 'flex';
@@ -451,210 +980,14 @@
             };
         }
 
-        async function deleteAchievement(id) {
-            showConfirm('Delete this achievement? This cannot be undone.', async () => {
-                try {
-                    const response = await fetch(`/api/achievements/${id}`, { method: 'DELETE' });
-                    if (response.ok) {
-                        showToast('Achievement deleted.', 'success');
-                        loadAchievements();
-                    } else {
-                        showToast('Failed to delete achievement.', 'error');
-                    }
-                } catch (err) {
-                    console.error("Error deleting achievement:", err);
-                }
-            });
-        }
-
-        // ── Linear regression helper ──
-        // Returns { a, b } for y = a + b*x (ordinary least squares)
-        function linearRegression(xArr, yArr) {
-            const n = xArr.length;
-            if (n < 2) return null;
-            let sx = 0, sy = 0, sxy = 0, sx2 = 0;
-            for (let i = 0; i < n; i++) {
-                sx  += xArr[i];
-                sy  += yArr[i];
-                sxy += xArr[i] * yArr[i];
-                sx2 += xArr[i] * xArr[i];
-            }
-            const denom = n * sx2 - sx * sx;
-            if (denom === 0) return null;
-            const b = (n * sxy - sx * sy) / denom;
-            const a = (sy - b * sx) / n;
-            return { a, b };
-        }
-
-        // ── Forecast card builder ──
-        function buildForecastHTML(etaText, etaSub, probs) {
-            const rings = probs.map(({ pct, label }) => {
-                const clr = pct >= 75 ? '#27ae60' : pct >= 40 ? '#e67e22' : '#e74c3c';
-                // Inline background so conic-gradient value is baked in (no CSS var calc needed)
-                const bg  = `conic-gradient(${clr} ${pct}%, #e8e8e8 0)`;
-                return `<div class="prob-ring-wrap">
-                    <div class="prob-ring" style="background:${bg}">
-                        <div class="prob-ring-inner" style="color:${clr}">${pct}%</div>
-                    </div>
-                    <div class="prob-ring-label">${label}</div>
-                </div>`;
-            }).join('');
-
-            return `<div class="forecast-eta-box">
-                <span class="forecast-eta-icon">📅</span>
-                <span class="forecast-eta-label">Est. completion</span>
-                <span class="forecast-eta-date">${etaText}</span>
-                <span class="forecast-eta-sub">${etaSub}</span>
-            </div>
-            <div class="forecast-rings">${rings}</div>`;
-        }
-
-        // ── Fun Milestones ──
-        async function loadFunMilestones() {
-            milestonesLoaded = true;
-            try {
-                // 10,000 Steps Club
-                const clubRes  = await fetch('/api/steps/club-status');
-                const clubData = await clubRes.json();
-                document.getElementById('club-count-display').textContent =
-                    `${clubData.count} time${clubData.count !== 1 ? 's' : ''} achieved`;
-                const clubStatus = document.getElementById('club-level-status');
-                if (clubData.level !== 'None') {
-                    const displayLevel = clubData.level === 'Member' ? 'Member' : `${clubData.level} Member`;
-                    clubStatus.innerHTML = `<strong>Current Level: ${displayLevel}</strong>`;
-                    const levelColors = { Member:'#3498db', Bronze:'#cd7f32', Silver:'#95a5a6', Gold:'#daa520' };
-                    clubStatus.style.color = levelColors[clubData.level] || '#27ae60';
-                }
-
-                // Total all-time steps
-                const totalRes   = await fetch('/api/steps/total');
-                const totalData  = await totalRes.json();
-                const totalSteps = totalData.total_steps || 0;
-
-                // ── 60-day window for regression + probability ──
-                const windowStart = new Date();
-                windowStart.setDate(windowStart.getDate() - 59);  // day 0 = 59 days ago
-                const etaStart = windowStart.toISOString().slice(0, 10);
-                const etaEnd   = new Date().toISOString().slice(0, 10);
-                const etaRes   = await fetch(`/api/steps?startDate=${etaStart}&endDate=${etaEnd}`);
-                const etaData  = await etaRes.json();
-
-                // Build daily array: index 0 = 59 days ago, index 59 = today
-                const stepsMap60 = new Map(etaData.map(d => [d.date, d.quantity]));
-                const dailyVals  = [];
-                for (let i = 0; i < 60; i++) {
-                    const d = new Date(windowStart);
-                    d.setDate(d.getDate() + i);
-                    dailyVals.push(stepsMap60.get(d.toISOString().slice(0, 10)) || 0);
-                }
-
-                // Mean & sigma over 60 days (for probability calculation)
-                const avg60  = dailyVals.reduce((a, b) => a + b, 0) / 60;
-                const sigma  = Math.sqrt(dailyVals.reduce((s, v) => s + Math.pow(v - avg60, 2), 0) / 60);
-
-                // ── Linear regression on all-time cumulative total vs day index ──
-                // y[i] = all-time total at end of day i in the 60-day window
-                // x[i] = day index (0 … 59)
-                // slope b ≈ daily step rate accounting for trend over the window
-                const sum60        = dailyVals.reduce((a, b) => a + b, 0);
-                const totalBefore  = totalSteps - sum60;  // all-time total at start of window
-                const xArr = [], yArr = [];
-                let cumFromWindow  = 0;
-                for (let i = 0; i < 60; i++) {
-                    cumFromWindow += dailyVals[i];
-                    xArr.push(i);
-                    yArr.push(totalBefore + cumFromWindow);
-                }
-                const reg = linearRegression(xArr, yArr);
-                // reg.b = trend-adjusted daily rate (steps/day)
-                // ETA for goal: solve  goal = reg.a + reg.b * x  →  x = (goal - reg.a) / reg.b
-                // days from today = x - 59  (since today is index 59)
-
-                // Normal CDF helper (Abramowitz & Stegun erf approximation)
-                const erf = x => {
-                    const s = x >= 0 ? 1 : -1, a = Math.abs(x);
-                    const t = 1 / (1 + 0.3275911 * a);
-                    const p = t * (0.254829592 + t * (-0.284496736 + t * (1.421413741 + t * (-1.453152027 + t * 1.061405429))));
-                    return s * (1 - p * Math.exp(-a * a));
-                };
-                const achievementProb = (target, N) => {
-                    if (target <= 0) return 100;
-                    if (avg60 <= 0)  return 0;
-                    const mu  = N * avg60;
-                    const sig = Math.sqrt(N) * sigma;
-                    if (sig === 0) return mu >= target ? 100 : 0;
-                    const z = (target - mu) / (sig * Math.SQRT2);
-                    return Math.round((0.5 * (1 - erf(z))) * 100);
-                };
-
-                const updateMilestone = (prefix, goal, doneMsg, progressMsg) => {
-                    const pct        = Math.min((totalSteps / goal) * 100, 100).toFixed(1);
-                    const bar        = document.getElementById(`${prefix}-progress-bar`);
-                    const status     = document.getElementById(`${prefix}-status`);
-                    const forecastEl = document.getElementById(`${prefix}-forecast`);
-
-                    bar.style.width = pct + '%';
-                    bar.textContent = pct + '%';
-
-                    if (totalSteps >= goal) {
-                        bar.style.backgroundColor = '#2ecc71';
-                        status.textContent      = doneMsg;
-                        status.style.color      = '#27ae60';
-                        status.style.fontWeight = 'bold';
-                        if (forecastEl) forecastEl.innerHTML =
-                            `<div class="forecast-achieved">🎉 ${doneMsg}</div>`;
-                    } else {
-                        const rem = goal - totalSteps;
-                        status.textContent = progressMsg.replace('{remaining}', rem.toLocaleString());
-
-                        if (forecastEl) {
-                            // ETA via regression
-                            let etaText = 'N/A', etaSub = 'based on 60-day trend';
-                            if (reg && reg.b > 0) {
-                                const daysFromNow = Math.ceil((goal - reg.a) / reg.b - 59);
-                                if (daysFromNow > 0) {
-                                    const d = new Date();
-                                    d.setDate(d.getDate() + daysFromNow);
-                                    etaText = d.toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' });
-                                } else {
-                                    etaText = 'Very soon';
-                                }
-                            } else {
-                                etaSub = 'insufficient data';
-                            }
-
-                            // Probability rings
-                            const horizons = [
-                                { N: 30,  label: '1 month'  },
-                                { N: 90,  label: '3 months' },
-                                { N: 180, label: '6 months' },
-                                { N: 365, label: '1 year'   },
-                            ];
-                            const probs = horizons.map(h => ({
-                                pct:   avg60 > 0 ? achievementProb(rem, h.N) : 0,
-                                label: h.label
-                            }));
-
-                            forecastEl.innerHTML = buildForecastHTML(etaText, etaSub, probs);
-                        }
-                    }
-                };
-
-                updateMilestone('london', 300000,   "Congratulations Fred! You've reached London! / Cheers, Fred!",           "Only {remaining} steps left until London! / Mind the gap, Fred!");
-                updateMilestone('paris',  800000,   "Incroyable! Fred, you've reached Paris! / Félicitations, Fred !",         "{remaining} steps until Paris! / En route pour Paris !");
-                updateMilestone('berlin', 1500000,  "Wunderbar! Fred, you've reached Berlin! / Gut gemacht, Fred!",            "{remaining} steps left until Berlin! / Auf geht's nach Berlin!");
-                updateMilestone('moscow', 3200000,  "Amazing! Fred, you've reached Moscow! / Поздравляем, Фред!",              "Keep going, {remaining} steps to Moscow! / В Москву, Фред!");
-                updateMilestone('joburg', 12000000, "Legendary! Fred, you've reached Johannesburg! / Siyakuhalalisela, Fred!", "Ultimate goal: {remaining} steps to Joburg! / Hamba kahle, Fred!");
-
-            } catch (err) {
-                console.error("Error loading fun milestones:", err);
-            }
-        }
-
-        // ── Shared helpers ──
-        function formatDateDDMMMYY(dateString) {
-            if (!dateString) return '';
-            return new Date(dateString).toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'2-digit' }).replace(/ /g, '-').toUpperCase();
+        // ── HTML escape helper ──
+        function escHtml(str) {
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
         }
 
         // ── Language toggle ──
@@ -687,13 +1020,6 @@
             await window.authReady;
             setLanguage(currentLang);
             loadAchievements();
-            document.getElementById('start_date').value = new Date().toISOString().slice(0, 10);
-
-            // Restore last active tab; also pre-load fun milestones if that tab was last active
-            const savedTab = localStorage.getItem('achievementsTab') || 'personal';
-            if (savedTab === 'fun') {
-                switchTab('fun');
-            }
         };
     </script>
 </body>

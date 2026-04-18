@@ -46,20 +46,8 @@
 <body>
     <header>
         <h1 data-translate="Fred's Rehab - Data Management">Fred's Rehab - Data Management</h1>
-        <nav>
-            <a href="/" data-translate="Enter Data">Enter Data</a>
-            <a href="/enter-data-tabular.html" data-translate="Enter Data - Tabular">Enter Data - Tabular</a>
-            <a href="/history.html" data-translate="View History">View History</a>
-            <a href="/steps-graph.html" data-translate="View Steps Graph">View Steps Graph</a>
-            <a href="/calendar-view.html" data-translate="Calendar View">Calendar View</a>
-            <a href="/achievements.html" data-translate="Achievements">Achievements</a>
-            <a href="/exercise-videos.html" data-translate="Exercise Videos">Exercise Videos</a>
-            <a href="/report.html" data-translate="Progress Report">Progress Report</a>
-            <a href="/data-management.html" data-translate="Data Management">Data Management</a>
-            <a href="/help.html" data-translate="Help">Help</a>
-            <a href="#" id="logout-btn" data-translate="Logout" onclick="logout()">Logout</a>
-            <button id="lang-toggle"><img src="https://flagsapi.com/FR/flat/24.png" alt="French Flag"></button>
-        </nav>
+        <nav id="main-nav"></nav>
+            <script src="/nav.js"></script>
     </header>
     <main>
         <div class="management-card">
@@ -124,7 +112,32 @@
             </div>
 
             <div class="management-section">
-                <h3 data-translate="Restore from Backup">5. Restore from Backup</h3>
+                <h3>5. Fred's Story — Notes</h3>
+                <p>Fred can write free notes about his recovery here. Whatever he writes will appear in <a href="/story.html">Fred's Story</a> as his own personal account — in his own words, alongside the automatically generated content.</p>
+
+                <div id="story-sections-list" style="margin-bottom: 1.5em;">
+                    <p style="color:#888;font-style:italic;">Loading notes…</p>
+                </div>
+
+                <div style="margin-top: 0.5em;">
+                    <div style="display:flex; flex-direction:column; gap:0.8em;">
+                        <div>
+                            <label style="font-weight:bold;display:block;margin-bottom:0.3em;">Note label <span style="font-weight:normal;color:#888;">(optional — helps you find it in the list)</span></label>
+                            <input type="text" id="new-sec-title" placeholder="e.g. First week home, Physio update…" style="width:100%;padding:0.5em;">
+                        </div>
+                        <div>
+                            <label style="font-weight:bold;display:block;margin-bottom:0.3em;">Fred's note</label>
+                            <textarea id="new-sec-content" rows="8" placeholder="Write anything about Fred's recovery here — how it felt, what helped, a good day, a tough day…" style="width:100%;padding:0.5em;resize:vertical;font-size:1em;line-height:1.6;"></textarea>
+                        </div>
+                        <div>
+                            <button class="fitbit-btn" onclick="addStorySection()">Add Note to Story</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="management-section">
+                <h3 data-translate="Restore from Backup">6. Restore from Backup</h3>
                 <div class="warning-box">
                     <strong data-translate="Warning:">Warning:</strong> <span data-translate="Restoring will completely replace all current data with the contents of the backup file. This cannot be undone.">Restoring will completely replace all current data with the contents of the backup file. This cannot be undone.</span>
                 </div>
@@ -387,11 +400,111 @@
             }
         }
 
+        // ── Story Notes ──
+        let storyNoteCount = 0;
+
+        async function loadStorySections() {
+            const container = document.getElementById('story-sections-list');
+            try {
+                const res = await fetch('/api/story-sections');
+                const sections = await res.json();
+                storyNoteCount = sections.length;
+                if (sections.length === 0) {
+                    container.innerHTML = `<p style="color:#888;font-style:italic;">No notes yet. Write the first one below.</p>`;
+                    return;
+                }
+                let html = '';
+                for (const sec of sections) {
+                    const safeContent = sec.content.replace(/</g,'&lt;').replace(/>/g,'&gt;');
+                    const safeTitle   = sec.title.replace(/</g,'&lt;').replace(/>/g,'&gt;');
+                    const preview     = safeContent.length > 180 ? safeContent.slice(0, 180) + '…' : safeContent;
+                    html += `
+                    <div id="story-sec-${sec.id}" style="border:1px solid #e0e8f0;border-radius:6px;padding:0.9em 1em;margin-bottom:0.8em;background:#fafbfc;">
+                        <div style="display:flex;justify-content:space-between;align-items:center;gap:0.5em;margin-bottom:0.5em;">
+                            <strong style="color:#1e3a5f;">${safeTitle}</strong>
+                            <div style="display:flex;gap:0.4em;flex-shrink:0;">
+                                <button class="fitbit-btn" style="padding:0.25em 0.7em;font-size:0.8em;" onclick="editStorySection(${sec.id})">Edit</button>
+                                <button class="fitbit-btn disconnect" style="padding:0.25em 0.7em;font-size:0.8em;" onclick="deleteStorySection(${sec.id})">Delete</button>
+                            </div>
+                        </div>
+                        <div id="story-sec-preview-${sec.id}" style="font-size:0.9em;color:#555;white-space:pre-wrap;line-height:1.5;">${preview}</div>
+                        <div id="story-sec-edit-${sec.id}" style="display:none;margin-top:0.7em;">
+                            <input type="text" id="edit-sec-title-${sec.id}" value="${sec.title.replace(/"/g,'&quot;')}" placeholder="Note label (optional)" style="width:100%;padding:0.4em;margin-bottom:0.5em;">
+                            <textarea id="edit-sec-content-${sec.id}" rows="8" style="width:100%;padding:0.5em;resize:vertical;font-size:1em;line-height:1.6;">${sec.content.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</textarea>
+                            <div style="display:flex;gap:0.5em;margin-top:0.5em;">
+                                <button class="fitbit-btn" onclick="saveStorySection(${sec.id})">Save</button>
+                                <button class="fitbit-btn" style="background:#6c757d;" onclick="cancelEditStorySection(${sec.id})">Cancel</button>
+                            </div>
+                        </div>
+                    </div>`;
+                }
+                container.innerHTML = html;
+            } catch (err) {
+                container.innerHTML = `<p style="color:red;">Failed to load notes.</p>`;
+            }
+        }
+
+        function editStorySection(id) {
+            document.getElementById(`story-sec-preview-${id}`).style.display = 'none';
+            document.getElementById(`story-sec-edit-${id}`).style.display = 'block';
+        }
+
+        function cancelEditStorySection(id) {
+            document.getElementById(`story-sec-preview-${id}`).style.display = 'block';
+            document.getElementById(`story-sec-edit-${id}`).style.display = 'none';
+        }
+
+        async function saveStorySection(id) {
+            const rawTitle  = document.getElementById(`edit-sec-title-${id}`).value.trim();
+            const content   = document.getElementById(`edit-sec-content-${id}`).value.trim();
+            const title     = rawTitle || `Note`;
+            if (!content) { showToast('Please write something in the note.', 'warning'); return; }
+            try {
+                const res = await fetch(`/api/story-sections/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ title, content })
+                });
+                if (res.ok) { showToast('Note saved!', 'success'); loadStorySections(); }
+                else showToast('Failed to save note.', 'error');
+            } catch { showToast('Error saving note.', 'error'); }
+        }
+
+        async function deleteStorySection(id) {
+            if (!confirm('Delete this note? This cannot be undone.')) return;
+            try {
+                const res = await fetch(`/api/story-sections/${id}`, { method: 'DELETE' });
+                if (res.ok) { showToast('Note deleted.', 'success'); loadStorySections(); }
+                else showToast('Failed to delete note.', 'error');
+            } catch { showToast('Error deleting note.', 'error'); }
+        }
+
+        async function addStorySection() {
+            const rawTitle  = document.getElementById('new-sec-title').value.trim();
+            const content   = document.getElementById('new-sec-content').value.trim();
+            const title     = rawTitle || `Note ${storyNoteCount + 1}`;
+            if (!content) { showToast('Please write something in the note first.', 'warning'); return; }
+            try {
+                const res = await fetch('/api/story-sections', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ title, content })
+                });
+                if (res.ok) {
+                    showToast('Note added to Fred\'s Story!', 'success');
+                    document.getElementById('new-sec-title').value = '';
+                    document.getElementById('new-sec-content').value = '';
+                    loadStorySections();
+                } else showToast('Failed to add note.', 'error');
+            } catch { showToast('Error adding note.', 'error'); }
+        }
+
         window.onload = () => {
             setLanguage(currentLang);
             checkFitbitStatus();
             loadSettings();
             loadAutoBackups();
+            loadStorySections();
         };
     </script>
 </body>

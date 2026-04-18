@@ -124,21 +124,9 @@
 </head>
 <body>
     <header>
-        <h1 data-translate="Fred's Rehab Tracker">Fred's Rehab Tracker</h1>
-        <nav>
-            <a href="/" class="editor-only" data-translate="Enter Data">Enter Data</a>
-            <a href="/enter-data-tabular.html" class="editor-only" data-translate="Enter Data - Tabular">Enter Data - Tabular</a>
-            <a href="/history.html" data-translate="View History">View History</a>
-            <a href="/steps-graph.html" data-translate="View Steps Graph">View Steps Graph</a>
-            <a href="/calendar-view.html" data-translate="Calendar View">Calendar View</a>
-            <a href="/achievements.html" data-translate="Achievements">Achievements</a>
-            <a href="/exercise-videos.html" data-translate="Exercise Videos">Exercise Videos</a>
-            <a href="/report.html" data-translate="Progress Report">Progress Report</a>
-            <a href="/data-management.html" class="editor-only" data-translate="Data Management">Data Management</a>
-            <a href="/help.html" data-translate="Help">Help</a>
-            <a href="#" id="logout-btn" data-translate="Logout" onclick="logout()">Logout</a>
-            <button id="lang-toggle"><img src="https://flagsapi.com/FR/flat/24.png" alt="French Flag"></button>
-        </nav>
+        <h1 data-translate="Fred's Progress Report">Fred's Progress Report</h1>
+        <nav id="main-nav"></nav>
+            <script src="/nav.js"></script>
     </header>
 
     <main>
@@ -606,7 +594,10 @@
             <h2>Fred</h2>
         </div>
         <div class="rpt-header-right">
-            <img src="/images/fred.jpg" alt="Fred" onerror="this.style.display='none'">
+            <div style="position:relative;display:inline-block;margin-bottom:0.5em;">
+                <img src="/images/fred.jpg" alt="Fred" onerror="this.style.display='none'" style="width:60px;height:60px;border-radius:50%;object-fit:cover;display:block;border:2px solid #1e3a5f;">
+                ${clubData.level !== 'None' ? `<div style="position:absolute;bottom:-8px;right:-8px;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:6pt;color:white;text-align:center;border:2px solid white;line-height:1.1;text-transform:uppercase;background:${clubData.level==='Gold'?'linear-gradient(135deg,#f6c90e,#c49a00)':clubData.level==='Silver'?'linear-gradient(135deg,#b0b0b0,#787878)':clubData.level==='Bronze'?'linear-gradient(135deg,#cd7f32,#a0522d)':'linear-gradient(135deg,#3498db,#2980b9)'};">${clubData.level==='Member'?'10K<br>CLUB':clubData.level+'<br>10K'}</div>` : ''}
+            </div>
             <div><strong>${T.period}:</strong> ${fmtLong(startDate)} – ${fmtLong(endDate)}</div>
             <div><strong>${T.duration}:</strong> ${periodDays} ${T.days}</div>
             <div><strong>${T.generated}:</strong> ${fmtLong(new Date().toISOString().slice(0,10))}</div>
@@ -639,9 +630,15 @@
         <div class="narrative">${narrative.map(p => `<p>${p}</p>`).join('')}</div>
     </div>
 
-    <!-- ── 2. Steps ── -->
+    <!-- ── 2. Recommendations ── -->
     <div class="rpt-section">
-        <div class="rpt-section-title"><span class="rpt-section-num">2</span>${T.s2}</div>
+        <div class="rpt-section-title"><span class="rpt-section-num">2</span>${T.s7}</div>
+        <ul class="rec-list">${recs.map(r => `<li>${r}</li>`).join('')}</ul>
+    </div>
+
+    <!-- ── 3. Steps ── -->
+    <div class="rpt-section">
+        <div class="rpt-section-title"><span class="rpt-section-num">3</span>${T.s2}</div>
         ${chart}
         <table class="log-table" style="width:auto;min-width:340px;margin-top:0.8em;">
             <tr><th>${T.metric}</th><th>${T.value}</th></tr>
@@ -655,9 +652,9 @@
         </table>
     </div>
 
-    <!-- ── 3. Exercise & Weights ── -->
+    <!-- ── 4. Exercise & Weights ── -->
     <div class="rpt-section">
-        <div class="rpt-section-title"><span class="rpt-section-num">3</span>${T.s3}</div>
+        <div class="rpt-section-title"><span class="rpt-section-num">4</span>${T.s3}</div>
         <div class="compliance-row">
             <span class="compliance-label">${T.exRoutine}</span>
             <div class="compliance-track"><div class="compliance-fill${clsCompliance(exPct)}" style="width:${exPct}%"></div></div>
@@ -672,9 +669,9 @@
         </div>
     </div>
 
-    <!-- ── 4. Milestones ── -->
+    <!-- ── 5. Milestones ── -->
     <div class="rpt-section">
-        <div class="rpt-section-title"><span class="rpt-section-num">4</span>${T.s4}</div>
+        <div class="rpt-section-title"><span class="rpt-section-num">5</span>${T.s4}</div>
         <p style="font-size:9pt;color:#777;margin:0 0 1em;font-family:Arial,sans-serif;">
             ${T.mileIntro} <strong>${allTimeTotal.toLocaleString()}</strong> ${T.steps}
             (${T.mileApprox} ${Math.round(allTimeTotal/2000).toLocaleString()} ${T.mileMiles}) ${T.mileSince}
@@ -695,9 +692,9 @@
         }).join('')}
     </div>
 
-    <!-- ── 5. Achievements ── -->
+    <!-- ── 6. Achievements ── -->
     <div class="rpt-section">
-        <div class="rpt-section-title"><span class="rpt-section-num">5</span>${T.s5}</div>
+        <div class="rpt-section-title"><span class="rpt-section-num">6</span>${T.s5}</div>
         ${periodAch.length === 0
             ? `<p style="color:#888;font-family:Arial,sans-serif;font-size:10pt;">${T.noAch}</p>`
             : periodAch.map(a => `<div class="ach-item">
@@ -707,9 +704,9 @@
               </div>`).join('')}
     </div>
 
-    <!-- ── 6. Daily Log ── -->
+    <!-- ── 7. Daily Log ── -->
     <div class="rpt-section page-break">
-        <div class="rpt-section-title"><span class="rpt-section-num">6</span>${T.s6}</div>
+        <div class="rpt-section-title"><span class="rpt-section-num">7</span>${T.s6}</div>
         <table class="log-table">
             <thead><tr><th>${T.dateH}</th><th>${T.exerciseH}</th><th>${T.weightsH}</th><th>${T.stepsH}</th><th>${T.commentsH}</th></tr></thead>
             <tbody>
@@ -729,12 +726,6 @@
                 }).join('')}
             </tbody>
         </table>
-    </div>
-
-    <!-- ── 7. Recommendations ── -->
-    <div class="rpt-section">
-        <div class="rpt-section-title"><span class="rpt-section-num">7</span>${T.s7}</div>
-        <ul class="rec-list">${recs.map(r => `<li>${r}</li>`).join('')}</ul>
     </div>
 
     <!-- ── Footer ── -->

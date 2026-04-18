@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fred's Story</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .story-wrapper {
+            width: 100%;
+            max-width: 820px;
+            margin: 0 auto;
+        }
+
+        .story-doc {
+            padding: 2.5em 3em;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            box-shadow: 0 2px 16px rgba(0,0,0,0.08);
+            font-family: Georgia, 'Times New Roman', serif;
+            font-size: 12pt;
+            line-height: 1.8;
+            color: #222;
+        }
+
+        /* Cover */
+        .story-cover {
+            text-align: center;
+            padding: 1.5em 0 2em;
+            border-bottom: 2px solid #1e3a5f;
+            margin-bottom: 2.5em;
+        }
+        .story-cover-photo-wrap {
+            display: inline-block;
+            position: relative;
+            margin-bottom: 1em;
+        }
+        .story-cover-photo-wrap img {
+            width: 110px;
+            height: 110px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid #1e3a5f;
+            display: block;
+        }
+        .story-cover-badge {
+            position: absolute;
+            bottom: -6px;
+            right: -6px;
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 7pt;
+            font-weight: bold;
+            color: white;
+            text-align: center;
+            line-height: 1.1;
+            font-family: Arial, sans-serif;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+        }
+        .story-title {
+            font-size: 26pt;
+            font-family: Georgia, serif;
+            color: #1e3a5f;
+            margin: 0 0 0.1em;
+            font-weight: bold;
+            letter-spacing: 0.02em;
+        }
+        .story-subtitle {
+            font-size: 12pt;
+            color: #666;
+            font-style: italic;
+            margin: 0 0 0.8em;
+        }
+        .story-meta {
+            font-size: 9.5pt;
+            color: #888;
+            font-family: Arial, sans-serif;
+        }
+
+        /* Chapters */
+        .story-chapter {
+            margin: 2.5em 0;
+        }
+        .story-chapter-title {
+            font-size: 14pt;
+            font-family: Arial, sans-serif;
+            font-weight: bold;
+            color: #1e3a5f;
+            border-bottom: 1px solid #ccd9e8;
+            padding-bottom: 0.4em;
+            margin-bottom: 1em;
+            letter-spacing: 0.04em;
+        }
+        .story-chapter-num {
+            display: inline-block;
+            background: #1e3a5f;
+            color: white;
+            font-size: 8pt;
+            padding: 2px 8px;
+            border-radius: 3px;
+            margin-right: 0.5em;
+            vertical-align: middle;
+            letter-spacing: 0.05em;
+        }
+        .story-body p {
+            margin: 0 0 1em;
+            text-align: justify;
+            text-indent: 1.5em;
+        }
+        .story-body p:first-child {
+            text-indent: 0;
+        }
+        .story-body p.no-indent {
+            text-indent: 0;
+        }
+
+        /* Pull quote / highlight box */
+        .story-pullquote {
+            border-left: 4px solid #3182ce;
+            background: #f0f6ff;
+            padding: 0.8em 1.2em;
+            margin: 1.2em 0;
+            font-style: italic;
+            color: #1e3a5f;
+            border-radius: 0 6px 6px 0;
+        }
+        .story-pullquote.gold {
+            border-left-color: #DAA520;
+            background: #fffbf0;
+        }
+        .story-pullquote.green {
+            border-left-color: #27ae60;
+            background: #f0fff4;
+        }
+
+        /* Stat strip */
+        .story-stat-strip {
+            display: flex;
+            gap: 1em;
+            flex-wrap: wrap;
+            margin: 1.2em 0;
+        }
+        .story-stat-chip {
+            background: #f0f4f8;
+            border-top: 3px solid #3182ce;
+            border-radius: 6px;
+            padding: 0.6em 1em;
+            text-align: center;
+            min-width: 100px;
+            font-family: Arial, sans-serif;
+        }
+        .story-stat-chip.green { border-top-color: #27ae60; }
+        .story-stat-chip.gold  { border-top-color: #DAA520; }
+        .story-stat-chip.orange { border-top-color: #e67e22; }
+        .story-stat-val {
+            font-size: 15pt;
+            font-weight: bold;
+            color: #1e3a5f;
+            display: block;
+        }
+        .story-stat-lbl {
+            font-size: 8pt;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: #777;
+        }
+
+        /* Achievement block */
+        .story-achievement {
+            margin: 0.8em 0;
+            padding: 0.7em 1em;
+            border-left: 3px solid #3182ce;
+            background: #f7faff;
+            border-radius: 0 6px 6px 0;
+            font-family: Arial, sans-serif;
+            font-size: 10.5pt;
+        }
+        .story-achievement-title {
+            font-weight: bold;
+            color: #1e3a5f;
+        }
+        .story-achievement-desc {
+            color: #555;
+            font-size: 9.5pt;
+            margin-top: 0.2em;
+        }
+        .story-achievement-updates {
+            margin-top: 0.5em;
+            padding-left: 0.5em;
+            border-left: 2px solid #ccd9e8;
+        }
+        .story-achievement-update {
+            font-size: 9.5pt;
+            color: #444;
+            margin: 0.25em 0;
+        }
+        .story-achievement-update-date {
+            color: #888;
+            font-size: 8.5pt;
+        }
+        .story-achievement-photo {
+            width: 80px;
+            height: 60px;
+            object-fit: cover;
+            border-radius: 4px;
+            margin-top: 0.4em;
+            border: 1px solid #ddd;
+        }
+
+        /* Fred's own words */
+        .story-fred-words-chapter {
+            margin: 2.5em 0;
+        }
+        .story-fred-note {
+            position: relative;
+            margin: 1.2em 0;
+            padding: 1.2em 1.4em 1.2em 2.2em;
+            background: #fffef8;
+            border: 1px solid #e8e0c8;
+            border-left: 4px solid #c9a84c;
+            border-radius: 0 6px 6px 0;
+        }
+        .story-fred-note::before {
+            content: '\201C';
+            position: absolute;
+            left: 0.4em;
+            top: 0.1em;
+            font-size: 2.4em;
+            color: #c9a84c;
+            line-height: 1;
+            font-family: Georgia, serif;
+        }
+        .story-fred-note-label {
+            font-size: 8.5pt;
+            font-family: Arial, sans-serif;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: #9a7d2e;
+            margin-bottom: 0.5em;
+        }
+        .story-fred-note-text {
+            white-space: pre-wrap;
+            font-family: Georgia, serif;
+            font-size: 11.5pt;
+            line-height: 1.8;
+            color: #333;
+            font-style: italic;
+        }
+
+        /* Media gallery */
+        .story-gallery-chapter {
+            margin: 2.5em 0;
+        }
+        .story-gallery-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.8em;
+            margin-top: 0.8em;
+        }
+        .story-gallery-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.3em;
+        }
+        .story-gallery-item a {
+            display: block;
+            text-decoration: none;
+        }
+        .story-gallery-img {
+            width: 130px;
+            height: 100px;
+            object-fit: cover;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+            display: block;
+            transition: opacity 0.2s;
+        }
+        .story-gallery-img:hover { opacity: 0.85; }
+        .story-gallery-video-thumb {
+            width: 130px;
+            height: 100px;
+            background: #1e3a5f;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2em;
+            color: white;
+            cursor: pointer;
+        }
+        .story-gallery-caption {
+            font-size: 8pt;
+            color: #888;
+            font-family: Arial, sans-serif;
+            text-align: center;
+            max-width: 130px;
+        }
+        .story-gallery-ach-title {
+            font-family: Arial, sans-serif;
+            font-size: 10pt;
+            font-weight: bold;
+            color: #1e3a5f;
+            margin: 1em 0 0.4em;
+        }
+
+        /* Controls */
+        .story-controls {
+            display: flex;
+            gap: 0.75em;
+            margin-bottom: 1.5em;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .style-btn {
+            padding: 0.55em 1.3em;
+            border: 2px solid #c8d6e5;
+            border-radius: 8px;
+            background: #fff;
+            color: #1e3a5f;
+            font-size: 0.95em;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.15s;
+            white-space: nowrap;
+        }
+        .style-btn:hover {
+            border-color: #1e3a5f;
+            background: #f0f4f8;
+            box-shadow: none;
+            transform: none;
+        }
+        .style-btn.active {
+            background: #1e3a5f;
+            border-color: #1e3a5f;
+            color: #fff;
+            font-weight: 600;
+        }
+        .style-btn:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+        }
+
+        .story-controls .divider {
+            width: 1px;
+            height: 2em;
+            background: #dde3ea;
+            margin: 0 0.25em;
+        }
+
+        .story-controls button.print-btn {
+            padding: 0.5em 1.1em;
+        }
+
+        .loading-msg {
+            text-align: center;
+            padding: 3em;
+            color: #888;
+            font-style: italic;
+        }
+
+        @media print {
+            header, nav, .story-controls { display: none !important; }
+            .story-doc {
+                box-shadow: none;
+                border: none;
+                padding: 0;
+            }
+            body { background: white; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1 data-translate="Fred's Rehab Story">Fred's Rehab Story</h1>
+        <nav id="main-nav"></nav>
+            <script src="/nav.js"></script>
+    </header>
+    <main>
+        <div class="story-wrapper">
+            <div class="story-controls">
+                <span style="font-size:0.85em;font-weight:600;color:#555;white-space:nowrap;">Story style:</span>
+                <button class="style-btn active" id="btn-factual"  onclick="selectStyle('factual')">📊 Factual</button>
+                <button class="style-btn"        id="btn-prose"    onclick="selectStyle('prose')">✍️ Prose</button>
+                <button class="style-btn"        id="btn-children" onclick="selectStyle('children')">📚 Children's</button>
+                <button id="generate-btn" onclick="generateStory()">✨ Generate Story</button>
+                <div class="divider"></div>
+                <button class="print-btn" onclick="window.print()">Print / Save as PDF</button>
+                <span id="story-status" style="font-size:0.85em;color:#888;font-style:italic;"></span>
+            </div>
+            <div id="story-output">
+                <p class="loading-msg">Building Fred's story…</p>
+            </div>
+        </div>
+    </main>
+
+    <script src="auth.js"></script>
+    <script src="toast.js"></script>
+    <script>
+    // ── Helpers ──
+    function fmtDate(d) {
+        if (!d) return '';
+        const dt = new Date(d + 'T00:00:00');
+        return dt.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+    }
+    function fmtNum(n) { return Number(n).toLocaleString(); }
+    function daysBetween(d1, d2) { return Math.round((new Date(d2) - new Date(d1)) / 86400000); }
+
+    const levelGradients = {
+        Gold:   'conic-gradient(#FFD700 0%, #DAA520 40%, #FFD700 70%, #B8860B 100%)',
+        Silver: 'conic-gradient(#C0C0C0 0%, #A8A8A8 40%, #D8D8D8 70%, #A0A0A0 100%)',
+        Bronze: 'conic-gradient(#CD7F32 0%, #A0522D 40%, #CD7F32 70%, #8B4513 100%)',
+        Member: 'conic-gradient(#3182ce 0%, #1e3a5f 50%, #3182ce 100%)',
+    };
+    const levelEmoji = { Gold: '🥇', Silver: '🥈', Bronze: '🥉', Member: '🏅' };
+
+    // ── Render chapters (from AI or auto-generated) into the story shell ──
+    function renderStory(coverHtml, statStripHtml, chaptersHtml) {
+        document.getElementById('story-output').innerHTML = `
+        <div class="story-doc">
+            ${coverHtml}
+            ${statStripHtml}
+            ${chaptersHtml}
+        </div>`;
+    }
+
+    function buildCoverHtml(clubData, firstDate) {
+        const clubLevel = clubData.level || 'None';
+        const hasBadge  = clubLevel !== 'None';
+        const badgeHtml = hasBadge
+            ? `<div class="story-cover-badge" style="background:${levelGradients[clubLevel]};" title="${clubLevel} member of the 10,000 Steps Club">${levelEmoji[clubLevel]}</div>`
+            : '';
+        const reportDateStr = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+        return `
+        <div class="story-cover">
+            <div class="story-cover-photo-wrap">
+                <img src="/images/fred.jpg" alt="Fred">
+                ${badgeHtml}
+            </div>
+            <div class="story-title">Fred's Story</div>
+            <div class="story-subtitle">A journey of recovery, resilience, and renewal</div>
+            <div class="story-meta">Written ${reportDateStr}${firstDate ? ` &bull; Journey began ${fmtDate(firstDate)}` : ''}</div>
+        </div>`;
+    }
+
+    function buildStatStrip(totalDays, totalSteps, exerciseDays, tenKDays, numAchievements) {
+        return `<div class="story-stat-strip">
+            ${totalDays > 0 ? `<div class="story-stat-chip"><span class="story-stat-val">${totalDays}</span><span class="story-stat-lbl">Days of Journey</span></div>` : ''}
+            ${totalSteps > 0 ? `<div class="story-stat-chip"><span class="story-stat-val">${fmtNum(totalSteps)}</span><span class="story-stat-lbl">Total Steps</span></div>` : ''}
+            ${exerciseDays > 0 ? `<div class="story-stat-chip green"><span class="story-stat-val">${exerciseDays}</span><span class="story-stat-lbl">Exercise Days</span></div>` : ''}
+            ${tenKDays > 0 ? `<div class="story-stat-chip gold"><span class="story-stat-val">${tenKDays}</span><span class="story-stat-lbl">10K Step Days</span></div>` : ''}
+            ${numAchievements > 0 ? `<div class="story-stat-chip orange"><span class="story-stat-val">${numAchievements}</span><span class="story-stat-lbl">Achievements</span></div>` : ''}
+        </div>`;
+    }
+
+    // ── Render AI-generated chapters ──
+    function renderAiChapters(aiData) {
+        return aiData.chapters.map(ch => `
+            <div class="story-chapter">
+                <div class="story-chapter-title"><span class="story-chapter-num">${ch.icon} ${ch.num}</span> ${ch.title}</div>
+                <div class="story-body">
+                    ${ch.paragraphs.map(p => `<p>${p}</p>`).join('')}
+                </div>
+            </div>`).join('');
+    }
+
+    // ── Style selection ──
+    let currentStyle = localStorage.getItem('storyStyle') || 'factual';
+
+    const styleLabels = {
+        factual:  'Factual',
+        prose:    'Prose',
+        children: "Children's",
+    };
+
+    function setControlsDisabled(disabled) {
+        ['factual', 'prose', 'children'].forEach(s => {
+            document.getElementById('btn-' + s).disabled = !!disabled;
+        });
+        document.getElementById('generate-btn').disabled = !!disabled;
+    }
+
+    function setStyleButtons(activeStyle) {
+        ['factual', 'prose', 'children'].forEach(s => {
+            document.getElementById('btn-' + s).classList.toggle('active', s === activeStyle);
+        });
+    }
+
+    // Selecting a style just highlights it and loads any existing cached/auto story
+    async function selectStyle(style) {
+        currentStyle = style;
+        localStorage.setItem('storyStyle', style);
+        setStyleButtons(style);
+
+        const status = document.getElementById('story-status');
+        setControlsDisabled(true);
+        status.textContent = 'Loading…';
+
+        try {
+            const cacheRes = await fetch(`/api/story/cache?style=${style}`);
+            const cached   = await cacheRes.json();
+
+            if (cached && cached.chapters) {
+                await buildStory(cached);
+                status.textContent = `Showing saved ${styleLabels[style]} story — click Generate Story to refresh.`;
+            } else {
+                // No AI story for this style yet — show auto version
+                await buildStory(null);
+                status.textContent = `No ${styleLabels[style]} story yet — click Generate Story to create one.`;
+            }
+        } catch (err) {
+            showToast('Error loading story: ' + err.message, 'error');
+        } finally {
+            setControlsDisabled(false);
+        }
+    }
+
+    // Generate button — explicitly calls AI for the currently selected style
+    async function generateStory() {
+        const style  = currentStyle;
+        const status = document.getElementById('story-status');
+        const genBtn = document.getElementById('generate-btn');
+
+        setControlsDisabled(true);
+        genBtn.textContent = 'Generating…';
+        status.textContent = `Claude is writing the ${styleLabels[style]} story…`;
+        status.style.color = '#888';
+
+        try {
+            const res = await fetch('/api/story/generate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ style })
+            });
+            const data = await res.json();
+            if (!res.ok) {
+                const msg = data.error || 'Failed to generate story.';
+                status.textContent = 'Error: ' + msg;
+                status.style.color = 'red';
+                return;
+            }
+            await buildStory(data);
+            status.textContent = `${styleLabels[style]} story generated with AI.`;
+            status.style.color = '#27ae60';
+        } catch (err) {
+            showToast('Error generating story: ' + err.message, 'error');
+            status.textContent = '';
+        } finally {
+            genBtn.textContent = '✨ Generate Story';
+            setControlsDisabled(false);
+        }
+    }
+
+    // ── Build media gallery from achievement updates ──
+    async function buildMediaGallery(achievements) {
+        let hasAnyMedia = false;
+        let galleryInner = '';
+
+        for (const ach of achievements) {
+            const updates = await fetch(`/api/achievement-updates/${ach.id}`).then(r => r.json());
+            let achMediaHtml = '';
+            for (const upd of updates) {
+                const media = upd.media || [];
+                if (media.length === 0) continue;
+                hasAnyMedia = true;
+                for (const m of media) {
+                    const dateStr = upd.update_date
+                        ? new Date(upd.update_date + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+                        : '';
+                    if (m.media_type === 'photo') {
+                        achMediaHtml += `
+                        <div class="story-gallery-item">
+                            <a href="${m.filepath}" target="_blank" title="View full size">
+                                <img class="story-gallery-img" src="${m.filepath}" alt="Photo" loading="lazy">
+                            </a>
+                            ${dateStr ? `<div class="story-gallery-caption">${dateStr}</div>` : ''}
+                        </div>`;
+                    } else {
+                        achMediaHtml += `
+                        <div class="story-gallery-item">
+                            <a href="${m.filepath}" target="_blank" title="Open video">
+                                <div class="story-gallery-video-thumb">▶</div>
+                            </a>
+                            ${dateStr ? `<div class="story-gallery-caption">${dateStr}</div>` : ''}
+                        </div>`;
+                    }
+                }
+            }
+            if (achMediaHtml) {
+                galleryInner += `<div class="story-gallery-ach-title">${ach.name}</div>
+                <div class="story-gallery-grid">${achMediaHtml}</div>`;
+            }
+        }
+
+        if (!hasAnyMedia) return '';
+        return `
+        <div class="story-gallery-chapter">
+            <div class="story-chapter-title"><span class="story-chapter-num">📷 Gallery</span> Photos &amp; Videos</div>
+            ${galleryInner}
+        </div>`;
+    }
+
+    // ── Main build ──
+    async function buildStory(aiData) {
+        try {
+            const [stepsAll, clubData, exercises, achievements] = await Promise.all([
+                fetch('/api/steps').then(r => r.json()),
+                fetch('/api/steps/club-status').then(r => r.json()),
+                fetch('/api/exercises').then(r => r.json()),
+                fetch('/api/achievements').then(r => r.json()),
+            ]);
+
+            // Stats for cover/strip
+            const allDates   = stepsAll.map(s => s.date).sort();
+            const firstDate  = allDates[0] || null;
+            const lastDate   = allDates[allDates.length - 1] || null;
+            const totalDays  = firstDate && lastDate ? daysBetween(firstDate, lastDate) + 1 : 0;
+            const totalSteps = stepsAll.reduce((s, r) => s + r.quantity, 0);
+            const exDays     = exercises.filter(e => e.done === 'yes').length;
+            const tenKDays   = stepsAll.filter(r => r.quantity >= 10000).length;
+
+            const coverHtml     = buildCoverHtml(clubData, firstDate);
+            const statStripHtml = buildStatStrip(totalDays, totalSteps, exDays, tenKDays, achievements.length);
+            const galleryHtml   = await buildMediaGallery(achievements);
+
+            let chaptersHtml;
+
+            if (aiData && aiData.chapters) {
+                chaptersHtml = renderAiChapters(aiData);
+            } else {
+                const cacheRes = await fetch(`/api/story/cache?style=${currentStyle}`);
+                const cached   = await cacheRes.json();
+
+                if (cached && cached.chapters) {
+                    chaptersHtml = renderAiChapters(cached);
+                    document.getElementById('story-status').textContent = `Showing ${styleLabels[currentStyle]} story. Click the same button to regenerate.`;
+                } else {
+                    chaptersHtml = buildAutoChapters(stepsAll, clubData, exercises, achievements);
+                    const notesRes = await fetch('/api/story-sections');
+                    const notes    = await notesRes.json();
+                    if (notes.length > 0) {
+                        document.getElementById('story-status').textContent = 'Fred has written notes — select a style above to generate with AI.';
+                    } else {
+                        document.getElementById('story-status').textContent = 'Add notes in Data Management, then select a style to generate.';
+                    }
+                }
+            }
+
+            renderStory(coverHtml, statStripHtml, chaptersHtml + galleryHtml);
+
+        } catch (err) {
+            console.error('Error building story:', err);
+            document.getElementById('story-output').innerHTML = `<p style="color:red;text-align:center;">Failed to load story data. Please try refreshing the page.</p>`;
+        }
+    }
+
+    // ── Auto-generated chapters (no AI, no notes) ──
+    function buildAutoChapters(stepsAll, clubData, exercises, achievements) {
+        const allDates    = stepsAll.map(s => s.date).sort();
+        const firstDate   = allDates[0] || null;
+        const lastDate    = allDates[allDates.length - 1] || null;
+        const totalDays   = firstDate && lastDate ? daysBetween(firstDate, lastDate) + 1 : 0;
+        const totalWeeks  = Math.floor(totalDays / 7);
+        const totalSteps  = stepsAll.reduce((s, r) => s + r.quantity, 0);
+        const activeDays  = stepsAll.filter(r => r.quantity > 0);
+        const avgSteps    = activeDays.length > 0 ? Math.round(totalSteps / activeDays.length) : 0;
+        const bestDay     = stepsAll.reduce((b, r) => r.quantity > (b ? b.quantity : 0) ? r : b, null);
+        const tenKDays    = stepsAll.filter(r => r.quantity >= 10000).length;
+        const clubLevel   = clubData.level || 'None';
+        const clubCount   = clubData.count || 0;
+        const exDays      = exercises.filter(e => e.done === 'yes').length;
+        const wtDays      = exercises.filter(e => e.weights_done === 'yes').length;
+        const exPct       = exercises.length > 0 ? Math.round((exDays / exercises.length) * 100) : 0;
+
+        const journeySpan = totalDays > 0
+            ? `${totalDays} days (${totalWeeks} week${totalWeeks !== 1 ? 's' : ''})`
+            : 'journey in progress';
+
+        const ch = (num, icon, title, body) => `
+            <div class="story-chapter">
+                <div class="story-chapter-title"><span class="story-chapter-num">${icon} ${num}</span> ${title}</div>
+                <div class="story-body">${body}</div>
+            </div>`;
+
+        let ch1 = firstDate
+            ? `<p>Fred's rehabilitation journey began on <strong>${fmtDate(firstDate)}</strong>. Over the course of ${journeySpan}, he has shown extraordinary dedication to getting back on his feet.</p><p>His records tell the story of someone who kept showing up, even on the hard days.</p>`
+            : `<p>Fred's rehabilitation journey is just beginning. The records in this app will chart his progress from here.</p>`;
+
+        let ch2 = totalSteps > 0
+            ? `<p>Fred has logged a total of <strong>${fmtNum(totalSteps)} steps</strong> across his programme.` +
+              (avgSteps > 0 ? ` On his active days he averaged <strong>${fmtNum(avgSteps)} steps</strong>.` : '') + `</p>` +
+              (bestDay ? `<p>His best single day was <strong>${fmtDate(bestDay.date)}</strong> — <strong>${fmtNum(bestDay.quantity)} steps</strong>.${bestDay.comments ? ` He noted: <em>"${bestDay.comments}"</em>` : ''}</p>` : '') +
+              (clubLevel !== 'None' ? `<div class="story-pullquote gold">Fred is a <strong>${clubLevel} member of the 10,000 Steps Club</strong>, having hit 10,000 or more steps on <strong>${clubCount} days</strong>.</div>` : '')
+            : `<p>Step tracking is an important part of Fred's programme. As records are added, this chapter will grow.</p>`;
+
+        let ch3 = exercises.length > 0
+            ? `<p>Fred has logged exercise on <strong>${exDays} day${exDays !== 1 ? 's' : ''}</strong> — a compliance rate of <strong>${exPct}%</strong>.` +
+              (wtDays > 0 ? ` He has completed strength sessions on <strong>${wtDays} day${wtDays !== 1 ? 's' : ''}</strong>.` : '') + `</p>` +
+              (exPct >= 80 ? `<div class="story-pullquote green">An exercise compliance of ${exPct}% is excellent — consistency like this drives lasting recovery.</div>` : '')
+            : `<p>Exercise records will be captured here as Fred's programme progresses.</p>`;
+
+        let ch4 = achievements.length > 0
+            ? `<p>Fred has recorded <strong>${achievements.length} personal achievement${achievements.length !== 1 ? 's' : ''}</strong> during his recovery:</p>` +
+              achievements.map(a => `<div class="story-achievement"><div class="story-achievement-title">${a.name}</div>${a.description ? `<div class="story-achievement-desc">${a.description}</div>` : ''}</div>`).join('')
+            : `<p>Fred's achievements will be recorded here as he reaches new milestones.</p>`;
+
+        return [
+            ch('Chapter One',   '📖', 'The Beginning',            ch1),
+            ch('Chapter Two',   '👟', 'Steps & Movement',         ch2),
+            ch('Chapter Three', '💪', 'Exercise & Strength',      ch3),
+            ch('Chapter Four',  '🏅', 'Milestones & Achievements',ch4),
+        ].join('');
+    }
+
+    window.onload = () => {
+        setStyleButtons(currentStyle);
+        buildStory(null);
+    };
+    </script>
+</body>
+</html>
