@@ -18,6 +18,7 @@
         {
             label: 'Progress',
             items: [
+                { href: '/ask.html',                  label: 'Ask a Question' },
                 { href: '/achievements.html',         label: 'Achievements' },
                 { href: '/milestones.html',           label: 'Fun Milestones' },
                 { href: '/report.html',               label: 'Progress Report' },
