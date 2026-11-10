@@ -52,6 +52,10 @@
             font-size: 0.75em; font-weight: 700; padding: 0.1em 0.5em; margin-left: 0.4em;
         }
         .map-link { font-size: 0.85em; }
+        .runs-map { height: 360px; border-radius: var(--radius-md); border: 1px solid var(--border); }
+        .pick-map { height: 230px; border-radius: var(--radius-md); border: 1px solid var(--border); margin-top: 0.5em; }
+        .map-info { font-size: 0.9em; line-height: 1.5; color: #2d3748; }
+        .map-info a { color: var(--accent-dark); }
         .row-actions { white-space: nowrap; }
         .row-actions button { padding: 0.3em 0.6em; font-size: 0.8em; margin: 0 0.15em; }
         .row-actions .del { background: var(--danger); }
@@ -120,6 +124,8 @@
                             </div>
                             <datalist id="location-list"></datalist>
                             <div class="gps-note" id="gps-note"></div>
+                            <div id="pick-map" class="pick-map" hidden></div>
+                            <div id="pick-hint" class="hint" hidden><span data-translate="Tap the map to set where the run was, or drag the pin.">Tap the map to set where the run was, or drag the pin.</span> <a href="#" id="clear-pos" data-translate="Clear position">Clear position</a></div>
                         </div>
                         <div class="full">
                             <label for="run-notes"><span data-translate="Notes:">Notes:</span> <span class="hint" data-translate="(optional)">(optional)</span></label>
@@ -142,6 +148,12 @@
                 <div id="chart-empty" class="empty-note" style="display:none" data-translate="No runs logged yet.">No runs logged yet.</div>
                 <div class="chart-box" id="chart-box"><canvas id="runs-chart" aria-label="Line chart of Fred's 5k finish times"></canvas></div>
                 <p class="chart-note" data-translate="Lower is faster. Gold dots are new personal bests; the dashed line shows the overall trend.">Lower is faster. Gold dots are new personal bests; the dashed line shows the overall trend.</p>
+            </section>
+
+            <section class="runs-block" id="map-section" hidden>
+                <h2 data-translate="Where Fred Has Run">Where Fred Has Run</h2>
+                <div id="runs-map" class="runs-map"></div>
+                <p class="chart-note" id="map-note"></p>
             </section>
 
             <section class="runs-block">
@@ -246,6 +258,148 @@
             renderStats();
             renderChart();
             renderTable();
+            renderMap();
+        }
+
+        // ── Google Maps ──
+        const STOKE = { lat: 53.0027, lng: -2.1794 };
+        let mapsPromise = null, mapsFailed = false;
+        let runsMap = null, runsMarkers = [], infoWindow = null, pickMap = null, pickMarker = null;
+
+        function googleMapsLink(lat, lng) {
+            return `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+        }
+
+        // Google calls this if the key is wrong or not allowed for this site.
+        window.gm_authFailure = () => {
+            mapsFailed = true;
+            document.getElementById('map-note').textContent = t('Google Maps rejected the map key. Check GOOGLE_MAPS_API_KEY and its website restrictions.');
+        };
+
+        function loadGoogleMaps() {
+            if (mapsPromise) return mapsPromise;
+            mapsPromise = fetch('/api/runs/map-config')
+                .then(res => res.ok ? res.json() : {})
+                .then(cfg => {
+                    if (!cfg.googleMapsApiKey) return null;
+                    return new Promise(resolve => {
+                        window.__runsMapsLoaded = () => resolve(window.google);
+                        const script = document.createElement('script');
+                        script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(cfg.googleMapsApiKey)}&callback=__runsMapsLoaded&loading=async&v=weekly`;
+                        script.async = true;
+                        script.onerror = () => resolve(null);
+                        document.head.appendChild(script);
+                    });
+                })
+                .catch(() => null);
+            return mapsPromise;
+        }
+
+        // One pin per place: runs are grouped by location name, or by position if unnamed.
+        function locationGroups(list) {
+            const groups = new Map();
+            for (const r of list) {
+                if (r.latitude == null) continue;
+                const key = (r.location || '').trim().toLowerCase() || `${r.latitude.toFixed(3)},${r.longitude.toFixed(3)}`;
+                if (!groups.has(key)) groups.set(key, { name: r.location || t('Unnamed place'), runs: [] });
+                const g = groups.get(key);
+                g.runs.push(r);
+                g.lat = r.latitude; g.lng = r.longitude; // latest position wins
+            }
+            return [...groups.values()];
+        }
+
+        async function renderMap() {
+            const google = await loadGoogleMaps();
+            const box = document.getElementById('runs-map');
+            const note = document.getElementById('map-note');
+            // No key configured: leave the map section hidden.
+            if (!google) return;
+            document.getElementById('map-section').hidden = false;
+            if (!runsMap) {
+                runsMap = new google.maps.Map(box, { center: STOKE, zoom: 11, mapTypeControl: false, streetViewControl: false });
+                infoWindow = new google.maps.InfoWindow();
+            }
+            runsMarkers.forEach(m => m.setMap(null));
+            runsMarkers = [];
+            infoWindow.close();
+
+            const list = filteredRuns();
+            const groups = locationGroups(list);
+            const bestOverall = runs.length ? Math.min(...runs.map(r => r.duration_seconds)) : null;
+            const bounds = new google.maps.LatLngBounds();
+            for (const g of groups) {
+                const best = Math.min(...g.runs.map(r => r.duration_seconds));
+                const last = g.runs[g.runs.length - 1];
+                const marker = new google.maps.Marker({
+                    map: runsMap,
+                    position: { lat: g.lat, lng: g.lng },
+                    title: g.name,
+                    label: g.runs.length > 1 ? { text: String(g.runs.length), color: '#fff', fontWeight: '700' } : undefined,
+                });
+                marker.addListener('click', () => {
+                    infoWindow.setContent(`<div class="map-info"><strong>${escapeHtml(g.name)}</strong><br>
+                        ${g.runs.length} ${t(g.runs.length === 1 ? 'run' : 'runs')} · ${t('best')} ${formatDuration(best)}${best === bestOverall ? ' 🏅' : ''}<br>
+                        ${t('Last run')}: ${formatDate(last.date)}<br>
+                        <a target="_blank" rel="noopener" href="${googleMapsLink(g.lat, g.lng)}">${t('Open in Google Maps')}</a></div>`);
+                    infoWindow.open({ anchor: marker, map: runsMap });
+                });
+                runsMarkers.push(marker);
+                bounds.extend(marker.getPosition());
+            }
+            if (groups.length === 1) { runsMap.setCenter(bounds.getCenter()); runsMap.setZoom(14); }
+            else if (groups.length > 1) runsMap.fitBounds(bounds, 40);
+            else { runsMap.setCenter(STOKE); runsMap.setZoom(11); }
+
+            if (mapsFailed) return;
+            const missing = list.filter(r => r.latitude == null).length;
+            note.textContent = !groups.length
+                ? t('No map positions yet. When logging a run, tap the map or use "Use my location".')
+                : missing
+                    ? `${t('Tap a pin to see the runs there.')} ${missing} ${t('run(s) have no position yet: edit them and tap the map to add one.')}`
+                    : t('Tap a pin to see the runs there.');
+        }
+
+        async function initPickMap() {
+            if (window.userRole !== 'editor') return;
+            const google = await loadGoogleMaps();
+            if (!google) return;
+            const el = document.getElementById('pick-map');
+            el.hidden = false;
+            document.getElementById('pick-hint').hidden = false;
+            pickMap = new google.maps.Map(el, { center: STOKE, zoom: 12, mapTypeControl: false, streetViewControl: false, fullscreenControl: false, clickableIcons: false });
+            pickMap.addListener('click', e => setPosition(e.latLng.lat(), e.latLng.lng(), t('Map position set.')));
+            syncPickMarker();
+        }
+
+        function setPosition(lat, lng, message) {
+            gpsCoords = lat == null ? null : { latitude: Math.round(lat * 1e5) / 1e5, longitude: Math.round(lng * 1e5) / 1e5 };
+            document.getElementById('gps-note').textContent = message || '';
+            syncPickMarker();
+        }
+
+        function syncPickMarker() {
+            if (!pickMap) return;
+            if (!gpsCoords) {
+                if (pickMarker) pickMarker.setMap(null);
+                return;
+            }
+            const pos = { lat: gpsCoords.latitude, lng: gpsCoords.longitude };
+            if (!pickMarker) {
+                pickMarker = new google.maps.Marker({ position: pos, draggable: true });
+                pickMarker.addListener('dragend', e => setPosition(e.latLng.lat(), e.latLng.lng(), t('Map position set.')));
+            }
+            pickMarker.setPosition(pos);
+            pickMarker.setMap(pickMap);
+            pickMap.panTo(pos);
+            if (pickMap.getZoom() < 14) pickMap.setZoom(15);
+        }
+
+        // Reuse the position of an earlier run at the same named place.
+        function knownPosition(name) {
+            const key = (name || '').trim().toLowerCase();
+            if (!key) return null;
+            return [...runs].reverse().find(r => r.latitude != null && (r.location || '').trim().toLowerCase() === key) || null;
         }
 
         // ── Summary tiles ──
@@ -384,7 +538,7 @@
             tbody.innerHTML = list.slice().reverse().map(r => {
                 const badge = r.duration_seconds === best ? `<span class="pb-badge">PB</span>` : '';
                 const map = r.latitude != null
-                    ? ` <a class="map-link" target="_blank" rel="noopener" href="https://www.openstreetmap.org/?mlat=${r.latitude}&mlon=${r.longitude}#map=15/${r.latitude}/${r.longitude}">${t('map')}</a>` : '';
+                    ? ` <a class="map-link" target="_blank" rel="noopener" href="${googleMapsLink(r.latitude, r.longitude)}">${t('map')}</a>` : '';
                 const L = k => `data-label="${escapeHtml(t(k))}"`;
                 return `<tr>
                     <td class="num" ${L('Date')}>${formatDate(r.date)}${r.start_time ? ' ' + r.start_time : ''}</td>
@@ -404,8 +558,8 @@
         function resetForm() {
             form.reset();
             editingId = null;
-            gpsCoords = null;
-            document.getElementById('gps-note').textContent = '';
+            setPosition(null);
+            if (pickMap) { pickMap.setCenter(STOKE); pickMap.setZoom(12); }
             document.getElementById('run-date').value = new Date().toLocaleDateString('en-CA');
             document.getElementById('form-title').textContent = t('Log a Run');
             document.getElementById('save-btn').textContent = t('Save Run');
@@ -422,8 +576,8 @@
             document.getElementById('run-effort').value = r.effort ?? '';
             document.getElementById('run-location').value = r.location || '';
             document.getElementById('run-notes').value = r.notes || '';
-            gpsCoords = r.latitude != null ? { latitude: r.latitude, longitude: r.longitude } : null;
-            document.getElementById('gps-note').textContent = gpsCoords ? t('Map position saved.') : '';
+            if (r.latitude != null) setPosition(r.latitude, r.longitude, t('Map position saved.'));
+            else setPosition(null, null, pickMap ? t('No position yet: tap the map to add one.') : '');
             document.getElementById('form-title').textContent = t('Edit Run');
             document.getElementById('save-btn').textContent = t('Save Changes');
             document.getElementById('cancel-edit-btn').style.display = '';
@@ -450,6 +604,10 @@
                 showToast(t('Please enter the finish time as minutes:seconds, e.g. 28:45.'), 'warning');
                 document.getElementById('run-duration').focus();
                 return;
+            }
+            if (!gpsCoords) {
+                const known = knownPosition(document.getElementById('run-location').value);
+                if (known) setPosition(known.latitude, known.longitude);
             }
             const body = {
                 date: document.getElementById('run-date').value,
@@ -480,18 +638,22 @@
         });
 
         document.getElementById('cancel-edit-btn').onclick = resetForm;
-        document.getElementById('location-filter').onchange = () => { renderChart(); renderTable(); };
+        document.getElementById('location-filter').onchange = () => { renderChart(); renderTable(); renderMap(); };
+
+        document.getElementById('run-location').addEventListener('change', e => {
+            if (gpsCoords) return;
+            const known = knownPosition(e.target.value);
+            if (known) setPosition(known.latitude, known.longitude, t('Using the saved position for this place.'));
+        });
+
+        document.getElementById('clear-pos').onclick = (e) => { e.preventDefault(); setPosition(null); };
 
         document.getElementById('gps-btn').onclick = () => {
             const note = document.getElementById('gps-note');
             if (!navigator.geolocation) { note.textContent = t('Location is not available on this device.'); return; }
             note.textContent = t('Finding your location…');
             navigator.geolocation.getCurrentPosition(pos => {
-                gpsCoords = {
-                    latitude: Math.round(pos.coords.latitude * 1e5) / 1e5,
-                    longitude: Math.round(pos.coords.longitude * 1e5) / 1e5,
-                };
-                note.textContent = t('Map position saved.');
+                setPosition(pos.coords.latitude, pos.coords.longitude, t('Map position saved.'));
                 const loc = document.getElementById('run-location');
                 if (!loc.value) loc.value = `${gpsCoords.latitude}, ${gpsCoords.longitude}`;
             }, () => {
@@ -531,6 +693,7 @@
             resetForm();
             await loadRuns();
             setLanguage(currentLang);
+            initPickMap();
         };
     </script>
 </body>
