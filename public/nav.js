@@ -12,6 +12,7 @@
             items: [
                 { href: '/history.html',              label: 'History' },
                 { href: '/steps-graph.html',          label: 'Steps Graph' },
+                { href: '/runs.html',                 label: '5k Runs' },
                 { href: '/calendar-view.html',        label: 'Calendar' },
             ]
         },

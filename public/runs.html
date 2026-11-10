@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title data-translate="Fred's 5k Runs">Fred's 5k Runs</title>
+    <script src="chart.min.js"></script>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .runs-page { width: 100%; max-width: 900px; margin: 0 auto; }
+        .runs-page h2 { margin-bottom: 0.6em; }
+        .runs-block { margin-bottom: 2em; }
+
+        .run-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0.8em; }
+        .run-stat {
+            background: var(--bg); border-radius: var(--radius-md); padding: 0.9em 1em;
+            border-left: 4px solid var(--primary);
+        }
+        .run-stat.pb { border-left-color: #d69e2e; }
+        .run-stat-label { font-size: 0.75em; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+        .run-stat-value { font-size: 1.6em; font-weight: 700; color: var(--primary); font-variant-numeric: tabular-nums; }
+        .run-stat-sub { font-size: 0.8em; color: var(--text-muted); }
+
+        .run-form { padding: 1.2em; margin: 0; max-width: none; }
+        .run-form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0 1.2em; }
+        .run-form .full { grid-column: 1 / -1; }
+        .run-form input[type="time"], .run-form textarea {
+            width: 100%; padding: 0.6em; border: 1px solid var(--border); border-radius: var(--radius-sm);
+            font: inherit; box-sizing: border-box;
+        }
+        .run-form textarea { min-height: 3.5em; resize: vertical; }
+        .location-row { display: flex; gap: 0.5em; align-items: center; flex-wrap: wrap; }
+        .location-row input { flex: 1 1 200px; min-width: 0; margin: 0; }
+        .location-row button { flex: 0 0 auto; width: auto; margin: 0; white-space: nowrap; padding: 0.55em 0.9em; font-size: 0.85em; }
+        .gps-note { font-size: 0.8em; color: var(--text-muted); margin-top: 0.3em; min-height: 1.2em; }
+        .hint { font-size: 0.8em; color: var(--text-muted); font-weight: normal; }
+        .form-actions { display: flex; gap: 0.6em; flex-wrap: wrap; }
+        .btn-secondary { background: #a0aec0; }
+        .btn-secondary:hover { background: #718096; }
+
+        .chart-controls { display: flex; gap: 0.6em; align-items: center; flex-wrap: wrap; margin-bottom: 0.8em; }
+        .chart-controls label { margin: 0; }
+        .chart-controls select { width: auto; }
+        .chart-box { position: relative; height: 320px; }
+        .chart-note { font-size: 0.8em; color: var(--text-muted); margin-top: 0.4em; }
+        .empty-note { color: var(--text-muted); font-style: italic; padding: 1em 0; }
+
+        .runs-table-wrap { overflow-x: auto; }
+        .runs-table td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+        .pb-badge {
+            display: inline-block; background: #fefcbf; color: #744210; border-radius: 10px;
+            font-size: 0.75em; font-weight: 700; padding: 0.1em 0.5em; margin-left: 0.4em;
+        }
+        .map-link { font-size: 0.85em; }
+        .row-actions { white-space: nowrap; }
+        .row-actions button { padding: 0.3em 0.6em; font-size: 0.8em; margin: 0 0.15em; }
+        .row-actions .del { background: var(--danger); }
+
+        @media (max-width: 600px) {
+            main { padding: 1em; margin: 0.5em; }
+            .chart-box { height: 260px; }
+            .run-stat-value { font-size: 1.3em; }
+            /* Table becomes one card per run */
+            .runs-table thead { display: none; }
+            .runs-table, .runs-table tbody, .runs-table tr, .runs-table td { display: block; width: 100%; box-sizing: border-box; }
+            .runs-table tr { border: 1px solid var(--border); border-radius: var(--radius-md); margin-bottom: 0.7em; padding: 0.5em 0.8em; }
+            .runs-table td { border: none; padding: 0.2em 0; display: flex; gap: 0.8em; }
+            .runs-table td::before { content: attr(data-label); flex: 0 0 5.5em; color: var(--text-muted); font-size: 0.85em; }
+            .runs-table td:empty, .runs-table td.blank { display: none; }
+            .runs-table td.row-actions::before { content: ''; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1 data-translate="Fred's 5k Runs">Fred's 5k Runs</h1>
+        <nav id="main-nav"></nav>
+        <script src="/nav.js"></script>
+    </header>
+
+    <main>
+        <div class="runs-page">
+
+            <section class="runs-block">
+                <div class="run-stats" id="run-stats"></div>
+            </section>
+
+            <section class="runs-block editor-only" id="log-section">
+                <h2 id="form-title" data-translate="Log a Run">Log a Run</h2>
+                <form id="run-form" class="run-form" autocomplete="off">
+                    <div class="run-form-grid">
+                        <div>
+                            <label for="run-date" data-translate="Date:">Date:</label>
+                            <input type="date" id="run-date" required>
+                        </div>
+                        <div>
+                            <label for="run-start"><span data-translate="Start time:">Start time:</span> <span class="hint" data-translate="(optional)">(optional)</span></label>
+                            <input type="time" id="run-start">
+                        </div>
+                        <div>
+                            <label for="run-duration"><span data-translate="Finish time:">Finish time:</span> <span class="hint">mm:ss</span></label>
+                            <input type="text" id="run-duration" placeholder="28:45" inputmode="numeric" required>
+                        </div>
+                        <div>
+                            <label for="run-effort"><span data-translate="How hard did it feel?">How hard did it feel?</span> <span class="hint">1–10</span></label>
+                            <select id="run-effort">
+                                <option value="">–</option>
+                                <option value="1">1 – Very easy</option>
+                                <option value="2">2</option><option value="3">3</option><option value="4">4</option>
+                                <option value="5">5 – Moderate</option>
+                                <option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option>
+                                <option value="10">10 – Flat out</option>
+                            </select>
+                        </div>
+                        <div class="full">
+                            <label for="run-location" data-translate="Location:">Location:</label>
+                            <div class="location-row">
+                                <input type="text" id="run-location" list="location-list" maxlength="200" data-translate-placeholder="e.g. Hanley Park parkrun" placeholder="e.g. Hanley Park parkrun">
+                                <button type="button" id="gps-btn" data-translate="Use my location">Use my location</button>
+                            </div>
+                            <datalist id="location-list"></datalist>
+                            <div class="gps-note" id="gps-note"></div>
+                        </div>
+                        <div class="full">
+                            <label for="run-notes"><span data-translate="Notes:">Notes:</span> <span class="hint" data-translate="(optional)">(optional)</span></label>
+                            <textarea id="run-notes" maxlength="1000"></textarea>
+                        </div>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" id="save-btn" data-translate="Save Run">Save Run</button>
+                        <button type="button" id="cancel-edit-btn" class="btn-secondary" style="display:none" data-translate="Cancel">Cancel</button>
+                    </div>
+                </form>
+            </section>
+
+            <section class="runs-block">
+                <h2 data-translate="Finish Times">Finish Times</h2>
+                <div class="chart-controls">
+                    <label for="location-filter" data-translate="Location:">Location:</label>
+                    <select id="location-filter"><option value="" data-translate="All locations">All locations</option></select>
+                </div>
+                <div id="chart-empty" class="empty-note" style="display:none" data-translate="No runs logged yet.">No runs logged yet.</div>
+                <div class="chart-box" id="chart-box"><canvas id="runs-chart" aria-label="Line chart of Fred's 5k finish times"></canvas></div>
+                <p class="chart-note" data-translate="Lower is faster. Gold dots are new personal bests; the dashed line shows the overall trend.">Lower is faster. Gold dots are new personal bests; the dashed line shows the overall trend.</p>
+            </section>
+
+            <section class="runs-block">
+                <h2 data-translate="All Runs">All Runs</h2>
+                <div class="runs-table-wrap">
+                    <table class="runs-table">
+                        <thead>
+                            <tr>
+                                <th data-translate="Date">Date</th>
+                                <th data-translate="Time">Time</th>
+                                <th data-translate="Pace">Pace</th>
+                                <th data-translate="Location">Location</th>
+                                <th data-translate="Effort">Effort</th>
+                                <th data-translate="Notes">Notes</th>
+                                <th class="editor-only" data-translate="Action">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="runs-tbody"></tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <script src="auth.js"></script>
+    <script src="toast.js"></script>
+    <script src="translations.js"></script>
+    <script>
+        let currentLang = localStorage.getItem('preferredLanguage') || 'en';
+        let runs = [];
+        let chart = null;
+        let editingId = null;
+        let gpsCoords = null;
+
+        const t = (key) => (translations[currentLang] && translations[currentLang][key]) || key;
+
+        // ── Time helpers ──
+        function parseDuration(text) {
+            const parts = String(text).trim().split(':');
+            if (parts.length < 2 || parts.length > 3 || parts.some(p => !/^\d+$/.test(p))) return null;
+            const nums = parts.map(Number);
+            const [h, m, s] = nums.length === 3 ? nums : [0, ...nums];
+            if (s > 59 || (nums.length === 3 && m > 59)) return null;
+            const total = h * 3600 + m * 60 + s;
+            return total > 0 ? total : null;
+        }
+        function formatDuration(sec) {
+            const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = Math.round(sec % 60);
+            const mm = h ? String(m).padStart(2, '0') : String(m);
+            return (h ? h + ':' : '') + mm + ':' + String(s).padStart(2, '0');
+        }
+        function formatPace(sec, km) { return formatDuration(sec / km) + ' /km'; }
+        function formatDate(iso) {
+            return new Date(iso + 'T12:00:00').toLocaleDateString(currentLang === 'fr' ? 'fr-FR' : 'en-GB',
+                { day: 'numeric', month: 'short', year: 'numeric' });
+        }
+        function escapeHtml(s) {
+            return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        }
+
+        // Runs that set a new best at the time they were run.
+        function pbIds(list) {
+            const ids = new Set();
+            let best = Infinity;
+            for (const r of list) {
+                if (r.duration_seconds < best) { best = r.duration_seconds; ids.add(r.id); }
+            }
+            return ids;
+        }
+
+        function filteredRuns() {
+            const loc = document.getElementById('location-filter').value;
+            return loc ? runs.filter(r => (r.location || '') === loc) : runs;
+        }
+
+        // ── Load ──
+        async function loadRuns() {
+            try {
+                const res = await fetch('/api/runs');
+                if (!res.ok) throw new Error();
+                runs = await res.json();
+            } catch {
+                showToast(t('Could not load runs.'), 'error');
+                runs = [];
+            }
+            refreshLocations();
+            renderAll();
+        }
+
+        function refreshLocations() {
+            const locations = [...new Set(runs.map(r => r.location).filter(Boolean))].sort();
+            document.getElementById('location-list').innerHTML =
+                locations.map(l => `<option value="${escapeHtml(l)}"></option>`).join('');
+            const filter = document.getElementById('location-filter');
+            const current = filter.value;
+            filter.innerHTML = `<option value="">${escapeHtml(t('All locations'))}</option>` +
+                locations.map(l => `<option value="${escapeHtml(l)}">${escapeHtml(l)}</option>`).join('');
+            filter.value = locations.includes(current) ? current : '';
+        }
+
+        function renderAll() {
+            renderStats();
+            renderChart();
+            renderTable();
+        }
+
+        // ── Summary tiles ──
+        function renderStats() {
+            const el = document.getElementById('run-stats');
+            const list = runs;
+            if (!list.length) {
+                el.innerHTML = `<div class="run-stat"><div class="run-stat-label">${t('Total runs')}</div><div class="run-stat-value">0</div></div>`;
+                return;
+            }
+            const best = list.reduce((a, b) => b.duration_seconds < a.duration_seconds ? b : a);
+            const last5 = list.slice(-5);
+            const avg5 = last5.reduce((s, r) => s + r.duration_seconds, 0) / last5.length;
+            const first = list[0], latest = list[list.length - 1];
+            const diff = first.duration_seconds - latest.duration_seconds;
+            const diffText = list.length < 2 ? '–'
+                : (diff >= 0 ? '−' : '+') + formatDuration(Math.abs(diff));
+            el.innerHTML = `
+                <div class="run-stat"><div class="run-stat-label">${t('Total runs')}</div>
+                    <div class="run-stat-value">${list.length}</div>
+                    <div class="run-stat-sub">${(list.reduce((s, r) => s + r.distance_km, 0)).toFixed(1)} km</div></div>
+                <div class="run-stat pb"><div class="run-stat-label">${t('Personal best')}</div>
+                    <div class="run-stat-value">${formatDuration(best.duration_seconds)}</div>
+                    <div class="run-stat-sub">${formatDate(best.date)}${best.location ? ' · ' + escapeHtml(best.location) : ''}</div></div>
+                <div class="run-stat"><div class="run-stat-label">${t('Average of last 5')}</div>
+                    <div class="run-stat-value">${formatDuration(avg5)}</div>
+                    <div class="run-stat-sub">${formatPace(avg5, 5)}</div></div>
+                <div class="run-stat"><div class="run-stat-label">${t('Latest vs first run')}</div>
+                    <div class="run-stat-value">${diffText}</div>
+                    <div class="run-stat-sub">${list.length < 2 ? t('Needs two runs') : (diff >= 0 ? t('faster') : t('slower'))}</div></div>`;
+        }
+
+        // ── Chart ──
+        function renderChart() {
+            const list = filteredRuns();
+            const empty = list.length === 0;
+            document.getElementById('chart-empty').style.display = empty ? '' : 'none';
+            document.getElementById('chart-box').style.display = empty ? 'none' : '';
+            if (chart) { chart.destroy(); chart = null; }
+            if (empty) return;
+
+            const pbs = pbIds(list);
+            const xs = list.map(r => new Date(r.date + 'T12:00:00').getTime());
+            const points = list.map((r, i) => ({ x: xs[i], y: r.duration_seconds / 60, run: r }));
+
+            // Least-squares trend line across the runs shown.
+            let trend = [];
+            if (list.length >= 3) {
+                const n = xs.length, mx = xs.reduce((a, b) => a + b) / n, my = points.reduce((a, p) => a + p.y, 0) / n;
+                let num = 0, den = 0;
+                xs.forEach((x, i) => { num += (x - mx) * (points[i].y - my); den += (x - mx) ** 2; });
+                const slope = den ? num / den : 0;
+                trend = [xs[0], xs[n - 1]].map(x => ({ x, y: my + slope * (x - mx) }));
+            }
+
+            const ys = points.map(p => p.y);
+            const pad = Math.max(0.5, (Math.max(...ys) - Math.min(...ys)) * 0.15);
+            const navy = '#1e3a5f', gold = '#d69e2e';
+
+            chart = new Chart(document.getElementById('runs-chart'), {
+                type: 'line',
+                data: {
+                    datasets: [
+                        {
+                            label: t('Finish time'),
+                            data: points,
+                            borderColor: navy,
+                            borderWidth: 2,
+                            tension: 0,
+                            pointRadius: points.map(p => pbs.has(p.run.id) ? 7 : 4),
+                            pointHoverRadius: 9,
+                            pointBackgroundColor: points.map(p => pbs.has(p.run.id) ? gold : navy),
+                            pointBorderColor: '#fff',
+                            pointBorderWidth: 2,
+                        },
+                        {
+                            label: t('Trend'),
+                            data: trend,
+                            borderColor: '#a0aec0',
+                            borderDash: [6, 5],
+                            borderWidth: 2,
+                            pointRadius: 0,
+                            pointHoverRadius: 0,
+                        },
+                    ],
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { mode: 'nearest', intersect: false, axis: 'x' },
+                    scales: {
+                        x: {
+                            type: 'linear',
+                            min: xs[0] - 86400000 * 4, max: xs[xs.length - 1] + 86400000 * 4,
+                            ticks: { callback: v => new Date(v).toLocaleDateString(currentLang === 'fr' ? 'fr-FR' : 'en-GB', { day: 'numeric', month: 'short' }), maxTicksLimit: 8, color: '#718096' },
+                            grid: { display: false },
+                        },
+                        y: {
+                            min: Math.floor(Math.min(...ys) - pad),
+                            max: Math.ceil(Math.max(...ys) + pad),
+                            title: { display: true, text: t('Minutes'), color: '#718096' },
+                            ticks: { callback: v => formatDuration(v * 60), color: '#718096' },
+                            grid: { color: '#edf2f7' },
+                        },
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            filter: item => item.datasetIndex === 0,
+                            callbacks: {
+                                title: items => formatDate(items[0].raw.run.date),
+                                label: item => {
+                                    const r = item.raw.run;
+                                    return `${formatDuration(r.duration_seconds)}  (${formatPace(r.duration_seconds, r.distance_km)})` +
+                                        (pbs.has(r.id) ? '  ★ ' + t('New PB') : '');
+                                },
+                                afterLabel: item => item.raw.run.location || '',
+                            },
+                        },
+                    },
+                },
+            });
+        }
+
+        // ── Table ──
+        function renderTable() {
+            const tbody = document.getElementById('runs-tbody');
+            const list = filteredRuns();
+            const pbs = pbIds(runs);
+            const best = runs.length ? Math.min(...runs.map(r => r.duration_seconds)) : null;
+            const isEditor = window.userRole === 'editor';
+            if (!list.length) {
+                tbody.innerHTML = `<tr><td colspan="7" class="empty-note">${t('No runs logged yet.')}</td></tr>`;
+                return;
+            }
+            tbody.innerHTML = list.slice().reverse().map(r => {
+                const badge = r.duration_seconds === best ? `<span class="pb-badge">PB</span>` : '';
+                const map = r.latitude != null
+                    ? ` <a class="map-link" target="_blank" rel="noopener" href="https://www.openstreetmap.org/?mlat=${r.latitude}&mlon=${r.longitude}#map=15/${r.latitude}/${r.longitude}">${t('map')}</a>` : '';
+                const L = k => `data-label="${escapeHtml(t(k))}"`;
+                return `<tr>
+                    <td class="num" ${L('Date')}>${formatDate(r.date)}${r.start_time ? ' ' + r.start_time : ''}</td>
+                    <td class="num" ${L('Time')}><strong>${formatDuration(r.duration_seconds)}</strong>${badge}</td>
+                    <td class="num" ${L('Pace')}>${formatPace(r.duration_seconds, r.distance_km)}</td>
+                    <td ${L('Location')}>${escapeHtml(r.location || '–')}${map}</td>
+                    <td ${L('Effort')}>${r.effort ?? '–'}</td>
+                    <td ${L('Notes')} class="${r.notes ? '' : 'blank'}">${escapeHtml(r.notes || '')}</td>
+                    ${isEditor ? `<td class="row-actions"><button onclick="editRun(${r.id})">${t('Edit')}</button><button class="del" onclick="deleteRun(${r.id})">${t('Delete')}</button></td>` : ''}
+                </tr>`;
+            }).join('');
+        }
+
+        // ── Form ──
+        const form = document.getElementById('run-form');
+
+        function resetForm() {
+            form.reset();
+            editingId = null;
+            gpsCoords = null;
+            document.getElementById('gps-note').textContent = '';
+            document.getElementById('run-date').value = new Date().toLocaleDateString('en-CA');
+            document.getElementById('form-title').textContent = t('Log a Run');
+            document.getElementById('save-btn').textContent = t('Save Run');
+            document.getElementById('cancel-edit-btn').style.display = 'none';
+        }
+
+        function editRun(id) {
+            const r = runs.find(x => x.id === id);
+            if (!r) return;
+            editingId = id;
+            document.getElementById('run-date').value = r.date;
+            document.getElementById('run-start').value = r.start_time || '';
+            document.getElementById('run-duration').value = formatDuration(r.duration_seconds);
+            document.getElementById('run-effort').value = r.effort ?? '';
+            document.getElementById('run-location').value = r.location || '';
+            document.getElementById('run-notes').value = r.notes || '';
+            gpsCoords = r.latitude != null ? { latitude: r.latitude, longitude: r.longitude } : null;
+            document.getElementById('gps-note').textContent = gpsCoords ? t('Map position saved.') : '';
+            document.getElementById('form-title').textContent = t('Edit Run');
+            document.getElementById('save-btn').textContent = t('Save Changes');
+            document.getElementById('cancel-edit-btn').style.display = '';
+            document.getElementById('log-section').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        async function deleteRun(id) {
+            const r = runs.find(x => x.id === id);
+            if (!r || !confirm(`${t('Delete the run on')} ${formatDate(r.date)} (${formatDuration(r.duration_seconds)})?`)) return;
+            const res = await fetch(`/api/runs/${id}`, { method: 'DELETE' });
+            if (res.ok) {
+                showToast(t('Run deleted.'), 'success');
+                if (editingId === id) resetForm();
+                loadRuns();
+            } else {
+                showToast(t('Could not delete the run.'), 'error');
+            }
+        }
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const seconds = parseDuration(document.getElementById('run-duration').value);
+            if (!seconds) {
+                showToast(t('Please enter the finish time as minutes:seconds, e.g. 28:45.'), 'warning');
+                document.getElementById('run-duration').focus();
+                return;
+            }
+            const body = {
+                date: document.getElementById('run-date').value,
+                start_time: document.getElementById('run-start').value || null,
+                duration_seconds: seconds,
+                distance_km: 5,
+                effort: document.getElementById('run-effort').value || null,
+                location: document.getElementById('run-location').value,
+                notes: document.getElementById('run-notes').value,
+                latitude: gpsCoords ? gpsCoords.latitude : null,
+                longitude: gpsCoords ? gpsCoords.longitude : null,
+            };
+            const previousBest = runs.length ? Math.min(...runs.filter(r => r.id !== editingId).map(r => r.duration_seconds)) : Infinity;
+            const res = await fetch(editingId ? `/api/runs/${editingId}` : '/api/runs', {
+                method: editingId ? 'PUT' : 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body),
+            });
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                showToast(err.error || t('Could not save the run.'), 'error');
+                return;
+            }
+            const isPb = runs.length > 0 && seconds < previousBest;
+            showToast(isPb ? '🏅 ' + t('New personal best!') : t('Run saved.'), 'success', isPb ? 5000 : 3500);
+            resetForm();
+            loadRuns();
+        });
+
+        document.getElementById('cancel-edit-btn').onclick = resetForm;
+        document.getElementById('location-filter').onchange = () => { renderChart(); renderTable(); };
+
+        document.getElementById('gps-btn').onclick = () => {
+            const note = document.getElementById('gps-note');
+            if (!navigator.geolocation) { note.textContent = t('Location is not available on this device.'); return; }
+            note.textContent = t('Finding your location…');
+            navigator.geolocation.getCurrentPosition(pos => {
+                gpsCoords = {
+                    latitude: Math.round(pos.coords.latitude * 1e5) / 1e5,
+                    longitude: Math.round(pos.coords.longitude * 1e5) / 1e5,
+                };
+                note.textContent = t('Map position saved.');
+                const loc = document.getElementById('run-location');
+                if (!loc.value) loc.value = `${gpsCoords.latitude}, ${gpsCoords.longitude}`;
+            }, () => {
+                note.textContent = t('Could not get your location. You can still type it in.');
+            }, { enableHighAccuracy: true, timeout: 15000 });
+        };
+
+        // ── Language ──
+        const langToggle = document.getElementById('lang-toggle');
+        langToggle.onclick = () => {
+            currentLang = currentLang === 'en' ? 'fr' : 'en';
+            localStorage.setItem('preferredLanguage', currentLang);
+            setLanguage(currentLang);
+        };
+
+        function setLanguage(lang) {
+            document.querySelectorAll('[data-translate]').forEach(el => {
+                const key = el.getAttribute('data-translate');
+                if (translations[lang] && translations[lang][key]) el.textContent = translations[lang][key];
+            });
+            document.querySelectorAll('[data-translate-placeholder]').forEach(el => {
+                el.placeholder = t(el.getAttribute('data-translate-placeholder'));
+            });
+            const flagImg = langToggle.querySelector('img');
+            flagImg.src = lang === 'en' ? 'https://flagsapi.com/FR/flat/24.png' : 'https://flagsapi.com/GB/flat/24.png';
+            flagImg.alt = lang === 'en' ? 'French Flag' : 'English Flag';
+            if (editingId) {
+                document.getElementById('form-title').textContent = t('Edit Run');
+                document.getElementById('save-btn').textContent = t('Save Changes');
+            }
+            refreshLocations();
+            renderAll();
+        }
+
+        window.onload = async () => {
+            await window.authReady;
+            resetForm();
+            await loadRuns();
+            setLanguage(currentLang);
+        };
+    </script>
+</body>
+</html>
