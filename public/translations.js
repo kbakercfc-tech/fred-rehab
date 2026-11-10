@@ -515,7 +515,6 @@ const translations = {
         "best": "meilleur",
         "Last run": "Dernière course",
         "Open in Google Maps": "Ouvrir dans Google Maps",
-        "Google Maps rejected the map key. Check GOOGLE_MAPS_API_KEY and its website restrictions.": "Google Maps a refusé la clé de la carte. Vérifiez GOOGLE_MAPS_API_KEY et ses restrictions de site.",
         "No map positions yet. When logging a run, tap the map or use \"Use my location\".": "Aucune position pour le moment. En enregistrant une course, touchez la carte ou utilisez « Utiliser ma position ».",
         "Tap a pin to see the runs there.": "Touchez une épingle pour voir les courses à cet endroit.",
         "run(s) have no position yet: edit them and tap the map to add one.": "course(s) sans position : modifiez-les et touchez la carte pour en ajouter une.",
