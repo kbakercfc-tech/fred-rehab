@@ -1098,6 +1098,7 @@ tr:hover { background-color: #ebf8ff; }
         padding: 0.8em 1em;
         gap: 0.5em;
         position: static;
+        height: auto;
     }
 
     header h1 { font-size: 1.2em; }
@@ -1125,3 +1126,66 @@ tr:hover { background-color: #ebf8ff; }
 
     .summary-boxes-vertical { flex-direction: row; flex-wrap: wrap; justify-content: center; width: 100%; }
 }
+
+/* ─── Ask chat ───────────────────────────────────────────── */
+.ask-page { max-width: 760px; margin-left: auto; margin-right: auto; }
+
+.ask-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.ask-new-chat {
+    background: var(--surface);
+    color: var(--primary);
+    border: 1px solid var(--border);
+    width: auto;
+    margin: 0;
+    padding: 6px 12px;
+    flex-shrink: 0;
+}
+
+.ask-suggestions { display: flex; flex-direction: column; gap: 8px; margin: 16px 0; }
+.ask-suggestions[hidden] { display: none; }
+
+.ask-suggestion {
+    background: var(--surface);
+    color: var(--primary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    width: 100%;
+    margin: 0;
+    padding: 12px 14px;
+    text-align: left;
+    font-weight: normal;
+    cursor: pointer;
+}
+
+.ask-suggestion:hover { border-color: var(--accent); background: var(--surface); color: var(--primary); }
+
+.ask-messages { display: flex; flex-direction: column; gap: 12px; margin: 16px 0; }
+
+.ask-message {
+    max-width: 88%;
+    padding: 10px 14px;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    overflow-wrap: anywhere;
+}
+
+.ask-message p { margin: 0 0 8px; }
+.ask-message p:last-child { margin-bottom: 0; }
+.ask-message ul { margin: 0 0 8px; padding-left: 20px; }
+.ask-message ul:last-child { margin-bottom: 0; }
+
+.ask-message-user { align-self: flex-end; background: var(--primary); color: #fff; }
+.ask-message-assistant { align-self: flex-start; background: var(--surface); color: var(--text); }
+.ask-message-error { color: var(--danger); }
+.ask-thinking { color: var(--text-muted); font-style: italic; }
+
+.ask-form { display: flex; gap: 8px; align-items: stretch; background: none; box-shadow: none; padding: 0; margin: 0; max-width: none; }
+.ask-form textarea { flex: 1; min-width: 0; margin: 0; resize: vertical; font: inherit; }
+.ask-form button { width: auto; margin: 0; padding: 0 20px; }
+.ask-note { color: var(--text-muted); font-size: 0.85em; margin-top: 8px; }

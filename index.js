@@ -10,6 +10,8 @@ const fs = require("fs");
 const cron = require("node-cron");
 const session = require('express-session');
 const Anthropic = require('@anthropic-ai/sdk');
+const { createRehabQueries, FUN_MILESTONES, clubLevel } = require('./lib/rehab-queries');
+const { askRehabQuestion, AskInputError } = require('./lib/ask');
 
 const app = express();
 const port = process.env.PORT || 3000; // Use process.env.PORT for Render
@@ -63,6 +65,8 @@ let db = new sqlite3.Database(DB_PATH, sqlite3.OPEN_READWRITE | sqlite3.OPEN_CRE
     }
     console.log(`Connected to the rehab database at ${DB_PATH}.`);
 });
+
+const rehabQueries = createRehabQueries(DB_PATH);
 
 // Set up multer for file uploads
 const UPLOAD_DESTINATION_RELATIVE = process.env.UPLOAD_PATH || 'public/uploads/';
@@ -399,13 +403,7 @@ app.get('/api/steps/club-status', requireLogin, (req, res) => {
             return;
         }
         const count = row.count || 0;
-        let level = 'None';
-        if (count >= 15) level = 'Gold';
-        else if (count >= 10) level = 'Silver';
-        else if (count >= 5) level = 'Bronze';
-        else if (count >= 1) level = 'Member';
-        
-        res.json({ count, level });
+        res.json({ count, level: clubLevel(count) });
     });
 });
 
@@ -1281,14 +1279,7 @@ app.post('/api/story/generate', requireLogin, async (req, res) => {
         const exPct    = exerciseRows.length > 0 ? Math.round((exDone / exerciseRows.length) * 100) : 0;
 
         // Fun milestones progress
-        const funMilestones = [
-            { name: 'Stoke to London',       steps: 300000,    miles: 150  },
-            { name: 'Stoke to Paris',         steps: 800000,    miles: 400  },
-            { name: 'Stoke to Berlin',        steps: 1500000,   miles: 750  },
-            { name: 'Stoke to Moscow',        steps: 3200000,   miles: 1600 },
-            { name: 'Stoke to Johannesburg',  steps: 12000000,  miles: 6000 },
-        ];
-        const milestoneSummary = funMilestones.map(m => {
+        const milestoneSummary = FUN_MILESTONES.map(m => {
             const pct = Math.min(100, Math.round((totalSteps / m.steps) * 100));
             const status = pct >= 100
                 ? 'COMPLETED'
@@ -1410,6 +1401,52 @@ ${jsonSchema}`
         console.error('Story generation error:', err);
         res.status(500).json({ error: err.message || 'Failed to generate story.' });
     }
+});
+
+// ── Ask: chat questions answered from the read-only query tools ──
+
+// Every question costs API credit, so cap usage across all users. This matters
+// most when AUTH_ENABLED=false, as anyone who finds the site can then call it.
+const ASK_HOURLY_LIMIT = parseInt(process.env.ASK_HOURLY_LIMIT, 10) || 60;
+let askTimestamps = [];
+
+function askLimitReached() {
+    const hourAgo = Date.now() - 60 * 60 * 1000;
+    askTimestamps = askTimestamps.filter(time => time > hourAgo);
+    if (askTimestamps.length >= ASK_HOURLY_LIMIT) return true;
+    askTimestamps.push(Date.now());
+    return false;
+}
+
+app.post('/api/ask', requireLogin, async (req, res) => {
+    if (!process.env.ANTHROPIC_API_KEY) {
+        return res.status(503).json({ error: 'ANTHROPIC_API_KEY is not configured on this server.' });
+    }
+    if (askLimitReached()) {
+        return res.status(429).json({ error: 'Too many questions this hour. Please try again later.' });
+    }
+
+    try {
+        const { answer, toolsUsed } = await askRehabQuestion({
+            client: new Anthropic(),
+            queries: rehabQueries,
+            messages: req.body && req.body.messages,
+        });
+        res.json({ answer, toolsUsed });
+    } catch (err) {
+        if (err instanceof AskInputError) {
+            return res.status(400).json({ error: err.message });
+        }
+        console.error('Ask error:', err);
+        if (err instanceof Anthropic.RateLimitError) {
+            return res.status(503).json({ error: 'The assistant is busy. Please try again in a minute.' });
+        }
+        res.status(502).json({ error: 'The assistant could not answer just now. Please try again.' });
+    }
+});
+
+app.get('/ask.html', requireLogin, (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'ask.html'));
 });
 
 app.get('/story.html', requireLogin, (req, res) => {
