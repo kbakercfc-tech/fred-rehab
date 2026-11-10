@@ -37,8 +37,6 @@
         .gps-note { font-size: 0.8em; color: var(--text-muted); margin-top: 0.3em; min-height: 1.2em; }
         .hint { font-size: 0.8em; color: var(--text-muted); font-weight: normal; }
         .form-actions { display: flex; gap: 0.6em; flex-wrap: wrap; }
-        .btn-secondary { background: #a0aec0; }
-        .btn-secondary:hover { background: #718096; }
 
         .chart-controls { display: flex; gap: 0.6em; align-items: center; flex-wrap: wrap; margin-bottom: 0.8em; }
         .chart-controls label { margin: 0; }
@@ -68,7 +66,6 @@
         .run-pin span { transform: rotate(45deg); color: #fff; font-weight: 700; font-size: 13px; }
         .row-actions { white-space: nowrap; }
         .row-actions button { padding: 0.3em 0.6em; font-size: 0.8em; margin: 0 0.15em; }
-        .row-actions .del { background: var(--danger); }
 
         @media (max-width: 600px) {
             main { padding: 1em; margin: 0.5em; }
@@ -665,7 +662,7 @@
                 el.placeholder = t(el.getAttribute('data-translate-placeholder'));
             });
             const flagImg = langToggle.querySelector('img');
-            flagImg.src = lang === 'en' ? 'https://flagsapi.com/FR/flat/24.png' : 'https://flagsapi.com/GB/flat/24.png';
+            flagImg.src = lang === 'en' ? '/images/flag-fr.svg' : '/images/flag-gb.svg';
             flagImg.alt = lang === 'en' ? 'French Flag' : 'English Flag';
             if (editingId) {
                 document.getElementById('form-title').textContent = t('Edit Run');
