@@ -15,6 +15,7 @@
             --c-weights: #eb6834;   /* weights only */
             --c-none: #d3d8de;      /* neither */
             --c-avg: #1e3a5f;       /* 7-day average */
+            --c-run: #6250d6;       /* running average since the start */
         }
 
         /* Summary tiles + Fred's photo */
@@ -51,6 +52,9 @@
         .lg-box { width: 12px; height: 12px; border-radius: 3px; }
         .lg-line { width: 18px; height: 0; border-top: 2px solid var(--c-avg); }
         .lg-dash { width: 18px; height: 0; border-top: 2px dashed #a0aec0; }
+        .lg.toggle { cursor: pointer; user-select: none; border-radius: 6px; padding: 2px 4px; margin: -2px -4px; }
+        .lg.toggle:hover { background: var(--bg); }
+        .lg.toggle.off { opacity: 0.4; text-decoration: line-through; }
         .steps-legend.hide-cats .cat { display: none; }
 
         .chart-wrap { position: relative; height: 380px; }
@@ -125,7 +129,8 @@
                 <span class="lg cat"><span class="lg-box" style="background:var(--c-weights)"></span><span data-translate="Weights only">Weights only</span></span>
                 <span class="lg cat"><span class="lg-box" style="background:var(--c-none)"></span><span data-translate="Neither">Neither</span></span>
                 <span class="lg daily" style="display:none"><span class="lg-line" style="border-color:var(--c-both)"></span><span data-translate="Daily steps">Daily steps</span></span>
-                <span class="lg avg"><span class="lg-line"></span><span data-translate="7-day average">7-day average</span></span>
+                <span class="lg avg toggle" role="button" tabindex="0" title="Show or hide"><span class="lg-line"></span><span data-translate="7-day average">7-day average</span></span>
+                <span class="lg run toggle" role="button" tabindex="0" title="Show or hide"><span class="lg-line" style="border-color:var(--c-run);border-top-width:3px"></span><span data-translate="Running average (since start)">Running average (since start)</span></span>
                 <span class="lg target"><span class="lg-dash"></span><span data-translate="10,000 target">10,000 target</span></span>
             </div>
 
@@ -141,6 +146,8 @@
         let currentLang = localStorage.getItem('preferredLanguage') || localStorage.getItem('language') || 'en';
         let chart = null;
         let days = [];             // one entry per calendar day in the period
+        let allSteps = null;       // every step entry, for the running average since the start
+        const showLine = { avg: true, run: true };
         let period = 'all';
         let chartType = 'bar';
         const t = (key) => (translations[currentLang] && translations[currentLang][key]) || key;
@@ -176,6 +183,24 @@
                 showToast(t('Could not load steps.'), 'error');
             }
 
+            // Running average since Fred's first recorded day, so it means the same in every period.
+            if (!allSteps) {
+                try { allSteps = qs ? await fetch('/api/steps').then(r => r.json()) : steps; } catch { allSteps = steps; }
+            }
+            const runAvgByDate = new Map();
+            let runSum = 0, runCount = 0;
+            [...allSteps].filter(s => s.quantity > 0).sort((a, b) => a.date.localeCompare(b.date)).forEach(s => {
+                runSum += s.quantity; runCount++;
+                runAvgByDate.set(s.date, runSum / runCount);
+            });
+            const runDates = [...runAvgByDate.keys()];
+            const runAvgOn = (date) => {
+                // latest running average on or before this date
+                let lo = 0, hi = runDates.length - 1, found = null;
+                while (lo <= hi) { const mid = (lo + hi) >> 1; if (runDates[mid] <= date) { found = runDates[mid]; lo = mid + 1; } else hi = mid - 1; }
+                return found ? runAvgByDate.get(found) : null;
+            };
+
             const stepByDate = new Map(steps.map(s => [s.date, s.quantity]));
             const exByDate = new Map(exercises.map(e => [e.date, e]));
             const dates = [...new Set([...stepByDate.keys(), ...exByDate.keys()])].sort();
@@ -197,6 +222,7 @@
             days.forEach((day, i) => {
                 const window = days.slice(Math.max(0, i - 6), i + 1).filter(x => x.steps > 0);
                 day.avg7 = window.length ? window.reduce((a, x) => a + x.steps, 0) / window.length : null;
+                day.runAvg = runAvgOn(day.date);
             });
             renderStats();
             renderChart();
@@ -296,6 +322,9 @@
             const byDate = chartType !== 'bar' || sortEl.value === 'date';
             legend.classList.toggle('hide-cats', chartType !== 'bar');
             legend.querySelector('.avg').style.display = (chartType === 'bar' || chartType === 'line') && byDate ? '' : 'none';
+            legend.querySelector('.run').style.display = (chartType === 'bar' || chartType === 'line') && byDate ? '' : 'none';
+            legend.querySelector('.avg').classList.toggle('off', !showLine.avg);
+            legend.querySelector('.run').classList.toggle('off', !showLine.run);
             legend.querySelector('.daily').style.display = chartType === 'line' ? '' : 'none';
             legend.querySelector('.target').style.display = (chartType === 'bar' || chartType === 'line') ? '' : 'none';
 
@@ -316,6 +345,7 @@
                     const d = list[item.dataIndex];
                     if (item.datasetIndex === 1) return `${t('7-day average')}: ${fmt(d.avg7)}`;
                     if (item.datasetIndex === 2) return null;
+                    if (item.datasetIndex === 3) return `${t('Running average')}: ${fmt(d.runAvg)}`;
                     return [d.steps ? `${fmt(d.steps)} ${t('steps')}` : t('No steps recorded'), catText(d)];
                 },
             };
@@ -339,12 +369,16 @@
                 });
             }
             datasets.push({
-                type: 'line', data: byDate ? list.map(d => d.avg7) : [], borderColor: css('--c-avg'),
+                type: 'line', data: byDate && showLine.avg ? list.map(d => d.avg7) : [], borderColor: css('--c-avg'),
                 borderWidth: 2.5, pointRadius: 0, pointHoverRadius: 0, tension: 0.3, spanGaps: false, order: 1,
             });
             datasets.push({
                 type: 'line', data: list.map(() => TARGET), borderColor: '#a0aec0', borderDash: [6, 5],
                 borderWidth: 1.5, pointRadius: 0, pointHoverRadius: 0, order: 2,
+            });
+            datasets.push({
+                type: 'line', data: byDate && showLine.run ? list.map(d => d.runAvg) : [], borderColor: css('--c-run'),
+                borderWidth: 3, pointRadius: 0, pointHoverRadius: 0, tension: 0.3, spanGaps: true, order: 0,
             });
             opts.scales.y.suggestedMax = TARGET * 1.05;
 
@@ -474,6 +508,13 @@
             renderChart();
         }));
         document.getElementById('sort-type').addEventListener('change', renderChart);
+        // Tap a line in the key to show or hide it.
+        [['avg', '.lg.avg'], ['run', '.lg.run']].forEach(([key, sel]) => {
+            const el = document.querySelector(sel);
+            const flip = () => { showLine[key] = !showLine[key]; renderChart(); };
+            el.addEventListener('click', flip);
+            el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); flip(); } });
+        });
 
         // ── Language ──
         const langToggleButton = document.getElementById('lang-toggle');
