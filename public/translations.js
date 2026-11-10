@@ -562,6 +562,8 @@ const translations = {
         "Target": "Objectif",
         "No steps recorded": "Aucun pas enregistré",
         "Gaps in the line are days with no steps recorded. Tap the chart for details.": "Les interruptions de la courbe sont des jours sans pas enregistrés. Touchez le graphique pour les détails.",
-        "Daily steps": "Pas quotidiens"
+        "Daily steps": "Pas quotidiens",
+        "Running average (since start)": "Moyenne cumulée (depuis le début)",
+        "Running average": "Moyenne cumulée"
     }
 };
