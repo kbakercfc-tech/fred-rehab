@@ -12,6 +12,7 @@ const session = require('express-session');
 const Anthropic = require('@anthropic-ai/sdk');
 const { createRehabQueries, FUN_MILESTONES, clubLevel } = require('./lib/rehab-queries');
 const { askRehabQuestion, AskInputError } = require('./lib/ask');
+const { registerRunRoutes } = require('./lib/runs');
 
 const app = express();
 const port = process.env.PORT || 3000; // Use process.env.PORT for Render
@@ -256,6 +257,9 @@ db.serialize(() => {
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 app.use(express.static(path.join(__dirname, 'public')));
+
+// 5k runs (routes and table live in lib/runs.js)
+registerRunRoutes(app, { getDb: () => db, requireLogin, requireEditor });
 
 // Auth Endpoints
 app.post('/api/login', (req, res) => {
