@@ -1189,3 +1189,258 @@ tr:hover { background-color: #ebf8ff; }
 .ask-form textarea { flex: 1; min-width: 0; margin: 0; resize: vertical; font: inherit; }
 .ask-form button { width: auto; margin: 0; padding: 0 20px; }
 .ask-note { color: var(--text-muted); font-size: 0.85em; margin-top: 8px; }
+
+/* ═══════════════════════════════════════════════════════════
+   Look & feel refresh: top bar, menu, buttons, forms
+   (later rules here deliberately override the older ones above)
+   ═══════════════════════════════════════════════════════════ */
+
+/* ─── Top bar ────────────────────────────────────────────── */
+header {
+    height: 64px;
+    padding: 0 1.5em;
+    gap: 1.5em;
+    justify-content: flex-start;
+}
+header > h1 { display: none; } /* page title is moved into the page by nav.js */
+
+.brand {
+    display: flex;
+    align-items: center;
+    gap: 0.55em;
+    color: #fff;
+    text-decoration: none;
+    font-weight: 700;
+    font-size: 1.15em;
+    letter-spacing: -0.2px;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+.brand-icon {
+    width: 32px; height: 32px; padding: 5px; box-sizing: border-box;
+    background: rgba(255,255,255,0.15); border-radius: 9px;
+}
+
+header nav { flex: 1; gap: 2px; min-width: 0; }
+
+header nav > a,
+.nav-footer > a,
+.nav-group,
+.nav-group-btn {
+    height: 40px;
+    font-size: 15px;
+    padding: 0 12px;
+    gap: 0.45em;
+    align-self: center;
+    border-radius: 8px;
+}
+.nav-group { padding: 0; }
+header nav .nav-icon { width: 18px; height: 18px; flex-shrink: 0; opacity: 0.9; }
+.nav-chevron { width: 15px; height: 15px; font-size: inherit; }
+.nav-spacer { min-width: 0; }
+.drawer-head, .menu-toggle, .tabbar, .nav-backdrop { display: none; }
+
+.nav-dropdown { top: calc(100% + 8px); padding: 6px; min-width: 230px; border-radius: 10px; }
+.nav-dropdown a {
+    display: flex; align-items: center; gap: 0.7em;
+    padding: 0.6em 0.8em; font-size: 15px; border-radius: 6px !important;
+}
+
+#role-badge { font-size: 0.7em; margin-right: 0.6em; }
+
+#lang-toggle { padding: 0.35em 0.45em; margin: 0 0 0 4px; align-self: center; width: auto; }
+#lang-toggle img { width: 24px; height: 16px; object-fit: cover; border-radius: 2px; display: block; }
+
+/* Page heading (moved out of the top bar) */
+.page-heading { width: 100%; max-width: 900px; margin: 0 auto 0.6em; }
+.page-heading h1 { font-size: 1.7em; margin: 0; color: var(--primary); letter-spacing: -0.3px; }
+
+/* ─── Buttons: primary, secondary, danger ────────────────── */
+button, .btn {
+    padding: 0.65em 1.25em;
+    border-radius: 8px;
+    font-size: 0.95em;
+    font-weight: 600;
+    line-height: 1.2;
+    border: 1.5px solid var(--accent);
+    background: var(--accent);
+    color: #fff;
+}
+button:hover, .btn:hover { background: var(--accent-dark); border-color: var(--accent-dark); transform: none; }
+
+.btn-secondary, .fitbit-btn, #fitbit-sync, .chart-controls button, .filter-controls button,
+.ask-new-chat, .row-actions button, .btn-sm.btn-outline, .btn-sm.btn-muted, .style-btn, .print-btn {
+    background: #fff;
+    color: var(--accent-dark);
+    border: 1.5px solid #bcd6ee;
+}
+.btn-secondary:hover, .fitbit-btn:hover, #fitbit-sync:hover, .chart-controls button:hover, .filter-controls button:hover,
+.ask-new-chat:hover, .row-actions button:hover, .btn-sm.btn-outline:hover, .btn-sm.btn-muted:hover, .style-btn:hover, .print-btn:hover {
+    background: #ebf4fc;
+    color: var(--accent-dark);
+    border-color: var(--accent);
+}
+.style-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+.btn-danger, .fitbit-btn.disconnect, .row-actions .del, .btn-icon.btn-danger, .delete-video-btn {
+    background: #fff;
+    color: var(--danger);
+    border: 1.5px solid #f3b4b4;
+}
+.btn-danger:hover, .fitbit-btn.disconnect:hover, .row-actions .del:hover, .btn-icon.btn-danger:hover, .delete-video-btn:hover {
+    background: #fff5f5;
+    color: #c53030;
+    border-color: var(--danger);
+}
+
+.fitbit-btn, #fitbit-sync { padding: 0.5em 1em; font-size: 0.85em; }
+.chart-controls button, .filter-controls button { padding: 0.5em 1em; font-size: 0.88em; }
+
+/* ─── Forms ──────────────────────────────────────────────── */
+label {
+    text-transform: none;
+    letter-spacing: 0;
+    font-size: 0.95em;
+    font-weight: 600;
+    color: var(--text);
+}
+label .hint { text-transform: none; }
+input[type="date"], input[type="number"], input[type="text"], input[type="time"], select, textarea {
+    padding: 0.75em 0.9em;
+    font-size: 1em;
+    border-radius: 8px;
+}
+
+/* Yes/No switch (replaces <select data-switch>) */
+.switch-source { display: none !important; }
+.switch {
+    display: inline-flex; align-items: center; gap: 0.7em;
+    background: none; border: none; color: var(--text); padding: 0.3em 0; margin: 0;
+    font-weight: 600; width: auto; box-shadow: none;
+}
+.switch:hover { background: none; }
+.switch-track {
+    width: 52px; height: 30px; border-radius: 15px; background: #cbd5e0;
+    position: relative; transition: background 0.2s; flex-shrink: 0;
+}
+.switch-thumb {
+    position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; border-radius: 50%;
+    background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.3); transition: transform 0.2s;
+}
+.switch.on .switch-track { background: var(--success); }
+.switch.on .switch-thumb { transform: translateX(22px); }
+.switch:focus-visible .switch-track { outline: 3px solid #90cdf4; outline-offset: 2px; }
+
+/* ─── Phones and small tablets ───────────────────────────── */
+@media (max-width: 1100px) {
+    header {
+        height: 56px;
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 0.6em 0 1em;
+        position: sticky;
+    }
+    .menu-toggle {
+        display: flex; align-items: center; justify-content: center;
+        width: 44px; height: 44px; padding: 0; margin: 0;
+        background: transparent; border: none; color: #fff;
+    }
+    .menu-toggle:hover { background: rgba(255,255,255,0.12); }
+    .menu-toggle .nav-icon { width: 26px; height: 26px; }
+
+    /* The menu becomes a panel that slides in from the right */
+    header nav {
+        position: fixed; top: 0; right: 0; bottom: 0;
+        width: min(320px, 86vw);
+        background: #fff;
+        flex-direction: column; align-items: stretch; flex-wrap: nowrap;
+        gap: 0; padding: 0 0 1.5em;
+        overflow-y: auto;
+        transform: translateX(100%);
+        transition: transform 0.25s ease;
+        z-index: 1001;
+        box-shadow: -8px 0 24px rgba(0,0,0,0.18);
+    }
+    body.nav-open header nav { transform: none; }
+    .nav-backdrop {
+        display: block; position: fixed; inset: 0; background: rgba(15,30,50,0.45);
+        opacity: 0; pointer-events: none; transition: opacity 0.25s; z-index: 1000;
+    }
+    body.nav-open .nav-backdrop { opacity: 1; pointer-events: auto; }
+    body.nav-open header { z-index: 1002; } /* lift the menu above the dimmed background */
+    body.nav-open { overflow: hidden; }
+
+    .drawer-head {
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 0.6em 0.6em 0.6em 1.2em; border-bottom: 1px solid var(--border);
+        font-weight: 700; color: var(--primary); position: sticky; top: 0; background: #fff;
+    }
+    .drawer-close {
+        width: 40px; height: 40px; padding: 0; margin: 0; display: flex; align-items: center; justify-content: center;
+        background: none; border: none; color: var(--text-muted);
+    }
+    .drawer-close:hover { background: var(--bg); color: var(--text); }
+
+    header nav > a, .nav-footer > a, .nav-dropdown a {
+        height: auto; font-size: 16px; padding: 0.8em 1.2em; margin: 1px 0.6em;
+        color: var(--text) !important; border-radius: 8px !important; align-self: stretch;
+    }
+    header nav > a:hover, .nav-footer > a:hover, .nav-dropdown a:hover { background: var(--bg); color: var(--text) !important; }
+    header nav > a.active-page, .nav-dropdown a.active-page {
+        background: #ebf4fc !important; color: var(--accent-dark) !important; font-weight: 600;
+    }
+    header nav .nav-icon { color: var(--accent); opacity: 1; }
+
+    /* Groups show as labelled sections, always open */
+    .nav-group { display: block; height: auto; align-self: stretch; }
+    .nav-group-btn { display: flex; height: auto; }
+    .nav-dropdown a { margin: 1px 0.6em !important; }
+    .nav-group-btn {
+        padding: 1.1em 1.2em 0.3em; font-size: 12px; font-weight: 700; text-transform: uppercase;
+        letter-spacing: 0.06em; color: var(--text-muted) !important; background: none !important; cursor: default;
+    }
+    .nav-group .nav-chevron { display: none; }
+    .nav-dropdown {
+        display: block; position: static; background: none; box-shadow: none; border: none;
+        padding: 0; min-width: 0;
+    }
+    .nav-spacer { flex: 0 0 0.8em; }
+    .nav-divider { width: auto; height: 1px; margin: 0.4em 1.2em; background: var(--border); }
+    .nav-footer { flex-direction: column; align-items: stretch; }
+    #lang-toggle { margin: 0.4em 1.8em; align-self: flex-start; border-color: var(--border); }
+    #role-badge { align-self: flex-start; margin: 0.8em 1.2em 0.2em; }
+    #role-badge.badge-editor { color: #276749; background: #c6f6d5; }
+    #role-badge.badge-viewer { color: #2c5282; background: #bee3f8; }
+}
+
+/* Bottom tab bar on phones */
+@media (max-width: 700px) {
+    .tabbar {
+        display: flex; position: fixed; left: 0; right: 0; bottom: 0; z-index: 900;
+        background: #fff; border-top: 1px solid var(--border);
+        padding: 4px 4px calc(4px + env(safe-area-inset-bottom));
+        box-shadow: 0 -2px 10px rgba(0,0,0,0.06);
+    }
+    .tabbar a {
+        flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px;
+        padding: 6px 0; font-size: 11px; font-weight: 600; color: var(--text-muted); text-decoration: none;
+        border-radius: 8px;
+    }
+    .tabbar .nav-icon { width: 22px; height: 22px; }
+    .tabbar a.active-page { color: var(--accent-dark); background: #ebf4fc; }
+    body { padding-bottom: calc(68px + env(safe-area-inset-bottom)); }
+    .page-heading h1 { font-size: 1.4em; }
+}
+
+/* Phone fixes for older page layouts */
+@media (max-width: 768px) {
+    .input-group { flex-wrap: nowrap; }
+    .input-group input { min-width: 0; }
+    .input-group button, #fitbit-sync { width: auto; flex-shrink: 0; }
+    #fitbit-status-bar { flex-wrap: wrap; justify-content: flex-start; }
+    #fitbit-status-bar button, #fitbit-status-bar .fitbit-btn { width: auto; }
+    #fitbit-status-text { white-space: nowrap; }
+    .chart-controls { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; }
+    .chart-controls button { display: inline-block; width: auto; margin: 0; }
+}

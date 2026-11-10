@@ -63,7 +63,7 @@
             });
             input.placeholder = t('ask_placeholder');
             const flag = lang === 'en' ? 'FR' : 'GB';
-            langToggle.innerHTML = `<img src="https://flagsapi.com/${flag}/flat/24.png" alt="${flag} Flag">`;
+            langToggle.innerHTML = `<img src="/images/flag-${flag.toLowerCase()}.svg" alt="${flag}">`;
         }
 
         langToggle.addEventListener('click', () => setLanguage(currentLang === 'en' ? 'fr' : 'en'));
