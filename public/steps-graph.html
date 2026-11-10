@@ -6,565 +6,512 @@
     <title>Fred's Steps Graph</title>
     <script src="chart.min.js"></script>
     <link rel="stylesheet" href="style.css">
+    <style>
+        .steps-page { width: 100%; max-width: 1100px; margin: 0 auto; }
+        .page-heading { max-width: 1100px; }
+        .steps-page {
+            --c-both: #2a78d6;      /* exercises and weights */
+            --c-exercise: #1baf7a;  /* exercises only */
+            --c-weights: #eb6834;   /* weights only */
+            --c-none: #d3d8de;      /* neither */
+            --c-avg: #1e3a5f;       /* 7-day average */
+        }
+
+        /* Summary tiles + Fred's photo */
+        .steps-top { display: flex; gap: 1em; align-items: center; margin-bottom: 1.2em; }
+        .steps-stats { flex: 1; display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0.8em; }
+        .stat-tile { background: var(--bg); border-radius: var(--radius-md); padding: 0.85em 1em; }
+        .stat-label { font-size: 0.75em; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; }
+        .stat-value { font-size: 1.55em; font-weight: 700; color: var(--primary); font-variant-numeric: tabular-nums; line-height: 1.25; }
+        .stat-sub { font-size: 0.8em; color: var(--text-muted); }
+        .steps-photo { position: relative; flex-shrink: 0; }
+        .steps-photo img { width: 96px; height: 96px; border-radius: 50%; object-fit: cover; border: 3px solid var(--accent); display: block; }
+        .steps-photo .club-badge { position: absolute; right: -10px; bottom: -6px; width: 46px; height: 46px; font-size: 0.55em; }
+
+        /* Controls */
+        .steps-controls { display: flex; flex-wrap: wrap; gap: 0.6em 1em; align-items: center; margin-bottom: 0.8em; }
+        .seg { display: inline-flex; background: var(--bg); border-radius: 9px; padding: 3px; gap: 2px; flex-wrap: wrap; }
+        .seg button {
+            background: transparent; border: none; color: var(--text-muted); margin: 0;
+            padding: 0.45em 0.85em; font-size: 0.88em; font-weight: 600; border-radius: 7px; width: auto;
+        }
+        .seg button:hover { background: rgba(255,255,255,0.7); color: var(--text); }
+        .seg button.active { background: #fff; color: var(--primary); box-shadow: var(--shadow-sm); }
+        .custom-range { display: none; gap: 0.5em; align-items: center; flex-wrap: wrap; }
+        .custom-range.show { display: inline-flex; }
+        .custom-range input { width: auto; padding: 0.45em 0.6em; font-size: 0.9em; }
+        .custom-range span { color: var(--text-muted); font-size: 0.9em; }
+        .controls-spacer { flex: 1; }
+        .sort-select { width: auto; padding: 0.45em 0.6em; font-size: 0.88em; }
+        .share-btn { width: auto; margin: 0; padding: 0.5em 1em; font-size: 0.88em; }
+
+        /* Legend */
+        .steps-legend { display: flex; flex-wrap: wrap; gap: 0.4em 1.1em; font-size: 0.85em; color: var(--text); margin: 0.2em 0 0.6em; }
+        .lg { display: inline-flex; align-items: center; gap: 0.4em; white-space: nowrap; }
+        .lg-box { width: 12px; height: 12px; border-radius: 3px; }
+        .lg-line { width: 18px; height: 0; border-top: 2px solid var(--c-avg); }
+        .lg-dash { width: 18px; height: 0; border-top: 2px dashed #a0aec0; }
+        .steps-legend.hide-cats .cat { display: none; }
+
+        .chart-wrap { position: relative; height: 380px; }
+        .chart-caption { font-size: 0.82em; color: var(--text-muted); margin-top: 0.5em; }
+        .empty-note { color: var(--text-muted); font-style: italic; padding: 2em 0; text-align: center; }
+
+        @media (max-width: 700px) {
+            .steps-photo { display: none; }
+            .steps-stats { grid-template-columns: 1fr 1fr; gap: 0.5em; }
+            .stat-tile { padding: 0.6em 0.75em; }
+            .stat-label { font-size: 0.68em; }
+            .stat-value { font-size: 1.2em; }
+            .stat-sub { font-size: 0.72em; }
+            .steps-top { margin-bottom: 0.8em; }
+            .steps-legend { font-size: 0.78em; gap: 0.3em 0.8em; }
+            .sort-select { padding: 0.4em 0.5em; font-size: 0.82em; }
+            .share-btn { padding: 0.4em 0.8em; font-size: 0.82em; }
+            .chart-wrap { height: 300px; }
+            .controls-spacer { display: none; }
+            .seg button { padding: 0.45em 0.7em; }
+        }
+    </style>
 </head>
 <body>
     <header>
         <h1 data-translate="Fred's Steps Graph">Fred's Steps Graph</h1>
         <nav id="main-nav"></nav>
-            <script src="/nav.js"></script>
+        <script src="/nav.js"></script>
     </header>
     <main>
-        <div class="graph-and-summary-wrapper">
-            <div class="chart-flex-container">
-                <div class="chart-section" style="position: relative;">
-                    <div class="fred-photo-wrapper">
-                        <img src="images/fred.jpg" alt="Fred's Photo" class="fred-photo">
-                        <div id="club-badge" class="club-badge"></div>
-                    </div>
-                    <div class="filter-controls">
-                        <label for="filter-type" data-translate="View:">View:</label>
-                        <select id="filter-type" onchange="toggleDatePickers()" title="Select a time period to display on the graph.">
-                            <option value="all" data-translate="All Entries">All Entries</option>
-                            <option value="30days" data-translate="Last 30 Days">Last 30 Days</option>
-                            <option value="custom" data-translate="Select Period">Select Period</option>
-                        </select>
-                        <label for="sort-type" data-translate="Sort by:">Sort by:</label>
-                        <select id="sort-type" onchange="applyFilter()" title="Select a sorting order for the graph data.">
-                            <option value="date-asc" data-translate="Date">Date</option>
-                            <option value="steps-asc" data-translate="Steps">Steps</option>
-                        </select>
-                        <div id="custom-date-pickers" style="display: none;">
-                            <label for="start-date" data-translate="From:">From:</label>
-                            <input type="date" id="start-date" title="Select the start date for your custom period." data-translate="Select the start date for your custom period.">
-                            <label for="end-date" data-translate="To:">To:</label>
-                            <input type="date" id="end-date" title="Select the end date for your custom period." data-translate="Select the end date for your custom period.">
-                        </div>
-                        <button onclick="applyFilter()" title="Apply the selected date filter to the graph." data-translate="Apply Filter">Apply Filter</button>
-                    </div>
-                    <div class="chart-controls">
-                        <button onclick="renderChart('line')" title="Display the data as a Line Chart." data-translate="Line Chart">Line Chart</button>
-                        <button onclick="renderChart('bar')" title="Display the data as a Bar Chart." data-translate="Bar Chart">Bar Chart</button>
-                        <button onclick="renderChart('histogram')" title="Display the step distribution as a Histogram." data-translate="Histogram">Histogram</button>
-                        <button onclick="renderChart('boxplot')" title="Display the step distribution as a Box Plot." data-translate="Box Plot">Box Plot</button>
-                        <button onclick="shareGraph()" title="Share a link to this steps graph page." data-translate="Share Graph">Share Graph</button>
-                    </div>
-                    <div id="chart-container">
-                        <canvas id="stepsChart"></canvas>
-                    </div>
-                    <div class="legend-and-summary-wrapper">
-                        <div class="legend">
-                            <span class="legend-item"><span class="legend-color-box" style="background-color: darkgreen;"></span> <span data-translate="Exercises & Weights Done">Exercises & Weights Done</span></span>
-                            <span class="legend-item"><span class="legend-color-box" style="background-color: #ADD8E6;"></span> <span data-translate="Only Weights done">Only Weights done</span></span>
-                            <span class="legend-item"><span class="legend-color-box" style="background-color: #d4edda;"></span> <span data-translate="Only Exercises Done">Only Exercises Done</span></span>
-                            <span class="legend-item"><span class="legend-color-box" style="background-color: #dcdcdc;"></span> <span data-translate="No exercise or weights done">No exercise or weights done</span></span>
-                            <span class="legend-item"><span class="legend-color-box" style="border: 1px solid red;"></span> <span data-translate="Largest Steps Day">Largest Steps Day</span></span>
-                        </div>
-                        <div class="summary-boxes-vertical">
-                            <div class="summary-box">
-                                <h3 data-translate="Largest Steps">Largest Steps</h3>
-                                <p id="largest-steps" class="summary-value">0</p>
-                                <p id="largest-steps-date" class="summary-date"></p>
-                            </div>
-                            <div class="summary-box">
-                                <h3 data-translate="Average Steps">Average Steps</h3>
-                                <p id="average-steps" class="summary-value">0</p>
-                            </div>
-                            <div class="summary-box milestone-box">
-                                <h3 data-translate="Total Steps">Total Steps</h3>
-                                <p id="total-steps" class="summary-value">0</p>
-                            </div>
-                        </div>
-                    </div>
+        <div class="steps-page">
+            <div class="steps-top">
+                <div class="steps-stats" id="steps-stats"></div>
+                <div class="steps-photo">
+                    <img src="images/fred.jpg" alt="Fred">
+                    <div id="club-badge" class="club-badge" style="display:none"></div>
                 </div>
             </div>
+
+            <div class="steps-controls">
+                <div class="seg" id="period-seg" role="group" aria-label="Period">
+                    <button type="button" data-period="30" data-translate="30 days">30 days</button>
+                    <button type="button" data-period="90" data-translate="90 days">90 days</button>
+                    <button type="button" data-period="all" data-translate="All">All</button>
+                    <button type="button" data-period="custom" data-translate="Custom">Custom</button>
+                </div>
+                <div class="custom-range" id="custom-range">
+                    <input type="date" id="start-date" aria-label="From">
+                    <span>–</span>
+                    <input type="date" id="end-date" aria-label="To">
+                </div>
+            </div>
+
+            <div class="steps-controls">
+                <div class="seg" id="type-seg" role="group" aria-label="Chart type">
+                    <button type="button" data-type="bar" data-translate="Daily bars">Daily bars</button>
+                    <button type="button" data-type="line" data-translate="Line">Line</button>
+                    <button type="button" data-type="histogram" data-translate="Histogram">Histogram</button>
+                    <button type="button" data-type="boxplot" data-translate="Box plot">Box plot</button>
+                </div>
+                <select id="sort-type" class="sort-select" aria-label="Sort">
+                    <option value="date" data-translate="Sort by date">Sort by date</option>
+                    <option value="steps" data-translate="Sort by steps">Sort by steps</option>
+                </select>
+                <div class="controls-spacer"></div>
+                <button type="button" class="btn-secondary share-btn" onclick="shareGraph()" data-translate="Share">Share</button>
+            </div>
+
+            <div class="steps-legend" id="steps-legend">
+                <span class="lg cat"><span class="lg-box" style="background:var(--c-both)"></span><span data-translate="Exercises & weights">Exercises & weights</span></span>
+                <span class="lg cat"><span class="lg-box" style="background:var(--c-exercise)"></span><span data-translate="Exercises only">Exercises only</span></span>
+                <span class="lg cat"><span class="lg-box" style="background:var(--c-weights)"></span><span data-translate="Weights only">Weights only</span></span>
+                <span class="lg cat"><span class="lg-box" style="background:var(--c-none)"></span><span data-translate="Neither">Neither</span></span>
+                <span class="lg daily" style="display:none"><span class="lg-line" style="border-color:var(--c-both)"></span><span data-translate="Daily steps">Daily steps</span></span>
+                <span class="lg avg"><span class="lg-line"></span><span data-translate="7-day average">7-day average</span></span>
+                <span class="lg target"><span class="lg-dash"></span><span data-translate="10,000 target">10,000 target</span></span>
+            </div>
+
+            <div id="chart-empty" class="empty-note" style="display:none" data-translate="No steps recorded in this period.">No steps recorded in this period.</div>
+            <div class="chart-wrap" id="chart-wrap"><canvas id="stepsChart" aria-label="Chart of Fred's daily steps"></canvas></div>
+            <p class="chart-caption" id="chart-caption"></p>
         </div>
     </main>
     <script src="auth.js"></script>
     <script src="toast.js"></script>
     <script src="translations.js"></script>
     <script>
-        let chart;
-        let chartData; // Declare chartData globally
+        let currentLang = localStorage.getItem('preferredLanguage') || localStorage.getItem('language') || 'en';
+        let chart = null;
+        let days = [];             // one entry per calendar day in the period
+        let period = 'all';
+        let chartType = 'bar';
+        const t = (key) => (translations[currentLang] && translations[currentLang][key]) || key;
+        const locale = () => currentLang === 'fr' ? 'fr-FR' : 'en-GB';
+        const css = (name) => getComputedStyle(document.querySelector('.steps-page')).getPropertyValue(name).trim();
+        const fmt = (n) => Math.round(n).toLocaleString(locale());
+        const TARGET = 10000;
 
-        const filterTypeSelect = document.getElementById('filter-type');
-        const customDatePickers = document.getElementById('custom-date-pickers');
-        const startDateInput = document.getElementById('start-date');
-        const endDateInput = document.getElementById('end-date');
-        const langToggleButton = document.getElementById('lang-toggle');
-        let currentLang = localStorage.getItem('language') || 'en';
+        function isoDate(d) { return d.toISOString().slice(0, 10); }
+        function dayLabel(iso, opts) {
+            return new Date(iso + 'T12:00:00').toLocaleDateString(locale(), opts || { day: 'numeric', month: 'short' });
+        }
 
-        function setLanguage(lang) {
-            document.querySelectorAll('[data-translate]').forEach(element => {
-                const key = element.getAttribute('data-translate');
-                if (translations[lang] && translations[lang][key]) {
-                    if (element.tagName === 'OPTION') {
-                        element.textContent = translations[lang][key];
-                    } else if (element.tagName === 'INPUT') {
-                        element.title = translations[lang][key];
-                    } else if (element.tagName === 'BUTTON' && element.id !== 'lang-toggle') {
-                        element.textContent = translations[lang][key];
-                    }
-                    else if (element.tagName !== 'BUTTON' && element.tagName !== 'SELECT') { // Exclude SELECT element
-                        element.innerHTML = translations[lang][key];
+        // ── Data ──
+        async function loadData() {
+            let qs = '';
+            const today = new Date();
+            if (period === '30' || period === '90') {
+                const start = new Date(today); start.setDate(today.getDate() - (Number(period) - 1));
+                qs = `?startDate=${isoDate(start)}&endDate=${isoDate(today)}`;
+            } else if (period === 'custom') {
+                const s = document.getElementById('start-date').value, e = document.getElementById('end-date').value;
+                if (!s || !e || s > e) { return; }
+                qs = `?startDate=${s}&endDate=${e}`;
+            }
+            let steps = [], exercises = [];
+            try {
+                [steps, exercises] = await Promise.all([
+                    fetch('/api/steps' + qs).then(r => r.json()),
+                    fetch('/api/exercises' + qs).then(r => r.json()),
+                ]);
+            } catch {
+                showToast(t('Could not load steps.'), 'error');
+            }
+
+            const stepByDate = new Map(steps.map(s => [s.date, s.quantity]));
+            const exByDate = new Map(exercises.map(e => [e.date, e]));
+            const dates = [...new Set([...stepByDate.keys(), ...exByDate.keys()])].sort();
+            days = [];
+            if (dates.length) {
+                for (let d = new Date(dates[0] + 'T00:00:00Z'); isoDate(d) <= dates[dates.length - 1]; d.setUTCDate(d.getUTCDate() + 1)) {
+                    const date = isoDate(d);
+                    const ex = exByDate.get(date);
+                    const exercise = ex && ex.done === 'Yes', weights = ex && ex.weights_done === 'Yes';
+                    days.push({
+                        date,
+                        steps: stepByDate.get(date) || 0,
+                        exercise, weights,
+                        cat: exercise && weights ? 'both' : exercise ? 'exercise' : weights ? 'weights' : 'none',
+                    });
+                }
+            }
+            // 7-day average over the days that have steps recorded.
+            days.forEach((day, i) => {
+                const window = days.slice(Math.max(0, i - 6), i + 1).filter(x => x.steps > 0);
+                day.avg7 = window.length ? window.reduce((a, x) => a + x.steps, 0) / window.length : null;
+            });
+            renderStats();
+            renderChart();
+        }
+
+        // ── Summary tiles ──
+        function renderStats() {
+            const recorded = days.filter(d => d.steps > 0);
+            const el = document.getElementById('steps-stats');
+            if (!recorded.length) { el.innerHTML = ''; return; }
+            const total = recorded.reduce((a, d) => a + d.steps, 0);
+            const best = recorded.reduce((a, d) => d.steps > a.steps ? d : a);
+            const tenK = recorded.filter(d => d.steps >= TARGET).length;
+            const exDays = days.filter(d => d.exercise || d.weights).length;
+            el.innerHTML = `
+                <div class="stat-tile"><div class="stat-label">${t('Daily average')}</div>
+                    <div class="stat-value">${fmt(total / recorded.length)}</div>
+                    <div class="stat-sub">${recorded.length} ${t('days recorded')}</div></div>
+                <div class="stat-tile"><div class="stat-label">${t('Best day')}</div>
+                    <div class="stat-value">${fmt(best.steps)}</div>
+                    <div class="stat-sub">${dayLabel(best.date, { day: 'numeric', month: 'short', year: 'numeric' })}</div></div>
+                <div class="stat-tile"><div class="stat-label">${t('10,000+ days')}</div>
+                    <div class="stat-value">${tenK}</div>
+                    <div class="stat-sub">${t('in this period')}</div></div>
+                <div class="stat-tile"><div class="stat-label">${t('Total steps')}</div>
+                    <div class="stat-value">${fmt(total)}</div>
+                    <div class="stat-sub">${exDays} ${t('exercise days')}</div></div>`;
+        }
+
+        // ── Chart ──
+        // Draws a small label above the best day and on the 10,000 line.
+        const annotations = {
+            id: 'annotations',
+            afterDatasetsDraw(c, args, opts) {
+                if (!opts.enabled) return;
+                const { ctx, chartArea, scales: { x, y } } = c;
+                ctx.save();
+                ctx.font = '600 11px Inter, system-ui, sans-serif';
+                // 10,000 line label
+                if (y.max >= TARGET) {
+                    const ty = y.getPixelForValue(TARGET);
+                    const label = t('Target') + ' 10,000';
+                    ctx.fillStyle = 'rgba(255,255,255,0.85)';
+                    ctx.fillRect(chartArea.left + 2, ty - 16, ctx.measureText(label).width + 6, 14);
+                    ctx.fillStyle = '#718096'; ctx.textAlign = 'left';
+                    ctx.fillText(label, chartArea.left + 5, ty - 5);
+                }
+                // Best day label
+                if (opts.bestIndex != null) {
+                    const meta = c.getDatasetMeta(0).data[opts.bestIndex];
+                    if (meta) {
+                        const text = `★ ${fmt(opts.bestValue)}`;
+                        ctx.fillStyle = '#1e3a5f'; ctx.textAlign = 'center';
+                        const px = Math.min(Math.max(meta.x, chartArea.left + 30), chartArea.right - 30);
+                        ctx.fillText(text, px, meta.y - 6);
                     }
                 }
+                ctx.restore();
+            },
+        };
+
+        function baseOptions() {
+            return {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: { duration: 300 },
+                layout: { padding: { top: 18 } },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: '#1a2b42', padding: 10, cornerRadius: 8,
+                        titleFont: { weight: '600' }, bodyFont: { size: 12 }, displayColors: false,
+                    },
+                },
+                scales: {
+                    x: { grid: { display: false }, ticks: { color: '#718096', maxRotation: 0, autoSkip: true, maxTicksLimit: window.innerWidth < 700 ? 5 : 9 } },
+                    y: {
+                        beginAtZero: true, grid: { color: '#edf2f7' }, border: { display: false },
+                        ticks: { color: '#718096', callback: v => v >= 1000 ? (v / 1000) + 'k' : v },
+                    },
+                },
+            };
+        }
+
+        function renderChart() {
+            if (chart) { chart.destroy(); chart = null; }
+            const recorded = days.filter(d => d.steps > 0);
+            const empty = !recorded.length;
+            document.getElementById('chart-empty').style.display = empty ? '' : 'none';
+            document.getElementById('chart-wrap').style.display = empty ? 'none' : '';
+            document.getElementById('steps-legend').style.display = empty ? 'none' : '';
+            if (empty) { document.getElementById('chart-caption').textContent = ''; return; }
+
+            const legend = document.getElementById('steps-legend');
+            const sortEl = document.getElementById('sort-type');
+            sortEl.style.display = chartType === 'bar' ? '' : 'none';
+            const byDate = chartType !== 'bar' || sortEl.value === 'date';
+            legend.classList.toggle('hide-cats', chartType !== 'bar');
+            legend.querySelector('.avg').style.display = (chartType === 'bar' || chartType === 'line') && byDate ? '' : 'none';
+            legend.querySelector('.daily').style.display = chartType === 'line' ? '' : 'none';
+            legend.querySelector('.target').style.display = (chartType === 'bar' || chartType === 'line') ? '' : 'none';
+
+            const ctx = document.getElementById('stepsChart');
+            if (chartType === 'histogram') return renderHistogram(ctx, recorded);
+            if (chartType === 'boxplot') return renderBoxplot(ctx, recorded);
+
+            const list = byDate ? days : [...days].filter(d => d.steps > 0).sort((a, b) => a.steps - b.steps);
+            const colours = { both: css('--c-both'), exercise: css('--c-exercise'), weights: css('--c-weights'), none: css('--c-none') };
+            const best = recorded.reduce((a, d) => d.steps > a.steps ? d : a);
+            const catText = d => d.cat === 'both' ? t('Exercises & weights') : d.cat === 'exercise' ? t('Exercises only') : d.cat === 'weights' ? t('Weights only') : t('Neither');
+            const opts = baseOptions();
+            opts.scales.x.ticks.callback = function (v) { return byDate ? dayLabel(list[v].date) : ''; };
+            if (!byDate) opts.scales.x.ticks.display = false;
+            opts.plugins.tooltip.callbacks = {
+                title: items => dayLabel(list[items[0].dataIndex].date, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }),
+                label: item => {
+                    const d = list[item.dataIndex];
+                    if (item.datasetIndex === 1) return `${t('7-day average')}: ${fmt(d.avg7)}`;
+                    if (item.datasetIndex === 2) return null;
+                    return [d.steps ? `${fmt(d.steps)} ${t('steps')}` : t('No steps recorded'), catText(d)];
+                },
+            };
+            opts.plugins.tooltip.itemSort = (a, b) => b.datasetIndex === 0 ? 1 : a.datasetIndex === 0 ? -1 : a.datasetIndex - b.datasetIndex;
+            opts.plugins.annotations = { enabled: true, bestIndex: list.indexOf(best), bestValue: best.steps };
+            opts.interaction = { mode: 'index', intersect: false };
+
+            const datasets = [];
+            if (chartType === 'bar') {
+                datasets.push({
+                    type: 'bar', data: list.map(d => d.steps),
+                    backgroundColor: list.map(d => colours[d.cat]),
+                    borderRadius: 3, borderSkipped: 'bottom',
+                    barPercentage: 0.9, categoryPercentage: 0.9, order: 3,
+                });
+            } else {
+                datasets.push({
+                    type: 'line', data: list.map(d => d.steps || null), spanGaps: false,
+                    borderColor: css('--c-both'), backgroundColor: css('--c-both'),
+                    borderWidth: 2, pointRadius: list.length > 60 ? 0 : 3, pointHoverRadius: 5, tension: 0.2, order: 3,
+                });
+            }
+            datasets.push({
+                type: 'line', data: byDate ? list.map(d => d.avg7) : [], borderColor: css('--c-avg'),
+                borderWidth: 2.5, pointRadius: 0, pointHoverRadius: 0, tension: 0.3, spanGaps: false, order: 1,
             });
+            datasets.push({
+                type: 'line', data: list.map(() => TARGET), borderColor: '#a0aec0', borderDash: [6, 5],
+                borderWidth: 1.5, pointRadius: 0, pointHoverRadius: 0, order: 2,
+            });
+            opts.scales.y.suggestedMax = TARGET * 1.05;
+
+            chart = new Chart(ctx, { data: { labels: list.map((d, i) => i), datasets }, options: opts, plugins: [annotations] });
+            document.getElementById('chart-caption').textContent = chartType === 'line'
+                ? t('Gaps in the line are days with no steps recorded. Tap the chart for details.')
+                : byDate
+                ? t('Bar colour shows whether exercises and weights were done that day. Tap a bar for details.')
+                : t('Days with steps recorded, lowest to highest.');
+        }
+
+        function renderHistogram(ctx, recorded) {
+            const values = recorded.map(d => d.steps).sort((a, b) => a - b);
+            const mean = values.reduce((a, b) => a + b, 0) / values.length;
+            const median = values.length % 2 ? values[(values.length - 1) / 2] : (values[values.length / 2 - 1] + values[values.length / 2]) / 2;
+            const bins = new Array(Math.ceil((values[values.length - 1] + 1) / 1000)).fill(0);
+            values.forEach(v => bins[Math.floor(v / 1000)]++);
+            const labels = bins.map((_, i) => `${i}–${i + 1}k`);
+            const opts = baseOptions();
+            opts.scales.x.ticks.maxTicksLimit = 14;
+            opts.scales.x.title = { display: true, text: t('Steps per day'), color: '#718096' };
+            opts.scales.y.title = { display: true, text: t('Number of days'), color: '#718096' };
+            opts.scales.y.ticks.precision = 0;
+            opts.scales.y.ticks.callback = v => v;
+            opts.plugins.tooltip.callbacks = {
+                title: items => `${items[0].dataIndex * 1000}–${(items[0].dataIndex + 1) * 1000} ${t('steps')}`,
+                label: item => `${item.raw} ${t('days')}`,
+            };
+            const markers = {
+                id: 'markers',
+                afterDatasetsDraw(c) {
+                    const { ctx, chartArea, scales: { x } } = c;
+                    const px = v => { const i = v / 1000; const a = x.getPixelForValue(Math.floor(i)), w = x.getPixelForValue(1) - x.getPixelForValue(0); return a - w / 2 + (i - Math.floor(i)) * w; };
+                    // Put the higher value's label on the right of its line and the lower one's on the left.
+                    const rightOf = median >= mean ? 'median' : 'mean';
+                    [[median, t('Median'), '#1e3a5f', 'median'], [mean, t('Average'), '#718096', 'mean']].forEach(([v, label, colour, which]) => {
+                        const xp = px(v);
+                        ctx.save(); ctx.strokeStyle = colour; ctx.setLineDash([4, 4]); ctx.lineWidth = 1.5;
+                        ctx.beginPath(); ctx.moveTo(xp, chartArea.top + 22); ctx.lineTo(xp, chartArea.bottom); ctx.stroke();
+                        ctx.setLineDash([]); ctx.fillStyle = colour; ctx.font = '600 11px Inter, system-ui, sans-serif';
+                        ctx.textAlign = which === rightOf ? 'left' : 'right';
+                        ctx.fillText(`${label} ${fmt(v)}`, xp + (ctx.textAlign === 'left' ? 5 : -5), chartArea.top + 12);
+                        ctx.restore();
+                    });
+                },
+            };
+            opts.layout.padding.top = 26;
+            chart = new Chart(ctx, {
+                type: 'bar',
+                data: { labels, datasets: [{ data: bins, backgroundColor: css('--c-both'), borderRadius: 3, barPercentage: 0.94, categoryPercentage: 0.94 }] },
+                options: opts, plugins: [markers],
+            });
+            document.getElementById('chart-caption').textContent = t('How many days fell into each 1,000-step band.');
+        }
+
+        function renderBoxplot(ctx, recorded) {
+            const v = recorded.map(d => d.steps).sort((a, b) => a - b);
+            const q = p => { const pos = (v.length - 1) * p, b = Math.floor(pos); return v[b + 1] !== undefined ? v[b] + (pos - b) * (v[b + 1] - v[b]) : v[b]; };
+            const stats = { min: v[0], q1: q(0.25), median: q(0.5), q3: q(0.75), max: v[v.length - 1] };
+            const opts = baseOptions();
+            opts.indexAxis = 'y';
+            opts.scales = {
+                x: { min: 0, suggestedMax: stats.max * 1.05, grid: { color: '#edf2f7' }, border: { display: false },
+                     ticks: { color: '#718096', callback: n => n >= 1000 ? (n / 1000) + 'k' : n } },
+                y: { display: false },
+            };
+            opts.plugins.tooltip.enabled = false;
+            opts.layout.padding = { top: 40, bottom: 10, left: 10, right: 10 };
+            const draw = {
+                id: 'box',
+                afterDatasetsDraw(c) {
+                    const { ctx, chartArea, scales: { x } } = c;
+                    const cy = (chartArea.top + chartArea.bottom) / 2, h = Math.min(70, (chartArea.bottom - chartArea.top) * 0.4);
+                    const X = n => x.getPixelForValue(n);
+                    ctx.save();
+                    ctx.strokeStyle = '#1e3a5f'; ctx.lineWidth = 2;
+                    ctx.beginPath(); ctx.moveTo(X(stats.min), cy); ctx.lineTo(X(stats.q1), cy); ctx.moveTo(X(stats.q3), cy); ctx.lineTo(X(stats.max), cy);
+                    ctx.moveTo(X(stats.min), cy - h / 4); ctx.lineTo(X(stats.min), cy + h / 4); ctx.moveTo(X(stats.max), cy - h / 4); ctx.lineTo(X(stats.max), cy + h / 4); ctx.stroke();
+                    ctx.fillStyle = 'rgba(42,120,214,0.18)'; ctx.strokeStyle = css('--c-both');
+                    ctx.beginPath(); ctx.roundRect(X(stats.q1), cy - h / 2, X(stats.q3) - X(stats.q1), h, 6); ctx.fill(); ctx.stroke();
+                    ctx.strokeStyle = '#1e3a5f'; ctx.lineWidth = 3;
+                    ctx.beginPath(); ctx.moveTo(X(stats.median), cy - h / 2); ctx.lineTo(X(stats.median), cy + h / 2); ctx.stroke();
+                    ctx.font = '600 11px Inter, system-ui, sans-serif'; ctx.fillStyle = '#4a5568'; ctx.textAlign = 'center';
+                    const top = [[stats.median, `${t('Median')} ${fmt(stats.median)}`]];
+                    const bottom = [[stats.min, `${t('Lowest')} ${fmt(stats.min)}`], [stats.q1, fmt(stats.q1)], [stats.q3, fmt(stats.q3)], [stats.max, `${t('Highest')} ${fmt(stats.max)}`]];
+                    top.forEach(([n, s]) => ctx.fillText(s, X(n), cy - h / 2 - 8));
+                    bottom.forEach(([n, s], i) => ctx.fillText(s, Math.min(Math.max(X(n), chartArea.left + 40), chartArea.right - 40), cy + h / 2 + (i % 2 ? 18 : 32)));
+                    ctx.restore();
+                },
+            };
+            chart = new Chart(ctx, { type: 'bar', data: { labels: [''], datasets: [{ data: [0] }] }, options: opts, plugins: [draw] });
+            document.getElementById('chart-caption').textContent = t('The box covers the middle half of days; the line inside is the median.');
+        }
+
+        // ── 10K Club badge ──
+        async function updateClubBadge() {
+            try {
+                const data = await fetch('/api/steps/club-status').then(r => r.json());
+                const badge = document.getElementById('club-badge');
+                if (data.level && data.level !== 'None') {
+                    badge.style.display = 'flex';
+                    badge.className = 'club-badge badge-' + data.level.toLowerCase();
+                    badge.innerHTML = data.level === 'Member' ? '10K<br>CLUB' : `${data.level}<br>10K`;
+                }
+            } catch (err) { console.error('Club status error:', err); }
+        }
+
+        // ── Controls ──
+        function setActive(segId, attr, value) {
+            document.querySelectorAll(`#${segId} button`).forEach(b => b.classList.toggle('active', b.dataset[attr] === value));
+        }
+        document.querySelectorAll('#period-seg button').forEach(b => b.addEventListener('click', () => {
+            period = b.dataset.period;
+            setActive('period-seg', 'period', period);
+            document.getElementById('custom-range').classList.toggle('show', period === 'custom');
+            if (period === 'custom' && !document.getElementById('start-date').value) {
+                const today = new Date(), start = new Date(); start.setDate(today.getDate() - 59);
+                document.getElementById('start-date').value = isoDate(start);
+                document.getElementById('end-date').value = isoDate(today);
+            }
+            loadData();
+        }));
+        ['start-date', 'end-date'].forEach(id => document.getElementById(id).addEventListener('change', loadData));
+        document.querySelectorAll('#type-seg button').forEach(b => b.addEventListener('click', () => {
+            chartType = b.dataset.type;
+            setActive('type-seg', 'type', chartType);
+            renderChart();
+        }));
+        document.getElementById('sort-type').addEventListener('change', renderChart);
+
+        // ── Language ──
+        const langToggleButton = document.getElementById('lang-toggle');
+        function setLanguage(lang) {
             currentLang = lang;
-            localStorage.setItem('language', lang);
-            if(langToggleButton) {
+            localStorage.setItem('preferredLanguage', lang);
+            document.querySelectorAll('[data-translate]').forEach(el => {
+                const key = el.getAttribute('data-translate');
+                if (translations[lang] && translations[lang][key]) el.textContent = translations[lang][key];
+            });
+            if (langToggleButton) {
                 const flag = lang === 'en' ? 'FR' : 'GB';
                 langToggleButton.innerHTML = `<img src="/images/flag-${flag.toLowerCase()}.svg" alt="${flag}">`;
             }
-            loadChartData(); // Call loadChartData after language is set
+            renderStats();
+            renderChart();
         }
+        if (langToggleButton) langToggleButton.addEventListener('click', () => setLanguage(currentLang === 'en' ? 'fr' : 'en'));
 
-        if(langToggleButton) {
-            langToggleButton.addEventListener('click', () => {
-                const newLang = currentLang === 'en' ? 'fr' : 'en';
-                setLanguage(newLang);
-            });
-        }
-
-
-        // Set max date for date pickers
-        const todayForPicker = new Date();
-        startDateInput.max = todayForPicker.toISOString().slice(0, 10);
-        endDateInput.max = todayForPicker.toISOString().slice(0, 10);
-
-        function toggleDatePickers() {
-            if (filterTypeSelect.value === 'custom') {
-                customDatePickers.style.display = 'block';
-            } else {
-                customDatePickers.style.display = 'none';
-            }
-        }
-
-        async function applyFilter() {
-            await loadChartData();
-        }
-
-        // Helper function to format date to DD-MMM-YY
-        function formatDateDDMMMYY(dateString) {
-            const date = new Date(dateString);
-            const options = { day: '2-digit', month: 'short', year: '2-digit' };
-            return date.toLocaleDateString('en-GB', options).replace(/ /g, '-').toUpperCase();
-        }
-
-        // renderChart function (globally accessible)
-        function renderChart(type) {
-            if (!chartData) return;
-            
-            try {
-                if (chart) {
-                    chart.destroy();
-                }
-                const ctx = document.getElementById('stepsChart').getContext('2d');
-                if (!ctx) return;
-
-                let finalType = (type === 'histogram' || type === 'boxplot') ? 'bar' : type;
-                let finalData = JSON.parse(JSON.stringify(chartData));
-                let plugins = [];
-
-                if (type === 'histogram') {
-                    // ... (histogram logic remains same)
-                    const recordedSteps = chartData.datasets[0].data.filter(s => s > 0).sort((a, b) => a - b);
-                    if (recordedSteps.length === 0) {
-                        showToast('No step data available.', 'warning');
-                        return;
-                    }
-
-                    const mean = recordedSteps.reduce((a, b) => a + b, 0) / recordedSteps.length;
-                    let median;
-                    const mid = Math.floor(recordedSteps.length / 2);
-                    if (recordedSteps.length % 2 === 0) {
-                        median = (recordedSteps[mid - 1] + recordedSteps[mid]) / 2;
-                    } else {
-                        median = recordedSteps[mid];
-                    }
-
-                    const binSize = 1000;
-                    const maxSteps = Math.max(...recordedSteps);
-                    const numBins = Math.ceil(maxSteps / binSize) || 1;
-                    const bins = new Array(numBins).fill(0);
-                    const binLabels = [];
-
-                    for (let i = 0; i < numBins; i++) {
-                        binLabels.push(`${i * binSize}-${(i + 1) * binSize}`);
-                    }
-
-                    recordedSteps.forEach(s => {
-                        const binIndex = Math.min(Math.floor(s / binSize), numBins - 1);
-                        bins[binIndex]++;
-                    });
-
-                    finalData = {
-                        labels: binLabels,
-                        datasets: [{
-                            label: translations[currentLang]['Number of Days'] || 'Days',
-                            data: bins,
-                            backgroundColor: '#00B0B9',
-                            borderColor: '#008a91',
-                            borderWidth: 1,
-                            barPercentage: 1,
-                            categoryPercentage: 1
-                        }]
-                    };
-
-                    plugins.push({
-                        id: 'statsLines',
-                        afterDraw(chart) {
-                            const { ctx, chartArea: { top, bottom, left, width }, scales: { x } } = chart;
-                            const drawLine = (value, color, label, offsetLabelY) => {
-                                const xPos = left + (value / (numBins * binSize)) * width;
-                                
-                                if (xPos >= left && xPos <= left + width) {
-                                    ctx.save();
-                                    ctx.strokeStyle = color;
-                                    ctx.lineWidth = 3;
-                                    ctx.setLineDash([5, 5]);
-                                    ctx.beginPath();
-                                    ctx.moveTo(xPos, top);
-                                    ctx.lineTo(xPos, bottom);
-                                    ctx.stroke();
-                                    
-                                    const text = `${label}: ${Math.round(value)}`;
-                                    ctx.font = 'bold 12px Arial';
-                                    const textWidth = ctx.measureText(text).width;
-                                    ctx.fillStyle = 'white';
-                                    ctx.fillRect(xPos - (textWidth/2) - 4, top - offsetLabelY - 14, textWidth + 8, 18);
-                                    ctx.fillStyle = color;
-                                    ctx.textAlign = 'center';
-                                    ctx.fillText(text, xPos, top - offsetLabelY);
-                                    ctx.restore();
-                                }
-                            };
-                            drawLine(mean, '#ff5722', translations[currentLang]['Mean'] || 'Mean', 25);
-                            drawLine(median, '#9c27b0', translations[currentLang]['Median'] || 'Median', 5);
-                        }
-                    });
-                } else if (type === 'line') {
-                    // Line chart needs a single border color for the whole line
-                    finalData.datasets[0].borderColor = '#00B0B9';
-                    finalData.datasets[0].borderWidth = 3;
-                    finalData.datasets[0].pointBackgroundColor = chartData.datasets[0].borderColor; // Red for the max point
-                    finalData.datasets[0].pointRadius = chartData.datasets[0].borderWidth; // Larger for the max point
-                } else if (type === 'boxplot') {
-                    // ... (boxplot logic remains same but inside try/catch)
-                    const recordedSteps = chartData.datasets[0].data.filter(s => s > 0).sort((a, b) => a - b);
-                    if (recordedSteps.length === 0) {
-                        showToast('No step data available.', 'warning');
-                        return;
-                    }
-                    const min = recordedSteps[0];
-                    const max = recordedSteps[recordedSteps.length - 1];
-                    const getQuartile = (q) => {
-                        const pos = (recordedSteps.length - 1) * q;
-                        const base = Math.floor(pos);
-                        const rest = pos - base;
-                        return recordedSteps[base + 1] !== undefined ? recordedSteps[base] + rest * (recordedSteps[base + 1] - recordedSteps[base]) : recordedSteps[base];
-                    };
-                    const q1 = getQuartile(0.25);
-                    const median = getQuartile(0.5);
-                    const q3 = getQuartile(0.75);
-                    const label = translations[currentLang]['Steps Distribution'] || 'Steps Distribution';
-                    finalData = {
-                        labels: [label],
-                        datasets: [{ label: 'IQR', data: [[q1, q3]], backgroundColor: 'rgba(0, 176, 185, 0.5)', borderColor: '#00B0B9', borderWidth: 2, barThickness: 100 }]
-                    };
-                    plugins.push({
-                        id: 'boxPlotExtras',
-                        afterDraw(chart) {
-                            const { ctx, scales: { x, y } } = chart;
-                            const xMid = x.getPixelForValue(label);
-                            ctx.save();
-                            ctx.strokeStyle = '#008a91';
-                            ctx.lineWidth = 2;
-                            const yMedian = y.getPixelForValue(median);
-                            ctx.beginPath(); ctx.moveTo(xMid - 50, yMedian); ctx.lineTo(xMid + 50, yMedian); ctx.stroke();
-                            const yMin = y.getPixelForValue(min); const yMax = y.getPixelForValue(max);
-                            const yQ1 = y.getPixelForValue(q1); const yQ3 = y.getPixelForValue(q3);
-                            ctx.setLineDash([2, 2]); ctx.beginPath(); ctx.moveTo(xMid, yMin); ctx.lineTo(xMid, yQ1); ctx.moveTo(xMid, yMax); ctx.lineTo(xMid, yQ3); ctx.stroke();
-                            ctx.setLineDash([]); ctx.beginPath(); ctx.moveTo(xMid - 20, yMin); ctx.lineTo(xMid + 20, yMin); ctx.moveTo(xMid - 20, yMax); ctx.lineTo(xMid + 20, yMax); ctx.stroke();
-                            ctx.fillStyle = '#333'; ctx.font = '11px Arial'; ctx.textAlign = 'left';
-                            ctx.fillText(`${translations[currentLang]['Max'] || 'Max'}: ${max}`, xMid + 60, yMax);
-                            ctx.fillText(`Q3: ${Math.round(q3)}`, xMid + 60, yQ3);
-                            ctx.fillText(`${translations[currentLang]['Median'] || 'Median'}: ${Math.round(median)}`, xMid + 60, yMedian);
-                            ctx.fillText(`Q1: ${Math.round(q1)}`, xMid + 60, yQ1);
-                            ctx.fillText(`${translations[currentLang]['Min'] || 'Min'}: ${min}`, xMid + 60, yMin);
-                            ctx.restore();
-                        }
-                    });
-                }
-
-                chart = new Chart(ctx, {
-                    type: finalType,
-                    data: finalData,
-                    options: {
-                        layout: { padding: { top: 35, right: type === 'boxplot' ? 120 : 10 } },
-                        scales: {
-                            x: { title: { display: type === 'histogram', text: translations[currentLang]['Step Range'] || 'Step Range' } },
-                            y: { 
-                                beginAtZero: true, 
-                                suggestedMax: type === 'boxplot' ? Math.max(...chartData.datasets[0].data.filter(s => s > 0)) * 1.1 : undefined,
-                                title: { display: true, text: type === 'histogram' ? (translations[currentLang]['Days'] || 'Days') : (translations[currentLang]['Steps'] || 'Steps') }
-                            }
-                        },
-                        plugins: { legend: { display: (type !== 'histogram' && type !== 'boxplot') } }
-                    },
-                    plugins: plugins
-                });
-            } catch (err) {
-                console.error("Chart Render Error:", err);
-                showToast('Error drawing chart. Please try again.', 'error');
-            }
-        }
-
-        async function updateClubBadge() {
-            try {
-                const response = await fetch('/api/steps/club-status');
-                const data = await response.json();
-                const badge = document.getElementById('club-badge');
-                
-                if (data.level && data.level !== 'None') {
-                    badge.style.display = 'flex';
-                    badge.className = 'club-badge ' + 'badge-' + data.level.toLowerCase();
-                    if (data.level === 'Member') {
-                        badge.innerHTML = '10K<br>CLUB';
-                    } else {
-                        badge.innerHTML = `${data.level}<br>10K CLUB`;
-                    }
-                } else {
-                    badge.style.display = 'none';
-                }
-            } catch (err) {
-                console.error("Error fetching club status:", err);
-            }
-        }
-
-        async function loadChartData() {
-            updateClubBadge();
-            let stepsApiUrl = '/api/steps';
-            let exercisesApiUrl = '/api/exercises';
-            const filterType = filterTypeSelect.value;
-            const sortType = document.getElementById('sort-type') ? document.getElementById('sort-type').value : 'date-asc';
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-
-            let actualStartDate = null;
-            let actualEndDate = null;
-
-            if (filterType === '30days') {
-                actualStartDate = new Date(today);
-                actualStartDate.setDate(today.getDate() - 29);
-                actualEndDate = today;
-            } else if (filterType === 'custom') {
-                const customStart = new Date(startDateInput.value);
-                const customEnd = new Date(endDateInput.value);
-                if (isNaN(customStart) || isNaN(customEnd) || customStart > customEnd) {
-                    showToast(translations[currentLang]['Please select valid custom start and end dates.'] || 'Please select valid custom start and end dates.', 'warning');
-                    return;
-                }
-                actualStartDate = customStart;
-                actualEndDate = customEnd;
-            }
-
-            if (actualStartDate && actualEndDate) {
-                const formattedStartDate = actualStartDate.toISOString().slice(0, 10);
-                const formattedEndDate = actualEndDate.toISOString().slice(0, 10);
-                stepsApiUrl += `?startDate=${formattedStartDate}&endDate=${formattedEndDate}`;
-                exercisesApiUrl += `?startDate=${formattedStartDate}&endDate=${formattedEndDate}`;
-            }
-
-            const stepsResponse = await fetch(stepsApiUrl);
-            const steps = await stepsResponse.json();
-            const exercisesResponse = await fetch(exercisesApiUrl);
-            const exercises = await exercisesResponse.json();
-
-            let allFetchedDates = new Set();
-            steps.forEach(s => allFetchedDates.add(s.date));
-            exercises.forEach(e => allFetchedDates.add(e.date));
-
-            let minDate = null;
-            let maxDate = null;
-
-            if (allFetchedDates.size > 0) {
-                const sortedUniqueDates = Array.from(allFetchedDates).sort();
-                minDate = new Date(sortedUniqueDates[0] + 'T00:00:00Z');
-                maxDate = new Date(sortedUniqueDates[sortedUniqueDates.length - 1] + 'T00:00:00Z');
-            } else {
-                const todayUtc = new Date();
-                todayUtc.setUTCHours(0, 0, 0, 0);
-                minDate = todayUtc;
-                maxDate = todayUtc;
-            }
-
-            let displayStartDate = minDate;
-            let displayEndDate = maxDate;
-
-            const allDates = [];
-            let currentDate = new Date(displayStartDate);
-            currentDate.setUTCHours(0, 0, 0, 0);
-            let comparisonEndDate = new Date(displayEndDate);
-            comparisonEndDate.setUTCHours(0, 0, 0, 0);
-
-            while (currentDate.getTime() <= comparisonEndDate.getTime()) {
-                allDates.push(currentDate.toISOString().slice(0, 10));
-                currentDate.setUTCDate(currentDate.getUTCDate() + 1);
-            }
-
-            let dataPoints = allDates.map(date => {
-                const step = steps.find(s => s.date === date);
-                const exercise = exercises.find(ex => ex.date === date);
-                let backgroundColor = '#dcdcdc'; // No exercise or weights done (Darker Light Grey)
-                if (exercise) {
-                    if (exercise.weights_done === 'Yes' && exercise.done === 'Yes') {
-                        backgroundColor = 'darkgreen';
-                    } else if (exercise.weights_done === 'Yes') {
-                        backgroundColor = '#ADD8E6'; // Only Weights done
-                    } else if (exercise.done === 'Yes') {
-                        backgroundColor = '#d4edda'; // Only Exercises Done
-                    }
-                }
-                return {
-                    date: date,
-                    steps: step ? step.quantity : 0,
-                    backgroundColor: backgroundColor,
-                };
-            });
-
-            // Calculate summary stats on unsorted data
-            let largestSteps = 0;
-            let largestStepsDate = 'N/A';
-            const recordedStepsValues = dataPoints.filter(dp => dp.steps > 0).map(dp => dp.steps);
-            console.log("Steps found for chart:", recordedStepsValues);
-            if (recordedStepsValues.length > 0) {
-                largestSteps = Math.max(...recordedStepsValues);
-                const largestStepsDataPoint = dataPoints.find(dp => dp.steps === largestSteps);
-                if (largestStepsDataPoint) {
-                    largestStepsDate = largestStepsDataPoint.date;
-                }
-            }
-            const averageSteps = recordedStepsValues.length > 0 ? Math.round(recordedStepsValues.reduce((a, b) => a + b, 0) / recordedStepsValues.length) : 0;
-
-            document.getElementById('largest-steps').textContent = largestSteps.toLocaleString();
-            document.getElementById('largest-steps-date').textContent = largestStepsDate !== 'N/A' ? `(${formatDateDDMMMYY(largestStepsDate)})` : '';
-            document.getElementById('average-steps').textContent = averageSteps.toLocaleString();
-
-            // Fetch total steps for the summary box
-            try {
-                const totalResponse = await fetch('/api/steps/total');
-                const totalData = await totalResponse.json();
-                document.getElementById('total-steps').textContent = (totalData.total_steps || 0).toLocaleString();
-            } catch (err) {
-                console.error("Error fetching total steps:", err);
-            }
-
-            // Calculate running average on time-sorted data before applying display sort
-            const timeSortedData = [...dataPoints].sort((a, b) => new Date(a.date) - new Date(b.date));
-            const runningAverageDataMap = new Map();
-            let sum = 0;
-            let count = 0;
-            timeSortedData.forEach(dp => {
-                if (dp.steps > 0) {
-                    sum += dp.steps;
-                    count++;
-                }
-                runningAverageDataMap.set(dp.date, count > 0 ? Math.round(sum / count) : 0);
-            });
-
-            // Apply sorting for chart display
-            switch(sortType) {
-                case 'date-asc':
-                    dataPoints.sort((a, b) => new Date(a.date) - new Date(b.date));
-                    break;
-                case 'steps-asc':
-                    dataPoints.sort((a, b) => a.steps - b.steps || new Date(a.date) - new Date(b.date));
-                    break;
-                default: // Default to date-asc if an unknown sortType is encountered
-                    dataPoints.sort((a, b) => new Date(a.date) - new Date(b.date));
-                    break;
-            }
-
-            const chartLabels = dataPoints.map(dp => dp.date);
-            const chartStepsData = dataPoints.map(dp => dp.steps);
-            const chartBackgroundColors = dataPoints.map(dp => dp.backgroundColor);
-            
-            const chartRunningAverageData = chartLabels.map(date => runningAverageDataMap.get(date));
-
-            const borderColors = chartLabels.map(date => date === largestStepsDate ? 'red' : 'transparent');
-            const borderWidths = chartLabels.map(date => date === largestStepsDate ? 2 : 0);
-
-            const showRunningAverage = sortType === 'date-asc';
-
-            chartData = {
-                labels: chartLabels,
-                datasets: [{
-                    label: 'Steps per Day',
-                    data: chartStepsData,
-                    fill: false,
-                    borderColor: borderColors,
-                    borderWidth: borderWidths,
-                    backgroundColor: chartBackgroundColors,
-                    tension: 0.1
-                },
-                {
-                    label: 'Running Average',
-                    data: showRunningAverage ? chartRunningAverageData : [],
-                    type: 'line',
-                    fill: false,
-                    borderColor: 'blue',
-                    borderWidth: 1,
-                    tension: 0.1,
-                    pointRadius: 0
-                }]
-            };
-
-            renderChart('bar');
-        }
-
-        window.onload = () => {
-            setLanguage(currentLang);
-            loadChartData();
-        };
-
+        // ── Share ──
         async function shareGraph() {
-            const shareUrl = window.location.href;
-            const shareTitle = "Fred's Steps Progress";
-            const shareText = "Check out Fred's daily steps progress in his rehab journey!";
-
+            const url = window.location.href, title = "Fred's Steps Progress";
+            const text = "Check out Fred's daily steps progress in his rehab journey!";
             if (navigator.share) {
-                // Use Web Share API if available
-                try {
-                    await navigator.share({
-                        title: shareTitle,
-                        text: shareText,
-                        url: shareUrl,
-                    });
-                    console.log('Web Share API used successfully!');
-                } catch (error) {
-                    console.error('Error sharing using Web Share API:', error);
-                    fallbackShare(shareTitle, shareText, shareUrl);
-                }
-            } else {
-                // Fallback for browsers that do not support Web Share API
-                    fallbackShare(shareTitle, shareText, shareUrl);
+                try { await navigator.share({ title, text, url }); return; } catch (e) { if (e.name === 'AbortError') return; }
             }
+            try { await navigator.clipboard.writeText(url); showToast(t('Link copied.'), 'success'); }
+            catch { prompt(t('Copy this link:'), url); }
         }
 
-        function fallbackShare(title, text, url) {
-            const emailSubject = encodeURIComponent(title);
-            const emailBody = encodeURIComponent(`${text}\n\nView the graph here: ${url}`);
-            const whatsappText = encodeURIComponent(`${text} ${url}`);
-
-            const shareOptions = `
-                Share this graph:
-                \n\nEmail: mailto:?subject=${emailSubject}&body=${emailBody}
-                \nWhatsApp: https://wa.me/?text=${whatsappText}
-                \n\n(Copy the link to share on other platforms: ${url})
-            `;
-            alert(shareOptions);
-        }
-
+        window.onload = async () => {
+            await window.authReady;
+            setActive('period-seg', 'period', period);
+            setActive('type-seg', 'type', chartType);
+            setLanguage(currentLang);
+            updateClubBadge();
+            loadData();
+        };
     </script>
 </body>
 </html>
