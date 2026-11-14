@@ -564,6 +564,18 @@ const translations = {
         "Gaps in the line are days with no steps recorded. Tap the chart for details.": "Les interruptions de la courbe sont des jours sans pas enregistrés. Touchez le graphique pour les détails.",
         "Daily steps": "Pas quotidiens",
         "Running average (since start)": "Moyenne cumulée (depuis le début)",
-        "Running average": "Moyenne cumulée"
+        "Running average": "Moyenne cumulée",
+        "Search for a place or postcode": "Rechercher un lieu ou un code postal",
+        "Can't find it? Choose on the map instead": "Introuvable ? Choisissez plutôt sur la carte",
+        "Pin in the wrong spot? Drag it or tap the map.": "Épingle mal placée ? Déplacez-la ou touchez la carte.",
+        "No position yet: search for the place above.": "Pas encore de position : recherchez le lieu ci-dessus.",
+        "Tap the map where the run was.": "Touchez la carte à l'endroit de la course.",
+        "Used before": "Déjà utilisé",
+        "Your places": "Vos lieux",
+        "Suggestions": "Suggestions",
+        "Searching…": "Recherche…",
+        "No places found. Try a postcode, or choose on the map.": "Aucun lieu trouvé. Essayez un code postal ou choisissez sur la carte.",
+        "Place search is not available just now. You can still type the name.": "La recherche de lieux est indisponible pour le moment. Vous pouvez saisir le nom.",
+        "Position set for": "Position définie pour"
     }
 };
