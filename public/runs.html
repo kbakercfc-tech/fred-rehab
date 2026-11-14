@@ -35,6 +35,27 @@
         .location-row input { flex: 1 1 200px; min-width: 0; margin: 0; }
         .location-row button { flex: 0 0 auto; width: auto; margin: 0; white-space: nowrap; padding: 0.55em 0.9em; font-size: 0.85em; }
         .gps-note { font-size: 0.8em; color: var(--text-muted); margin-top: 0.3em; min-height: 1.2em; }
+        .place-search { position: relative; flex: 1 1 220px; min-width: 0; }
+        .place-search input { width: 100%; margin: 0; padding-left: 2.3em; }
+        .place-search .search-icon { position: absolute; left: 0.8em; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; color: var(--text-muted); pointer-events: none; }
+        .place-list {
+            position: absolute; left: 0; right: 0; top: calc(100% + 4px); z-index: 50;
+            list-style: none; margin: 0; padding: 4px; background: #fff;
+            border: 1px solid var(--border); border-radius: 10px; box-shadow: var(--shadow-lg);
+            max-height: 320px; overflow-y: auto;
+        }
+        .place-list[hidden] { display: none; }
+        .place-list li { padding: 0.55em 0.7em; border-radius: 7px; cursor: pointer; display: flex; gap: 0.6em; align-items: flex-start; }
+        .place-list li.active, .place-list li:hover { background: #ebf4fc; }
+        .place-list li .pl-icon { flex-shrink: 0; margin-top: 2px; width: 16px; height: 16px; color: var(--accent); }
+        .place-list li div { margin: 0; } /* undo the general form spacing */
+        .place-list li .pl-name { font-weight: 600; color: var(--text); }
+        .place-list li .pl-detail { font-size: 0.8em; color: var(--text-muted); }
+        .place-list li.pl-head { font-size: 0.7em; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); cursor: default; padding: 0.6em 0.7em 0.2em; }
+        .place-list li.pl-head:hover { background: none; }
+        .place-list li.pl-note { font-size: 0.85em; color: var(--text-muted); cursor: default; font-style: italic; }
+        .place-list li.pl-note:hover { background: none; }
+        .map-choice { font-size: 0.85em; }
         .hint { font-size: 0.8em; color: var(--text-muted); font-weight: normal; }
         .form-actions { display: flex; gap: 0.6em; flex-wrap: wrap; }
 
@@ -126,13 +147,17 @@
                         <div class="full">
                             <label for="run-location" data-translate="Location:">Location:</label>
                             <div class="location-row">
-                                <input type="text" id="run-location" list="location-list" maxlength="200" data-translate-placeholder="e.g. Hanley Park parkrun" placeholder="e.g. Hanley Park parkrun">
+                                <div class="place-search">
+                                    <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+                                    <input type="text" id="run-location" maxlength="200" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="place-list" data-translate-placeholder="Search for a place or postcode" placeholder="Search for a place or postcode">
+                                    <ul id="place-list" class="place-list" role="listbox" hidden></ul>
+                                </div>
                                 <button type="button" id="gps-btn" data-translate="Use my location">Use my location</button>
                             </div>
-                            <datalist id="location-list"></datalist>
                             <div class="gps-note" id="gps-note"></div>
+                            <a href="#" id="map-choice" class="map-choice editor-only" data-translate="Can't find it? Choose on the map instead">Can't find it? Choose on the map instead</a>
                             <div id="pick-map" class="pick-map" hidden></div>
-                            <div id="pick-hint" class="hint" hidden><span data-translate="Tap the map to set where the run was, or drag the pin.">Tap the map to set where the run was, or drag the pin.</span> <a href="#" id="clear-pos" data-translate="Clear position">Clear position</a></div>
+                            <div id="pick-hint" class="hint" hidden><span data-translate="Pin in the wrong spot? Drag it or tap the map.">Pin in the wrong spot? Drag it or tap the map.</span> <a href="#" id="clear-pos" data-translate="Clear position">Clear position</a></div>
                         </div>
                         <div class="full">
                             <label for="run-notes"><span data-translate="Notes:">Notes:</span> <span class="hint" data-translate="(optional)">(optional)</span></label>
@@ -252,8 +277,6 @@
 
         function refreshLocations() {
             const locations = [...new Set(runs.map(r => r.location).filter(Boolean))].sort();
-            document.getElementById('location-list').innerHTML =
-                locations.map(l => `<option value="${escapeHtml(l)}"></option>`).join('');
             const filter = document.getElementById('location-filter');
             const current = filter.value;
             filter.innerHTML = `<option value="">${escapeHtml(t('All locations'))}</option>` +
@@ -345,20 +368,28 @@
                     : t('Tap a pin to see the runs there.');
         }
 
-        function initPickMap() {
+        // The small map in the form only appears once there is a position to confirm,
+        // or when Fred chooses to pick the spot on the map himself.
+        let pickMapWanted = false;
+        function showPickMap(show) {
             if (window.userRole !== 'editor' || typeof L === 'undefined') return;
             const el = document.getElementById('pick-map');
-            el.hidden = false;
-            document.getElementById('pick-hint').hidden = false;
-            pickMap = makeMap(el, 12);
-            pickMap.on('click', e => setPosition(e.latlng.lat, e.latlng.lng, t('Map position set.')));
+            el.hidden = !show;
+            document.getElementById('pick-hint').hidden = !show;
+            document.getElementById('map-choice').hidden = show;
+            if (!show) return;
+            if (!pickMap) {
+                pickMap = makeMap(el, 12);
+                pickMap.on('click', e => setPosition(e.latlng.lat, e.latlng.lng, t('Map position set.')));
+            }
+            pickMap.invalidateSize();
             syncPickMarker();
         }
 
         function setPosition(lat, lng, message) {
             gpsCoords = lat == null ? null : { latitude: Math.round(lat * 1e5) / 1e5, longitude: Math.round(lng * 1e5) / 1e5 };
             document.getElementById('gps-note').textContent = message || '';
-            syncPickMarker();
+            showPickMap(!!gpsCoords || pickMapWanted);
         }
 
         function syncPickMarker() {
@@ -542,6 +573,8 @@
         function resetForm() {
             form.reset();
             editingId = null;
+            pickMapWanted = false;
+            closePlaces();
             setPosition(null);
             if (pickMap) pickMap.setView(STOKE, 12);
             document.getElementById('run-date').value = new Date().toLocaleDateString('en-CA');
@@ -561,7 +594,7 @@
             document.getElementById('run-location').value = r.location || '';
             document.getElementById('run-notes').value = r.notes || '';
             if (r.latitude != null) setPosition(r.latitude, r.longitude, t('Map position saved.'));
-            else setPosition(null, null, pickMap ? t('No position yet: tap the map to add one.') : '');
+            else { pickMapWanted = false; setPosition(null, null, t('No position yet: search for the place above.')); }
             document.getElementById('form-title').textContent = t('Edit Run');
             document.getElementById('save-btn').textContent = t('Save Changes');
             document.getElementById('cancel-edit-btn').style.display = '';
@@ -630,7 +663,115 @@
             if (known) setPosition(known.latitude, known.longitude, t('Using the saved position for this place.'));
         });
 
-        document.getElementById('clear-pos').onclick = (e) => { e.preventDefault(); setPosition(null); };
+        document.getElementById('clear-pos').onclick = (e) => { e.preventDefault(); pickMapWanted = false; setPosition(null); };
+        document.getElementById('map-choice').onclick = (e) => {
+            e.preventDefault();
+            pickMapWanted = true;
+            setPosition(gpsCoords ? gpsCoords.latitude : null, gpsCoords ? gpsCoords.longitude : null, t('Tap the map where the run was.'));
+        };
+
+        // ── Place search: suggestions as Fred types a place name or postcode ──
+        const locInput = document.getElementById('run-location');
+        const placeList = document.getElementById('place-list');
+        const PIN_SVG = '<svg class="pl-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s7-6.2 7-12a7 7 0 0 0-14 0c0 5.8 7 12 7 12Z"/><circle cx="12" cy="10" r="2.5"/></svg>';
+        const RUN_SVG = '<svg class="pl-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>';
+        let placeItems = [], activeIndex = -1, searchTimer = null, searchSeq = 0;
+
+        function savedPlaces(q) {
+            const key = q.trim().toLowerCase(), seen = new Set(), out = [];
+            for (const r of [...runs].reverse()) {
+                if (r.latitude == null || !r.location) continue;
+                const k = r.location.trim().toLowerCase();
+                if (seen.has(k) || (key && !k.includes(key))) continue;
+                seen.add(k);
+                out.push({ label: r.location, detail: t('Used before'), lat: r.latitude, lng: r.longitude, saved: true });
+                if (out.length >= 3) break;
+            }
+            return out;
+        }
+
+        function closePlaces() {
+            placeList.hidden = true;
+            locInput.setAttribute('aria-expanded', 'false');
+            activeIndex = -1;
+        }
+
+        function renderPlaces(saved, found, state) {
+            placeItems = [...saved, ...found];
+            let html = '';
+            if (saved.length) html += `<li class="pl-head">${escapeHtml(t('Your places'))}</li>`;
+            saved.forEach((p, i) => html += placeRow(p, i, RUN_SVG));
+            if (found.length) html += `<li class="pl-head">${escapeHtml(t('Suggestions'))}</li>`;
+            found.forEach((p, i) => html += placeRow(p, saved.length + i, PIN_SVG));
+            if (state === 'searching') html += `<li class="pl-note">${escapeHtml(t('Searching…'))}</li>`;
+            if (state === 'none') html += `<li class="pl-note">${escapeHtml(t('No places found. Try a postcode, or choose on the map.'))}</li>`;
+            if (state === 'error') html += `<li class="pl-note">${escapeHtml(t('Place search is not available just now. You can still type the name.'))}</li>`;
+            placeList.innerHTML = html;
+            const open = !!html;
+            placeList.hidden = !open;
+            locInput.setAttribute('aria-expanded', String(open));
+            activeIndex = -1;
+        }
+
+        function placeRow(p, index, icon) {
+            return `<li role="option" data-index="${index}">${icon}<div><div class="pl-name">${escapeHtml(p.label)}</div>` +
+                (p.detail ? `<div class="pl-detail">${escapeHtml(p.detail)}</div>` : '') + `</div></li>`;
+        }
+
+        function choosePlace(index) {
+            const p = placeItems[index];
+            if (!p) return;
+            locInput.value = p.label;
+            closePlaces();
+            setPosition(p.lat, p.lng, '📍 ' + t('Position set for') + ' ' + p.label);
+        }
+
+        locInput.addEventListener('input', () => {
+            const q = locInput.value.trim();
+            clearTimeout(searchTimer);
+            const seq = ++searchSeq;
+            if (!q) { renderPlaces(savedPlaces(''), [], null); return; }
+            const saved = savedPlaces(q);
+            if (q.length < 3) { renderPlaces(saved, [], null); return; }
+            renderPlaces(saved, [], 'searching');
+            searchTimer = setTimeout(async () => {
+                try {
+                    const res = await fetch('/api/places?q=' + encodeURIComponent(q));
+                    if (!res.ok) throw new Error();
+                    const found = (await res.json()).map(p => ({
+                        label: p.town ? `${p.name}, ${p.town}` : p.name,
+                        detail: p.detail, lat: p.lat, lng: p.lng,
+                    })).filter(p => !saved.some(s => s.label.toLowerCase() === p.label.toLowerCase()));
+                    if (seq === searchSeq) renderPlaces(saved, found, found.length || saved.length ? null : 'none');
+                } catch {
+                    if (seq === searchSeq) renderPlaces(saved, [], 'error');
+                }
+            }, 350);
+        });
+        locInput.addEventListener('focus', () => { if (!locInput.value.trim()) renderPlaces(savedPlaces(''), [], null); });
+        locInput.addEventListener('keydown', e => {
+            if (placeList.hidden) return;
+            const options = [...placeList.querySelectorAll('li[role=option]')];
+            if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+                e.preventDefault();
+                activeIndex = (activeIndex + (e.key === 'ArrowDown' ? 1 : -1) + options.length) % options.length;
+                options.forEach((li, i) => li.classList.toggle('active', i === activeIndex));
+                if (options[activeIndex]) options[activeIndex].scrollIntoView({ block: 'nearest' });
+            } else if (e.key === 'Enter' && activeIndex >= 0) {
+                e.preventDefault();
+                choosePlace(Number(options[activeIndex].dataset.index));
+            } else if (e.key === 'Escape') {
+                closePlaces();
+            }
+        });
+        // mousedown (not click) so the choice lands before the box loses focus
+        placeList.addEventListener('mousedown', e => {
+            const li = e.target.closest('li[role=option]');
+            if (!li) return;
+            e.preventDefault();
+            choosePlace(Number(li.dataset.index));
+        });
+        locInput.addEventListener('blur', () => setTimeout(closePlaces, 150));
 
         document.getElementById('gps-btn').onclick = () => {
             const note = document.getElementById('gps-note');
@@ -639,7 +780,13 @@
             navigator.geolocation.getCurrentPosition(pos => {
                 setPosition(pos.coords.latitude, pos.coords.longitude, t('Map position saved.'));
                 const loc = document.getElementById('run-location');
-                if (!loc.value) loc.value = `${gpsCoords.latitude}, ${gpsCoords.longitude}`;
+                if (!loc.value) {
+                    // Fill in the name of the place, falling back to the coordinates.
+                    fetch(`/api/places/reverse?lat=${gpsCoords.latitude}&lon=${gpsCoords.longitude}`)
+                        .then(r => r.ok ? r.json() : null)
+                        .then(p => { if (!loc.value) loc.value = p ? (p.town ? `${p.name}, ${p.town}` : p.name) : `${gpsCoords.latitude}, ${gpsCoords.longitude}`; })
+                        .catch(() => { if (!loc.value) loc.value = `${gpsCoords.latitude}, ${gpsCoords.longitude}`; });
+                }
             }, () => {
                 note.textContent = t('Could not get your location. You can still type it in.');
             }, { enableHighAccuracy: true, timeout: 15000 });
@@ -677,7 +824,7 @@
             resetForm();
             await loadRuns();
             setLanguage(currentLang);
-            initPickMap();
+            showPickMap(false);
         };
     </script>
 </body>
