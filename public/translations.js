@@ -576,6 +576,7 @@ const translations = {
         "Searching…": "Recherche…",
         "No places found. Try a postcode, or choose on the map.": "Aucun lieu trouvé. Essayez un code postal ou choisissez sur la carte.",
         "Place search is not available just now. You can still type the name.": "La recherche de lieux est indisponible pour le moment. Vous pouvez saisir le nom.",
-        "Position set for": "Position définie pour"
+        "Position set for": "Position définie pour",
+        "Find a parkrun on parkrun.org.uk": "Trouver un parkrun sur parkrun.org.uk"
     }
 };
